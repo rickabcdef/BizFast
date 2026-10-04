@@ -1,2 +1,33 @@
-.page.m10-user { min-height: 100vh; }
-.placeholder { color: #8b93b8; padding: 32px; display: block; }
+.m10-user {
+  padding: 32rpx;
+}
+.m10-login {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.m10-code {
+  margin: 8rpx 0;
+}
+.m10-note {
+  margin-top: 8rpx;
+}
+.m10-name {
+  font-size: 34rpx;
+  font-weight: 700;
+}
+.m10-logout {
+  margin-top: 16rpx;
+  display: inline-block;
+}
+.m10-pkg {
+  margin: 16rpx 0;
+}
+.m10-zip {
+  margin-top: 12rpx;
+}
+.m10-cancel,
+.m10-invite {
+  margin-top: 12rpx;
+}

@@ -1,5 +1,6 @@
 // 统一 API 客户端：fetch 封装，注入 Token、统一错误处理、进度轮询。
 // 所有错误提示中文化（见 docs/api-contract.md 与 types/ERROR_MESSAGES）。
+import Taro from '@tarojs/taro'
 import { ERROR_MESSAGES, type ApiResult } from '@/types'
 
 const BASE = (typeof API_BASE !== 'undefined' ? API_BASE : '/api') as string

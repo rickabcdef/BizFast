@@ -6,6 +6,7 @@ dist/
 build/
 .taro/
 .rn_temp/
+.swc/
 *.tsbuildinfo
 
 # ---------- Python ----------

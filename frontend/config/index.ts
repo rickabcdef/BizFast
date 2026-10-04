@@ -1,4 +1,5 @@
 import { defineConfig } from '@tarojs/cli'
+import path from 'path'
 import devConfig from './dev'
 import prodConfig from './prod'
 
@@ -15,10 +16,15 @@ export default defineConfig(async (merge, { command, mode }) => {
     },
     sourceRoot: 'src',
     outputRoot: 'dist',
+    alias: {
+      '@': path.resolve(__dirname, '..', 'src')
+    },
     plugins: [],
     defineConstants: {
       // 后端 API 基址由各端环境变量注入；默认走 Web 基址
-      API_BASE: JSON.stringify(process.env.API_BASE || '/api')
+      API_BASE: JSON.stringify(process.env.API_BASE || '/api'),
+      // 无后端联调时启用前端 Mock 数据；生产构建请设 USE_MOCK=false
+      USE_MOCK: JSON.stringify(process.env.USE_MOCK !== 'false')
     },
     copy: {
       patterns: [],

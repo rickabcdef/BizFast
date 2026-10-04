@@ -55,6 +55,44 @@ export interface PackageResult {
   retryCount: number
 }
 
+// ---- 程序员 D 扩展类型（首屏/个人/分享） ----
+export interface UserProfile {
+  isGuest: boolean
+  phone?: string
+  plan: Plan
+  city?: string
+  inviteCode?: string
+}
+
+export interface OrderView {
+  orderId: string
+  title: string
+  status: OrderStatus
+  amount: number
+  createdAt: string
+}
+
+export interface Membership {
+  plan: Exclude<Plan, 'none'>
+  expireAt: string
+  autoRenew: boolean
+}
+
+export interface InviteInfo {
+  code: string
+  link: string
+  coupon: string
+  freeGenerations: number
+}
+
+// M8-04 分享数据回收（按渠道转化），D 在运营后台呈现
+export interface ShareStatsRow {
+  channel: string
+  clicks: number
+  registers: number
+  pays: number
+}
+
 // 统一响应（见 docs/api-contract.md）
 export interface ApiResult<T = unknown> {
   code: number
