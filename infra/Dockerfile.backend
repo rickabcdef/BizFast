@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# 系统依赖：libvips（LGPL 动态链接，用于图片压缩）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libvips42 libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+# 启动 API + 队列 worker（生产可用 supervisord 或分开容器）
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]

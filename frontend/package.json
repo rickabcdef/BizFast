@@ -1,0 +1,55 @@
+{
+  "name": "bizfast-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BizFast 生意快启 前端（一套代码多端：Web/H5 + 微信小程序 + App + 鸿蒙）",
+  "templateInfo": {
+    "name": "default",
+    "typescript": true,
+    "css": "sass"
+  },
+  "scripts": {
+    "dev:h5": "taro build --type h5 --watch",
+    "build:h5": "taro build --type h5",
+    "dev:weapp": "taro build --type weapp --watch",
+    "build:weapp": "taro build --type weapp",
+    "dev:rn": "taro build --type rn --watch",
+    "build:rn": "taro build --type rn",
+    "dev:harmony": "taro build --type harmony --watch",
+    "build:harmony": "taro build --type harmony",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "browserslist": [
+    "last 3 versions",
+    "Android >= 4.1",
+    "ios >= 8"
+  ],
+  "dependencies": {
+    "@babel/runtime": "^7.24.0",
+    "@tarojs/components": "4.0.0",
+    "@tarojs/helper": "4.0.0",
+    "@tarojs/plugin-framework-react": "4.0.0",
+    "@tarojs/plugin-platform-h5": "4.0.0",
+    "@tarojs/plugin-platform-weapp": "4.0.0",
+    "@tarojs/plugin-platform-rn": "4.0.0",
+    "@tarojs/react": "4.0.0",
+    "@tarojs/runtime": "4.0.0",
+    "@tarojs/shared": "4.0.0",
+    "@tarojs/taro": "4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-react": "^7.23.0",
+    "@tarojs/cli": "4.0.0",
+    "@tarojs/webpack5-runner": "4.0.0",
+    "@types/react": "^18.2.0",
+    "@types/webpack-env": "^1.18.0",
+    "babel-preset-taro": "4.0.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  }
+}

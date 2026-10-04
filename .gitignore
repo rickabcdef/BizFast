@@ -1,0 +1,49 @@
+# ---------- 依赖 / 构建产物 ----------
+node_modules/
+.pnp/
+.pnp.js
+dist/
+build/
+.taro/
+.rn_temp/
+*.tsbuildinfo
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+backend/.env
+
+# ---------- 环境变量 / 密钥 ----------
+.env
+.env.*
+!.env.example
+infra/.env
+infra/.env.*
+
+# ---------- 编辑器 / 系统 ----------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------- 日志 / 运行时 ----------
+logs/
+*.log
+*.pid
+
+# ---------- 本地生成物（非源码） ----------
+*.zip.tmp
+backend/tests/output/
+frontend/src/canvas-games/_gen/
+
+# ---------- 大体积/二进制参考素材（仅本地参考，不入库） ----------
+assets/ui/

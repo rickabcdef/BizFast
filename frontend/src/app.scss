@@ -1,0 +1,31 @@
+// 全局基础样式：科技风（藏蓝背景 + 蓝紫渐变 + 呼吸光效）
+page,
+body {
+  background: var(--bf-bg, #0b1026);
+  color: var(--bf-text, #e8ecff);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+// 蓝紫渐变主色按钮（呼吸光效）
+.bf-gradient-btn {
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  color: #fff;
+  border-radius: 999rpx;
+  box-shadow: 0 0 24rpx rgba(123, 108, 255, 0.45);
+  animation: bf-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes bf-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 16rpx rgba(123, 108, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 32rpx rgba(155, 92, 255, 0.6);
+  }
+}
