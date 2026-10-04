@@ -1,2 +1,292 @@
-.page.m2-diagnose { min-height: 100vh; }
-.placeholder { color: #8b93b8; padding: 32px; display: block; }
+.page.m2-diagnose {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.m2-head {
+  align-items: flex-start;
+  margin-bottom: 8rpx;
+}
+.m2-head__title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+.m2-head__sub {
+  display: block;
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+
+/* ---------- 进度 ---------- */
+.m2-progress__num {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #9b5cff;
+}
+.m2-bar {
+  height: 16rpx;
+  border-radius: 999rpx;
+  background: rgba(139, 147, 184, 0.2);
+  overflow: hidden;
+  margin: 20rpx 0 24rpx;
+}
+.m2-bar--slim {
+  height: 12rpx;
+  margin: 12rpx 0 8rpx;
+}
+.m2-bar__fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #5b6cff 0%, #9b5cff 100%);
+  box-shadow: 0 0 18rpx rgba(123, 108, 255, 0.7);
+  transition: width 0.4s ease;
+}
+
+.m2-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+.m2-stage {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.m2-stage__mark {
+  width: 40rpx;
+  font-size: 30rpx;
+  color: #8b93b8;
+  text-align: center;
+}
+.m2-stage__mark.is-done {
+  color: #39d98a;
+}
+.m2-stage__mark.is-active {
+  color: #9b5cff;
+  animation: m2-spin 1.4s linear infinite;
+}
+@keyframes m2-spin {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.m2-stage__text {
+  font-size: 26rpx;
+  color: #8b93b8;
+}
+.m2-stage__text.is-done {
+  color: #e8ecff;
+}
+
+/* ---------- 等待小游戏 ---------- */
+.m2-game__score {
+  font-size: 24rpx;
+}
+.m2-game__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.m2-game__cell {
+  height: 120rpx;
+  border-radius: 20rpx;
+  background: rgba(139, 147, 184, 0.12);
+  border: 2rpx solid rgba(139, 147, 184, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+}
+.m2-game__cell.is-active {
+  background: rgba(155, 92, 255, 0.22);
+  border-color: rgba(155, 92, 255, 0.7);
+  box-shadow: 0 0 24rpx rgba(155, 92, 255, 0.55);
+  transform: scale(1.04);
+}
+
+/* ---------- 结果 ---------- */
+.m2-tip {
+  font-size: 24rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(139, 147, 184, 0.12);
+  margin: 16rpx 0 0;
+}
+.m2-tip--warn {
+  color: #ffb454;
+  background: rgba(255, 180, 84, 0.12);
+}
+.m2-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin: 12rpx 0;
+}
+.m2-meta {
+  display: block;
+  font-size: 22rpx;
+}
+.m2-heatmap {
+  width: 100%;
+  border-radius: 20rpx;
+  margin: 16rpx 0 8rpx;
+  background: rgba(139, 147, 184, 0.1);
+}
+.m2-dirs {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 8rpx;
+}
+.m2-dir__name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.m2-dir__heat {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #9b5cff;
+}
+.m2-dir__reason {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+.m2-actions {
+  display: flex;
+  gap: 12rpx;
+  flex: none;
+}
+.m2-cta {
+  margin: 32rpx 0 48rpx;
+}
+
+/* ---------- M2-03：等待页右下角气泡 ---------- */
+.m2-bubble {
+  position: fixed;
+  right: 24rpx;
+  bottom: 48rpx;
+  z-index: 30;
+  max-width: 300rpx;
+  padding: 18rpx 24rpx;
+  border-radius: 28rpx 28rpx 8rpx 28rpx;
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  box-shadow: 0 8rpx 32rpx rgba(123, 108, 255, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  animation: m2-float 2.6s ease-in-out infinite;
+}
+@keyframes m2-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+.m2-bubble__emoji {
+  font-size: 32rpx;
+  line-height: 1.2;
+}
+.m2-bubble__text {
+  font-size: 24rpx;
+  line-height: 1.35;
+  color: #fff;
+}
+
+/* ---------- 通用浮层（M2-03 小游戏 / M2-05 分享面板） ---------- */
+.m2-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  background: rgba(5, 8, 22, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+.m2-modal {
+  width: 100%;
+  max-width: 620rpx;
+  max-height: 86vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: var(--bf-bg-elevated, #141a3a);
+  border: 2rpx solid rgba(139, 147, 184, 0.22);
+  border-radius: 28rpx;
+  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.m2-modal__title {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+.m2-modal__sub {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+.m2-modal__img {
+  width: 100%;
+  border-radius: 20rpx;
+  background: rgba(139, 147, 184, 0.1);
+}
+.m2-modal__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+.m2-modal__item {
+  width: 100%;
+  box-sizing: border-box;
+}
+.m2-modal__tip {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.6;
+}
+.m2-modal__loading {
+  display: block;
+  padding: 64rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+}
+.m2-modal__close {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+}
+.m2-modal__timer {
+  flex: none;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #9b5cff;
+}
+
+/* ---------- M2-03：小游戏浮层 ---------- */
+.m2-game-modal {
+  max-width: 600rpx;
+}
+.m2-game__scorebar {
+  justify-content: flex-start;
+  gap: 40rpx;
+}

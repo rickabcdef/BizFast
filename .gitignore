@@ -45,6 +45,8 @@ logs/
 *.zip.tmp
 backend/tests/output/
 frontend/src/canvas-games/_gen/
+# 本地调试落盘（SQLite 库 / 本地对象存储），非源码
+backend/var/
 
 # ---------- 大体积/二进制参考素材（仅本地参考，不入库） ----------
 assets/ui/

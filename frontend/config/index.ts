@@ -23,8 +23,14 @@ export default defineConfig(async (merge, { command, mode }) => {
     defineConstants: {
       // 后端 API 基址由各端环境变量注入；默认走 Web 基址
       API_BASE: JSON.stringify(process.env.API_BASE || '/api'),
-      // 无后端联调时启用前端 Mock 数据；生产构建请设 USE_MOCK=false
-      USE_MOCK: JSON.stringify(process.env.USE_MOCK !== 'false')
+      // 开发态默认开 Mock（没后端也能看页面）；生产态必须显式 USE_MOCK=true 才开。
+      // 反过来（生产默认开 Mock）是最危险的配置事故：包发出去全是假数据，
+      // 而且页面看起来完全正常，很难被发现，所以这里默认必须是关。
+      USE_MOCK: JSON.stringify(
+        process.env.USE_MOCK
+          ? process.env.USE_MOCK !== 'false'
+          : process.env.NODE_ENV === 'development'
+      )
     },
     copy: {
       patterns: [],

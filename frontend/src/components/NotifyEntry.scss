@@ -1,0 +1,32 @@
+.bf-notify {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(139, 147, 184, 0.16);
+  border: 2rpx solid rgba(139, 147, 184, 0.28);
+}
+.bf-notify__icon {
+  font-size: 26rpx;
+}
+.bf-notify__label {
+  font-size: 24rpx;
+  color: var(--bf-text, #e8ecff);
+}
+.bf-notify__dot {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: #ff5c7c;
+  color: #fff;
+  font-size: 20rpx;
+  line-height: 32rpx;
+  text-align: center;
+  box-shadow: 0 0 16rpx rgba(255, 92, 124, 0.7);
+}

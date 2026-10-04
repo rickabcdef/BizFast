@@ -1,0 +1,73 @@
+"""Pydantic schema 包：与 frontend/src/types/index.ts 对齐。"""
+from app.schemas.common import CamelModel, ok
+from app.schemas.diagnose import (
+    DiagnoseCreate,
+    DiagnoseCreateOut,
+    DiagnoseProgress,
+    DiagnoseResult,
+    DiagnoseTags,
+    HeatDirection,
+)
+from app.schemas.match import (
+    CaseItem,
+    CostItem,
+    FavoriteOut,
+    FiveElements,
+    MatchListOut,
+    OpportunityDetail,
+    OpportunityOut,
+    RevenueItem,
+)
+from app.schemas.notify import (
+    NotificationOut,
+    NotifyListOut,
+    NotifySettingIn,
+    NotifySettingOut,
+    SubscribeItem,
+    SubscribeOut,
+)
+from app.schemas.payment import (
+    OrderOut,
+    PayParams,
+    PaymentCallbackOut,
+    PaymentCreate,
+    PaymentCreateOut,
+    PlanOption,
+    RefundCreate,
+    RefundOut,
+    TimelineItem,
+)
+
+__all__ = [
+    "CamelModel",
+    "ok",
+    "DiagnoseCreate",
+    "DiagnoseCreateOut",
+    "DiagnoseProgress",
+    "DiagnoseResult",
+    "DiagnoseTags",
+    "HeatDirection",
+    "CaseItem",
+    "CostItem",
+    "FavoriteOut",
+    "FiveElements",
+    "MatchListOut",
+    "OpportunityDetail",
+    "OpportunityOut",
+    "RevenueItem",
+    "NotificationOut",
+    "NotifyListOut",
+    "NotifySettingIn",
+    "NotifySettingOut",
+    "SubscribeItem",
+    "SubscribeOut",
+    "OrderOut",
+    "PayParams",
+    "PaymentCallbackOut",
+    "PaymentCreate",
+    "PaymentCreateOut",
+    "PlanOption",
+    "RefundCreate",
+    "RefundOut",
+    "TimelineItem",
+]

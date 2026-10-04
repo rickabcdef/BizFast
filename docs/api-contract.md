@@ -9,6 +9,17 @@
 - 文件命名：`生意快启_交付物名称_生成日期`（如 `生意快启_可行性评分卡_20261004.pdf`）。
 - 进度真实不造假（M2-02 / M4-02）。
 
+### 1.0 游客态约定（M1-07：不强制登录）
+
+游客可免登录走完「诊断 → 商机 → 付费下单 → 查单 → 消息」全链路，身份靠 `X-Guest-Token` 维持：
+
+- 客户端首次请求**不传**该头；服务端生成一个 token，并在**每个响应头**回写 `X-Guest-Token`。
+- 客户端必须把该值**持久化**（本地存储），此后所有请求都带上 `X-Guest-Token: <token>`。
+- CORS 已 `expose_headers: X-Guest-Token, X-Request-Id`，浏览器可直接读到。
+- **不回传的后果**：每次请求都会被当成新游客，订单 / 收藏 / 消息全部查不到（联调必踩）。
+- 登录后携带 `Authorization: Bearer <JWT>` 时以用户身份为准，`owner_key` 由 `guest:<token>` 切换为 `user:<id>`。
+- 参考实现：前端 `frontend/src/services/api.ts`（`bf_guest_token`），后端 `backend/app/main.py` + `core/context.py`。
+
 ### 1.1 统一响应
 ```json
 { "code": 0, "message": "ok", "data": { }, "request_id": "..." }

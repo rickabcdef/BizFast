@@ -24,7 +24,8 @@ export const useAppStore = create<AppState>((set) => ({
   token: Taro.getStorageSync('bf_token') || null,
   plan: (Taro.getStorageSync('bf_plan') as Plan) || 'none',
   user: Taro.getStorageSync('bf_user') || null,
-  input: null,
+  // 最近一次的三要素要跨刷新保留：M3-08「重新诊断」需要在刷新后仍能取回原条件
+  input: (Taro.getStorageSync('bf_input') as StartupInput) || null,
   taskId: null,
   orderId: null,
   setToken: (t) => {
@@ -41,13 +42,17 @@ export const useAppStore = create<AppState>((set) => ({
     else Taro.removeStorageSync('bf_user')
     set({ user: u, plan: u ? u.plan : 'none' })
   },
-  setInput: (i) => set({ input: i }),
+  setInput: (i) => {
+    Taro.setStorageSync('bf_input', i)
+    set({ input: i })
+  },
   setTaskId: (id) => set({ taskId: id }),
   setOrderId: (id) => set({ orderId: id }),
   logout: () => {
     Taro.removeStorageSync('bf_token')
     Taro.removeStorageSync('bf_user')
-    set({ token: null, user: null, plan: 'none', taskId: null, orderId: null })
+    Taro.removeStorageSync('bf_input')
+    set({ token: null, user: null, plan: 'none', input: null, taskId: null, orderId: null })
   }
 }))
 

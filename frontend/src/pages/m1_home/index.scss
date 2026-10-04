@@ -19,3 +19,80 @@
 .m1-submit {
   margin: 32rpx 8rpx;
 }
+
+/* ---------- M3-08：重新诊断的预填提示 ---------- */
+.m1-redo {
+  margin: 16rpx 8rpx 0;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  background: rgba(155, 92, 255, 0.14);
+  border: 2rpx solid rgba(155, 92, 255, 0.4);
+}
+.m1-redo__text {
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #d9ccff;
+}
+
+/* ---------- M2-07：补充问答（可选，可整体跳过） ---------- */
+.m1-extra__head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.m1-extra__badge {
+  flex: none;
+}
+.m1-extra__toggle {
+  font-size: 24rpx;
+  flex: none;
+}
+.m1-extra__tip {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+  margin-top: 8rpx;
+}
+.m1-extra__body {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-top: 16rpx;
+}
+.m1-extra__q {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.m1-extra__label {
+  font-size: 26rpx;
+  color: #e8ecff;
+}
+.m1-extra__opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.m1-extra__opt {
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  border: 2rpx solid transparent;
+}
+.m1-extra__opt.is-active {
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  color: #fff;
+  font-weight: 600;
+}
+.m1-extra__foot {
+  align-items: flex-start;
+}
+.m1-extra__hint {
+  font-size: 20rpx;
+  line-height: 1.6;
+  flex: 1;
+}
+.m1-extra__clear {
+  font-size: 22rpx;
+  color: #ff5c7c;
+  flex: none;
+}

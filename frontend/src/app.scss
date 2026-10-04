@@ -178,6 +178,22 @@ body {
   color: #c9ccff;
   font-size: 22rpx;
 }
+// M2-07：补充问答产生的偏好标签，与基础标签做视觉区分
+.bf-tag--accent {
+  background: rgba(155, 92, 255, 0.28);
+  border: 2rpx solid rgba(155, 92, 255, 0.6);
+  color: #e2d4ff;
+}
+.bf-tag--good {
+  background: rgba(57, 217, 138, 0.18);
+  border: 2rpx solid rgba(57, 217, 138, 0.5);
+  color: #9df3c4;
+}
+.bf-tag--warn {
+  background: rgba(255, 180, 84, 0.16);
+  border: 2rpx solid rgba(255, 180, 84, 0.5);
+  color: #ffd29b;
+}
 .bf-list {
   display: flex;
   flex-direction: column;

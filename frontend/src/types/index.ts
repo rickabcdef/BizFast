@@ -11,6 +11,13 @@ export interface StartupInput {
   capital: number // 启动资金（档位）
   dailyHours: number // 每日可投入时间（档位）
   city: string // 城市
+  // M2-07 补充问答（可选）：不传或 { skipped: true } 表示跳过，不影响结果
+  extra?: {
+    experience?: 'none' | 'some' | 'pro' | null
+    mode?: 'offline' | 'online' | 'both' | null
+    priority?: 'cost' | 'profit' | 'balance' | null
+    skipped?: boolean
+  } | null
 }
 
 // 诊断（M2）

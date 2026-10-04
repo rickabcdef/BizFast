@@ -51,6 +51,7 @@
     "@types/webpack-env": "^1.18.0",
     "babel-preset-taro": "4.0.0",
     "eslint": "^8.57.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "webpack": "^5.91.0"
   }
 }

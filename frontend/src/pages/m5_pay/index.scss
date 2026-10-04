@@ -1,2 +1,512 @@
-.page.m5-pay { min-height: 100vh; }
-.placeholder { color: #8b93b8; padding: 32px; display: block; }
+.page.m5-pay {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.m5-head {
+  align-items: flex-start;
+  margin-bottom: 8rpx;
+}
+.m5-head__title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+.m5-head__sub {
+  display: block;
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+
+/* ---------- 三档价格（M5-03） ---------- */
+.m5-plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+  margin: 16rpx 0;
+}
+.m5-plan {
+  position: relative;
+  border: 2rpx solid rgba(139, 147, 184, 0.25);
+  border-radius: 20rpx;
+  padding: 34rpx 12rpx 20rpx;
+  text-align: center;
+  background: rgba(139, 147, 184, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+.m5-plan.is-active {
+  border-color: #5b6cff;
+  background: rgba(91, 108, 255, 0.16);
+  box-shadow: 0 0 24rpx rgba(91, 108, 255, 0.35);
+}
+.m5-plan.is-hot {
+  border-color: rgba(155, 92, 255, 0.6);
+}
+.m5-plan__badge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  color: #fff;
+  font-size: 18rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  white-space: nowrap;
+}
+.m5-plan__badge--plain {
+  position: static;
+  transform: none;
+  background: rgba(139, 147, 184, 0.2);
+  color: #8b93b8;
+}
+.m5-plan__name {
+  font-size: 24rpx;
+  color: #e8ecff;
+}
+.m5-plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: 2rpx;
+}
+.m5-plan__cur {
+  font-size: 22rpx;
+  color: #9b5cff;
+}
+.m5-plan__num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #fff;
+}
+.m5-plan__unit {
+  font-size: 20rpx;
+  color: #8b93b8;
+}
+
+/* ---------- 权益清单 ---------- */
+.m5-rights {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 12rpx;
+}
+.m5-right {
+  display: flex;
+  gap: 12rpx;
+  align-items: flex-start;
+}
+.m5-right__check {
+  color: #39d98a;
+  font-size: 26rpx;
+}
+.m5-right__text {
+  font-size: 24rpx;
+  line-height: 1.6;
+  flex: 1;
+}
+.m5-em {
+  color: #9b5cff;
+  font-weight: 600;
+}
+
+.m5-paybtn {
+  margin: 32rpx 0 16rpx;
+  animation: m5-breath 2.4s ease-in-out infinite;
+}
+@keyframes m5-breath {
+  0%,
+  100% {
+    box-shadow: 0 0 16rpx rgba(123, 108, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 34rpx rgba(155, 92, 255, 0.65);
+  }
+}
+.m5-foot {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.7;
+  text-align: center;
+  margin-bottom: 48rpx;
+}
+
+/* ---------- 订单 ---------- */
+.m5-order__amount {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #9b5cff;
+}
+.m5-order__id {
+  display: block;
+  font-size: 20rpx;
+  margin-top: 6rpx;
+  word-break: break-all;
+}
+.m5-order__hint {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.7;
+  margin-top: 8rpx;
+}
+.m5-tip {
+  font-size: 22rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(57, 217, 138, 0.12);
+  color: #39d98a;
+  margin: 16rpx 0 0;
+  line-height: 1.6;
+}
+.m5-tip--muted {
+  background: rgba(139, 147, 184, 0.14);
+  color: #8b93b8;
+}
+
+.m5-timeline {
+  margin-top: 24rpx;
+}
+.m5-tl {
+  display: flex;
+  gap: 16rpx;
+}
+.m5-tl__left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 32rpx;
+}
+.m5-tl__dot {
+  font-size: 20rpx;
+  color: #8b93b8;
+}
+.m5-tl__dot.is-done {
+  color: #39d98a;
+}
+.m5-tl__dot.is-active {
+  color: #9b5cff;
+  animation: m5-pulse 1.3s ease-in-out infinite;
+}
+@keyframes m5-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.m5-tl__line {
+  width: 2rpx;
+  flex: 1;
+  min-height: 26rpx;
+  background: rgba(139, 147, 184, 0.25);
+}
+.m5-tl:last-child .m5-tl__line {
+  display: none;
+}
+.m5-tl__body {
+  flex: 1;
+  padding-bottom: 20rpx;
+}
+.m5-tl__label {
+  display: block;
+  font-size: 26rpx;
+  color: #8b93b8;
+}
+.m5-tl__label.is-done {
+  color: #e8ecff;
+}
+.m5-tl__time {
+  display: block;
+  font-size: 20rpx;
+  margin-top: 4rpx;
+}
+
+.m5-actions {
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+.m5-actions__btn {
+  flex: 1;
+}
+
+/* ---------- 支付弹窗 ---------- */
+.m5-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(6, 8, 20, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  z-index: 99;
+}
+.m5-modal {
+  width: 100%;
+  max-width: 600rpx;
+  background: #141a3a;
+  border: 2rpx solid rgba(91, 108, 255, 0.45);
+  border-radius: 28rpx;
+  padding: 36rpx 32rpx;
+  text-align: center;
+  box-shadow: 0 0 60rpx rgba(123, 108, 255, 0.35);
+}
+.m5-modal__title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.m5-modal__amount {
+  display: block;
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #9b5cff;
+  margin: 12rpx 0 20rpx;
+}
+.m5-modal__qr {
+  width: 300rpx;
+  height: 300rpx;
+  margin: 0 auto 20rpx;
+  border-radius: 20rpx;
+  background: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.92) 0 12rpx,
+      rgba(232, 236, 255, 0.92) 12rpx 24rpx
+    );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+.m5-modal__qrtext {
+  font-size: 18rpx;
+  color: #0b1026;
+  word-break: break-all;
+  line-height: 1.4;
+}
+.m5-modal__notice {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.6;
+  margin-bottom: 24rpx;
+}
+.m5-modal__btn {
+  margin-bottom: 16rpx;
+}
+
+/* ---------- M5-09 优惠券 / 邀请码 ---------- */
+.m5-coupon__inputrow {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 12rpx;
+}
+.m5-coupon__input {
+  min-width: 0;
+  min-height: 76rpx;
+  box-sizing: border-box;
+}
+.m5-coupon__apply {
+  flex: none;
+}
+.m5-coupon__clear {
+  font-size: 22rpx;
+  color: #8b93b8;
+}
+.m5-coupon__err {
+  display: block;
+  font-size: 22rpx;
+  color: #ff5c7c;
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+.m5-coupon__ok {
+  margin-top: 14rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(57, 217, 138, 0.12);
+  border: 2rpx solid rgba(57, 217, 138, 0.35);
+}
+.m5-coupon__oktitle {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #9df3c4;
+  margin-bottom: 6rpx;
+}
+.m5-coupon__oktext {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+.m5-coupon__rules {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.7;
+  margin-top: 12rpx;
+}
+.m5-coupon__more {
+  display: block;
+  font-size: 22rpx;
+  color: #9b5cff;
+  margin-top: 12rpx;
+}
+.m5-coupon__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 12rpx;
+}
+.m5-coupon__item {
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  border: 2rpx dashed rgba(155, 92, 255, 0.5);
+  background: rgba(155, 92, 255, 0.1);
+}
+.m5-coupon__item.is-dead {
+  border-color: rgba(139, 147, 184, 0.3);
+  background: rgba(139, 147, 184, 0.1);
+  opacity: 0.6;
+}
+.m5-coupon__code {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #e8ecff;
+}
+.m5-coupon__value {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #9b5cff;
+}
+.m5-coupon__title {
+  display: block;
+  font-size: 22rpx;
+  margin-top: 6rpx;
+}
+.m5-coupon__cond {
+  display: block;
+  font-size: 20rpx;
+  margin-top: 4rpx;
+}
+
+/* 金额预览条 */
+.m5-amountbar {
+  margin-top: 24rpx;
+  padding: 16rpx 22rpx;
+  border-radius: 16rpx;
+  background: rgba(57, 217, 138, 0.1);
+  border: 2rpx solid rgba(57, 217, 138, 0.3);
+}
+.m5-amountbar__k {
+  font-size: 22rpx;
+}
+.m5-amountbar__v {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #9df3c4;
+}
+.m5-amountbar__orig {
+  font-size: 22rpx;
+  color: #8b93b8;
+  text-decoration: line-through;
+}
+
+/* ---------- M5-08 自动续费 ---------- */
+.m5-renew__row {
+  align-items: flex-start;
+  margin-top: 12rpx;
+}
+.m5-renew__left {
+  flex: 1;
+  min-width: 0;
+}
+.m5-renew__label {
+  display: block;
+  font-size: 26rpx;
+  color: #e8ecff;
+}
+.m5-renew__desc {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.6;
+  margin-top: 6rpx;
+}
+.m5-switch {
+  width: 84rpx;
+  height: 48rpx;
+  border-radius: 999rpx;
+  background: rgba(139, 147, 184, 0.28);
+  border: 2rpx solid rgba(139, 147, 184, 0.4);
+  flex: none;
+  padding: 4rpx;
+  box-sizing: border-box;
+  transition: background 0.2s ease;
+}
+.m5-switch.is-on {
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  border-color: transparent;
+}
+.m5-switch__dot {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 999rpx;
+  background: #e8ecff;
+  transition: transform 0.2s ease;
+}
+.m5-switch.is-on .m5-switch__dot {
+  transform: translateX(36rpx);
+}
+
+/* ---------- 订单金额明细（M5-09） ---------- */
+.m5-amounts {
+  margin-top: 18rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(139, 147, 184, 0.1);
+}
+.m5-amounts__row + .m5-amounts__row {
+  margin-top: 10rpx;
+}
+.m5-amounts__k {
+  font-size: 22rpx;
+}
+.m5-amounts__orig {
+  font-size: 22rpx;
+  color: #8b93b8;
+  text-decoration: line-through;
+}
+.m5-amounts__off {
+  font-size: 22rpx;
+  color: #39d98a;
+}
+.m5-amounts__final {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #9b5cff;
+}
+
+/* ---------- M5-10 风控提示 ---------- */
+.m5-tip--warn {
+  background: rgba(255, 180, 84, 0.14);
+  border: 2rpx solid rgba(255, 180, 84, 0.4);
+  color: #ffd9a3;
+}
+.m5-modal__risk {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.6;
+  color: #ffd9a3;
+  background: rgba(255, 180, 84, 0.14);
+  border-radius: 12rpx;
+  padding: 12rpx 16rpx;
+  margin-bottom: 20rpx;
+  text-align: left;
+}

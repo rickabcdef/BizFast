@@ -9,6 +9,7 @@ export default defineAppConfig({
     'pages/m6_tools/index',
     'pages/m7_games/index',
     'pages/m8_share/index',
+    'pages/m9_notify/index',
     'pages/m10_user/index',
     'pages/m11_admin/index'
   ],

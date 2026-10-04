@@ -65,7 +65,7 @@ export async function startDiagnose(input: StartupInput): Promise<{ taskId: stri
     await delay(700)
     return { taskId: 'mock-task-001' }
   }
-  return api.post<{ taskId: string }>('/api/diagnose/start', input)
+  return api.post<{ taskId: string }>('/api/diagnose', input)
 }
 
 export async function getMyPackages(): Promise<PackageResult[]> {
