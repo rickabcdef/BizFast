@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 解锁启动包</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .price-tag {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .price-tag .original {
+            font-size: 16px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+        .price-tag .current {
+            font-size: 48px;
+            font-weight: 700;
+            background: var(--brand-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .price-tag .unit {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        .deliverable-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+        }
+        .deliverable-item .check {
+            color: var(--success);
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .deliverable-item .text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .deliverable-item .text strong {
+            color: var(--text-primary);
+        }
+        .payment-method {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            border: 2px solid var(--brand-blue);
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .payment-method .icon {
+            font-size: 28px;
+        }
+        .payment-method .name {
+            flex: 1;
+            font-weight: 500;
+        }
+        .payment-method .radio {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--brand-blue);
+            position: relative;
+        }
+        .payment-method .radio::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--brand-blue);
+        }
+        .guarantee {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .guarantee span::before {
+            content: '✓ ';
+            color: var(--success);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="opacity: 0.3;">
+        <!-- 背景占位 -->
+    </div>
+    
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <a href="04-结果页.html" class="close-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">✕</a>
+            
+            <div style="text-align: center; margin-bottom: 8px;">
+                <span style="font-size: 40px;">🎁</span>
+            </div>
+            <h3 style="text-align: center; font-size: 20px; font-weight: 700; margin-bottom: 8px;">解锁你的专属生意启动包</h3>
+            <p style="text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">付钱后立即生成，3-5分钟即可下载全部文件</p>
+            
+            <div class="price-tag">
+                <div class="original">原价 ¥299</div>
+                <div><span class="current">9.9</span><span class="unit"> 元</span></div>
+            </div>
+            
+            <div style="background: var(--bg-card); border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px;">
+                <div style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">📦 付钱后你立刻拿到这10样东西：</div>
+                
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>专属商机可行性评分卡</strong> - 完整评估你最适合的那个生意</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>自动算好的回本测算Excel表</strong> - 填数字就能自动算多久回本</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>精准客户画像与首月获客清单</strong> - 第一个客户在哪找写得明明白白</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>一手供应商联系方式+询价话术</strong> - 照着打电话就行</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>定价建议+3套开业活动方案</strong> - 直接照搬就能用</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>全套开店/经营流程清单</strong> - 从0到1每一步做什么</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>写好的朋友圈/抖音获客文案10条</strong> - 复制粘贴直接发</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>店名+海报+收款二维码宣传物料</strong> - 直接下载打印用</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>30天逐日行动日历</strong> - 每天该做什么都给你排好</span>
+                </div>
+                <div class="deliverable-item">
+                    <span class="check">✓</span>
+                    <span class="text"><strong>风险清单与止损线</strong> - 亏到多少钱立刻停，帮你避坑</span>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <div style="font-size: 14px; font-weight: 500; margin-bottom: 12px;">选择支付方式</div>
+                <div class="payment-method">
+                    <span class="icon">💚</span>
+                    <span class="name">微信支付</span>
+                    <span class="radio"></span>
+                </div>
+            </div>
+            
+            <a href="06-生成中.html" class="btn btn-primary">立即支付 ¥9.9 生成启动包</a>
+            
+            <div class="guarantee">
+                <span>7天无理由退款</span>
+                <span>不满意不要钱</span>
+                <span>隐私加密</span>
+            </div>
+            
+        </div>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

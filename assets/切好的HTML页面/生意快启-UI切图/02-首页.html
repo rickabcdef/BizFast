@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 商机诊断</title>
+    <link rel="stylesheet" href="common.css">
+</head>
+<body>
+    <div class="container page-with-tabbar">
+        
+        <div class="page-header fade-in">
+            <h1>🔍 商机诊断</h1>
+            <p>告诉我你的情况，帮你找到合适的小生意</p>
+        </div>
+        
+        <div class="card fade-in stagger-1">
+            <div style="font-size: 15px; font-weight: 600; margin-bottom: 16px;">📍 你在哪个城市？</div>
+            <div class="option-grid">
+                <div class="option-item active">
+                    <div class="emoji">🏙️</div>
+                    <div class="label">上海</div>
+                </div>
+                <div class="option-item">
+                    <div class="emoji">🌆</div>
+                    <div class="label">北京</div>
+                </div>
+                <div class="option-item">
+                    <div class="emoji">🏯</div>
+                    <div class="label">广州</div>
+                </div>
+                <div class="option-item">
+                    <div class="emoji">🌉</div>
+                    <div class="label">深圳</div>
+                </div>
+                <div class="option-item">
+                    <div class="emoji">🏘️</div>
+                    <div class="label">杭州</div>
+                </div>
+                <div class="option-item">
+                    <div class="emoji">➕</div>
+                    <div class="label">更多</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-2">
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>💰 你能拿出多少启动资金？</span>
+                    <span class="value" id="moneyValue">1-5万</span>
+                </div>
+                <input type="range" min="0" max="3" value="1" id="moneySlider">
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                    <span>1万以下</span>
+                    <span>1-5万</span>
+                    <span>5-20万</span>
+                    <span>20万+</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-3">
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>⏰ 你每天能投入多少时间？</span>
+                    <span class="value" id="timeValue">全职 8h+</span>
+                </div>
+                <input type="range" min="0" max="2" value="2" id="timeSlider">
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                    <span>兼职2h</span>
+                    <span>半天4h</span>
+                    <span>全职8h+</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-4">
+            <div style="font-size: 15px; font-weight: 600; margin-bottom: 16px;">💼 你之前有没有做生意的经验？</div>
+            <div class="option-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="option-item active">
+                    <div class="emoji">🌱</div>
+                    <div class="label">完全没做过</div>
+                </div>
+                <div class="option-item">
+                    <div class="emoji">👨‍💼</div>
+                    <div class="label">有过经验</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="btn-area fade-in stagger-5">
+            <a href="03-等待页.html" class="btn btn-primary">🔮 帮我找生意</a>
+            <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 12px;">预计3分钟出结果，完全免费</p>
+        </div>
+        
+    </div>
+    
+    <!-- 底部导航 -->
+    <div class="tab-nav">
+        <a href="02-首页.html" class="tab-item active">
+            <span class="tab-icon">🔍</span>
+            <span>找生意</span>
+        </a>
+        <a href="08-工具箱.html" class="tab-item">
+            <span class="tab-icon">🛠️</span>
+            <span>工具箱</span>
+        </a>
+        <a href="11-个人中心.html" class="tab-item">
+            <span class="tab-icon">👤</span>
+            <span>我的</span>
+        </a>
+    </div>
+    
+    <script src="common.js"></script>
+    <script>
+        const moneyLabels = ['1万以下', '1-5万', '5-20万', '20万+'];
+        const timeLabels = ['兼职 2h', '半天 4h', '全职 8h+'];
+        
+        document.getElementById('moneySlider').addEventListener('input', function(e) {
+            document.getElementById('moneyValue').textContent = moneyLabels[e.target.value];
+        });
+        
+        document.getElementById('timeSlider').addEventListener('input', function(e) {
+            document.getElementById('timeValue').textContent = timeLabels[e.target.value];
+        });
+        
+        // 选项点击
+        document.querySelectorAll('.option-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const parent = this.parentElement;
+                parent.querySelectorAll('.option-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 数字合成</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .game-board {
+            width: 320px;
+            height: 320px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            position: relative;
+        }
+        .cell {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            transition: all 0.15s ease;
+        }
+        .cell[data-val="2"] { background: #eee4da; color: #776e65; }
+        .cell[data-val="4"] { background: #ede0c8; color: #776e65; }
+        .cell[data-val="8"] { background: #f2b179; color: white; }
+        .cell[data-val="16"] { background: #f59563; color: white; }
+        .cell[data-val="32"] { background: #f67c5f; color: white; }
+        .cell[data-val="64"] { background: #f65e3b; color: white; }
+        .cell[data-val="128"] { background: #edcf72; color: white; font-size: 20px; }
+        .cell[data-val="256"] { background: #edcc61; color: white; font-size: 20px; }
+        .cell[data-val="512"] { background: #edc850; color: white; font-size: 20px; }
+        .cell[data-val="1024"] { background: #edc53f; color: white; font-size: 16px; }
+        .cell[data-val="2048"] { background: #edc22e; color: white; font-size: 16px; }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .score-box {
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 8px 20px;
+            text-align: center;
+        }
+        .score-box .label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .score-box .score {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .instruction {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <a href="javascript:history.back()" class="back-btn">←</a>
+        
+        <div class="page-header fade-in" style="padding-top: 10px;">
+            <h1>🔢 数字合成</h1>
+            <p>相同数字合并，玩两把等启动包生成</p>
+        </div>
+        
+        <div class="game-header fade-in stagger-1">
+            <div>
+                <div style="font-size: 28px; font-weight: 700; background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">2048</div>
+                <div style="font-size: 12px; color: var(--text-muted);">合成数字2048</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="score-box">
+                    <div class="label">分数</div>
+                    <div class="score" id="score">0</div>
+                </div>
+                <div class="score-box">
+                    <div class="label">最高</div>
+                    <div class="score" id="best">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="fade-in stagger-2">
+            <div class="game-board" id="board">
+                <!-- 16格 -->
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <button class="btn btn-secondary" id="newGameBtn" style="width: auto; display: inline-block;">🔄 新游戏</button>
+        </div>
+        
+        <div class="instruction fade-in stagger-3">
+            <p>💡 使用方向键 ↑↓←→ 或滑动屏幕<br>相同数字碰到一起会合并，凑到2048就赢啦</p>
+        </div>
+        
+    </div>
+    
+    <script src="common.js"></script>
+    <script>
+        const board = document.getElementById('board');
+        const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
+        const newGameBtn = document.getElementById('newGameBtn');
+        
+        let grid = [];
+        let score = 0;
+        let best = parseInt(localStorage.getItem('best2048') || '0');
+        bestEl.textContent = best;
+        
+        function init() {
+            grid = Array(4).fill(null).map(() => Array(4).fill(0));
+            score = 0;
+            scoreEl.textContent = '0';
+            addRandom();
+            addRandom();
+            render();
+        }
+        
+        function addRandom() {
+            const empty = [];
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (grid[i][j] === 0) empty.push([i, j]);
+                }
+            }
+            if (empty.length === 0) return;
+            const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+            grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+        }
+        
+        function render() {
+            board.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    const val = grid[i][j];
+                    if (val > 0) {
+                        cell.textContent = val;
+                        cell.dataset.val = val;
+                    }
+                    board.appendChild(cell);
+                }
+            }
+            scoreEl.textContent = score;
+            if (score > best) {
+                best = score;
+                bestEl.textContent = best;
+                localStorage.setItem('best2048', best);
+            }
+        }
+        
+        function slide(row) {
+            let arr = row.filter(x => x !== 0);
+            for (let i = 0; i < arr.length - 1; i++) {
+                if (arr[i] === arr[i+1]) {
+                    arr[i] *= 2;
+                    score += arr[i];
+                    arr.splice(i+1, 1);
+                }
+            }
+            while (arr.length < 4) arr.push(0);
+            return arr;
+        }
+        
+        function moveLeft() {
+            let changed = false;
+            for (let i = 0; i < 4; i++) {
+                const newRow = slide(grid[i]);
+                if (newRow.join(',') !== grid[i].join(',')) changed = true;
+                grid[i] = newRow;
+            }
+            if (changed) addRandom();
+            render();
+        }
+        
+        function moveRight() {
+            let changed = false;
+            for (let i = 0; i < 4; i++) {
+                const newRow = slide(grid[i].slice().reverse()).reverse();
+                if (newRow.join(',') !== grid[i].join(',')) changed = true;
+                grid[i] = newRow;
+            }
+            if (changed) addRandom();
+            render();
+        }
+        
+        function moveUp() {
+            let changed = false;
+            for (let j = 0; j < 4; j++) {
+                let col = [grid[0][j], grid[1][j], grid[2][j], grid[3][j]];
+                const newCol = slide(col);
+                for (let i = 0; i < 4; i++) {
+                    if (grid[i][j] !== newCol[i]) changed = true;
+                    grid[i][j] = newCol[i];
+                }
+            }
+            if (changed) addRandom();
+            render();
+        }
+        
+        function moveDown() {
+            let changed = false;
+            for (let j = 0; j < 4; j++) {
+                let col = [grid[3][j], grid[2][j], grid[1][j], grid[0][j]];
+                const newCol = slide(col);
+                for (let i = 0; i < 4; i++) {
+                    if (grid[3-i][j] !== newCol[i]) changed = true;
+                    grid[3-i][j] = newCol[i];
+                }
+            }
+            if (changed) addRandom();
+            render();
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft': moveLeft(); e.preventDefault(); break;
+                case 'ArrowRight': moveRight(); e.preventDefault(); break;
+                case 'ArrowUp': moveUp(); e.preventDefault(); break;
+                case 'ArrowDown': moveDown(); e.preventDefault(); break;
+            }
+        });
+        
+        // 触摸滑动支持
+        let touchStartX, touchStartY;
+        board.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        board.addEventListener('touchend', (e) => {
+            if (!touchStartX) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > 30) {
+                    dx > 0 ? moveRight() : moveLeft();
+                }
+            } else {
+                if (Math.abs(dy) > 30) {
+                    dy > 0 ? moveDown() : moveUp();
+                }
+            }
+            touchStartX = null;
+        });
+        
+        newGameBtn.addEventListener('click', init);
+        init();
+    </script>
+</body>
+</html>

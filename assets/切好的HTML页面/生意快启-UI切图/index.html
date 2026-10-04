@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - UI页面导航</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .container { max-width: 800px; }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+        .nav-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-glass);
+            padding: 20px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        .nav-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--brand-blue);
+            box-shadow: 0 12px 40px rgba(22, 93, 255, 0.2);
+        }
+        .nav-card .num {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand-gradient);
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .nav-card .title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .nav-card .desc {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .flow-note {
+            background: rgba(255, 125, 0, 0.1);
+            border: 1px solid rgba(255, 125, 0, 0.3);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-top: 24px;
+        }
+        .flow-note h3 {
+            color: var(--warning);
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .flow-note p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>🚀 生意快启</h1>
+            <p>全平台高保真UI原型 - 共13个页面</p>
+        </div>
+        
+        <div class="card fade-in">
+            <h2 style="font-size: 18px; margin-bottom: 12px;">完整用户流程</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.8;">
+                欢迎启动 → 商机诊断 → 等待诊断 → 推荐结果 → 付费解锁 → 生成中 → 启动包交付 → 工具箱/小游戏
+                <br><br>
+                个人中心 → 会员购买 → 管理后台
+            </p>
+        </div>
+        
+        <div class="nav-grid">
+            <a href="01-欢迎页.html" class="nav-card fade-in stagger-1">
+                <div class="num">1</div>
+                <div class="title">欢迎启动页</div>
+                <div class="desc">品牌介绍、首次打开加载</div>
+            </a>
+            <a href="02-首页.html" class="nav-card fade-in stagger-2">
+                <div class="num">2</div>
+                <div class="title">商机诊断首页</div>
+                <div class="desc">点选条件、开始诊断入口</div>
+            </a>
+            <a href="03-等待页.html" class="nav-card fade-in stagger-3">
+                <div class="num">3</div>
+                <div class="title">诊断等待页</div>
+                <div class="desc">进度展示、嵌入小游戏</div>
+            </a>
+            <a href="04-结果页.html" class="nav-card fade-in stagger-4">
+                <div class="num">4</div>
+                <div class="title">商机推荐结果</div>
+                <div class="desc">3个商机展示、付费引导</div>
+            </a>
+            <a href="05-付费弹窗.html" class="nav-card fade-in stagger-5">
+                <div class="num">5</div>
+                <div class="title">付费解锁弹窗</div>
+                <div class="desc">10件交付物清单、支付</div>
+            </a>
+            <a href="06-生成中.html" class="nav-card fade-in stagger-1">
+                <div class="num">6</div>
+                <div class="title">启动包生成中</div>
+                <div class="desc">实时进度、游戏入口</div>
+            </a>
+            <a href="07-交付页.html" class="nav-card fade-in stagger-2">
+                <div class="num">7</div>
+                <div class="title">启动包交付页</div>
+                <div class="desc">10个文件下载、工具嵌入</div>
+            </a>
+            <a href="08-工具箱.html" class="nav-card fade-in stagger-3">
+                <div class="num">8</div>
+                <div class="title">实用工具箱</div>
+                <div class="desc">4个零风险小工具</div>
+            </a>
+            <a href="09-指尖解压游戏.html" class="nav-card fade-in stagger-4">
+                <div class="num">9</div>
+                <div class="title">指尖解压游戏</div>
+                <div class="desc">捏泡泡解压小游戏</div>
+            </a>
+            <a href="10-数字合成游戏.html" class="nav-card fade-in stagger-5">
+                <div class="num">10</div>
+                <div class="title">数字合成游戏</div>
+                <div class="desc">2048风格合成游戏</div>
+            </a>
+            <a href="11-个人中心.html" class="nav-card fade-in stagger-1">
+                <div class="num">11</div>
+                <div class="title">个人中心</div>
+                <div class="desc">用户信息、订单、我的启动包</div>
+            </a>
+            <a href="12-会员购买页.html" class="nav-card fade-in stagger-2">
+                <div class="num">12</div>
+                <div class="title">会员购买页</div>
+                <div class="desc">3档定价、权益展示</div>
+            </a>
+            <a href="13-管理后台.html" class="nav-card fade-in stagger-3">
+                <div class="num">13</div>
+                <div class="title">管理后台看板</div>
+                <div class="desc">数据统计、订单管理</div>
+            </a>
+        </div>
+        
+        <div class="flow-note">
+            <h3>💡 体验建议</h3>
+            <p>
+                建议按数字顺序从1到7点击，走一遍完整的核心付费流程，体验"即得感"和"超值感"的设计。
+                8-10是赠送的工具箱和小游戏，11-13是辅助页面。所有页面之间都有跳转链接，可以相互导航。
+                <br><br>
+                <strong>设计规范遵循：</strong>深色科技风主题、蓝紫渐变主色、毛玻璃卡片、呼吸光效按钮、流畅交互动画，零版权风险元素。
+            </p>
+        </div>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

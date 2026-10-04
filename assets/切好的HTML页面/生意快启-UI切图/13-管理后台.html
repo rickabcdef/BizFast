@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 管理后台</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body { background: #0F172A; }
+        .admin-container { max-width: 1200px; padding: 20px; margin: 0 auto; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-glass); }
+        .admin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .admin-stat { background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 1px solid var(--border-glass); }
+        .admin-stat .label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .admin-stat .value { font-size: 28px; font-weight: 700; }
+        .admin-stat .trend { font-size: 12px; margin-top: 8px; }
+        .admin-stat .trend.up { color: var(--success); }
+        .admin-stat .trend.down { color: var(--danger); }
+        .chart-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; border: 1px solid var(--border-glass); margin-bottom: 24px; }
+        .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+        .chart-placeholder { height: 240px; display: flex; align-items: flex-end; justify-content: space-around; gap: 8px; padding: 20px 0; }
+        .bar { flex: 1; background: var(--brand-gradient); border-radius: 4px 4px 0 0; position: relative; transition: all 0.3s ease; min-height: 20px; }
+        .bar:hover { opacity: 0.8; transform: scaleY(1.02); transform-origin: bottom; }
+        .bar-label { position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+        .bar-value { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--text-secondary); }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .donut-placeholder { width: 200px; height: 200px; border-radius: 50%; background: conic-gradient(#165DFF 0% 35%, #7B61FF 35% 60%, #00B42A 60% 80%, #FF7D00 80% 100%); margin: 0 auto; position: relative; }
+        .donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; background: var(--bg-card); display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .donut-center .num { font-size: 24px; font-weight: 700; }
+        .donut-center .label { font-size: 12px; color: var(--text-muted); }
+        .legend { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; font-size: 13px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border-glass); }
+        td { padding: 12px; font-size: 13px; border-bottom: 1px solid var(--border-glass); }
+        .status-paid { color: var(--success); }
+        .status-pending { color: var(--warning); }
+        .admin-nav { display: flex; gap: 4px; }
+        .admin-nav a { padding: 8px 16px; color: var(--text-muted); text-decoration: none; border-radius: var(--radius-sm); font-size: 14px; }
+        .admin-nav a.active { background: var(--bg-card); color: var(--text-primary); }
+        @media (max-width: 768px) {
+            .admin-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        
+        <div class="admin-header fade-in">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">📊 数据看板</h1>
+                <p style="color: var(--text-muted); font-size: 13px;">生意快启 管理后台 · 2026年10月4日</p>
+            </div>
+            <div class="admin-nav">
+                <a href="#" class="active">数据概览</a>
+                <a href="#">用户管理</a>
+                <a href="#">订单管理</a>
+                <a href="#">商机库</a>
+            </div>
+        </div>
+        
+        <div class="admin-grid fade-in stagger-1">
+            <div class="admin-stat">
+                <div class="label">今日新增用户</div>
+                <div class="value big-number" data-target="286">0</div>
+                <div class="trend up">↑ 12.5% 较昨日</div>
+            </div>
+            <div class="admin-stat">
+                <div class="label">今日订单数</div>
+                <div class="value big-number" data-target="89">0</div>
+                <div class="trend up">↑ 8.3% 较昨日</div>
+            </div>
+            <div class="admin-stat">
+                <div class="label">今日营收</div>
+                <div class="value big-number" data-target="1765">¥0</div>
+                <div class="trend up">↑ 15.2% 较昨日</div>
+            </div>
+            <div class="admin-stat">
+                <div class="label">付费转化率</div>
+                <div class="value big-number" data-target="7.8" data-suffix="%">0%</div>
+                <div class="trend up">↑ 0.6% 较上周</div>
+            </div>
+        </div>
+        
+        <div class="chart-card fade-in stagger-2">
+            <div class="chart-title">📈 7天营收趋势</div>
+            <div class="chart-placeholder">
+                <div class="bar" style="height: 45%;"><span class="bar-value">¥892</span><span class="bar-label">9/28</span></div>
+                <div class="bar" style="height: 60%;"><span class="bar-value">¥1156</span><span class="bar-label">9/29</span></div>
+                <div class="bar" style="height: 55%;"><span class="bar-value">¥1089</span><span class="bar-label">9/30</span></div>
+                <div class="bar" style="height: 70%;"><span class="bar-value">¥1342</span><span class="bar-label">10/1</span></div>
+                <div class="bar" style="height: 65%;"><span class="bar-value">¥1256</span><span class="bar-label">10/2</span></div>
+                <div class="bar" style="height: 80%;"><span class="bar-value">¥1532</span><span class="bar-label">10/3</span></div>
+                <div class="bar" style="height: 90%;"><span class="bar-value">¥1765</span><span class="bar-label">10/4</span></div>
+            </div>
+        </div>
+        
+        <div class="two-col fade-in stagger-3">
+            <div class="chart-card">
+                <div class="chart-title">🥧 商机分类占比</div>
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <div>
+                        <div class="donut-placeholder">
+                            <div class="donut-center">
+                                <div class="num">1,247</div>
+                                <div class="label">商机总数</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot" style="background: #165DFF;"></div>餐饮小吃 35%</div>
+                        <div class="legend-item"><div class="legend-dot" style="background: #7B61FF;"></div>社区服务 25%</div>
+                        <div class="legend-item"><div class="legend-dot" style="background: #00B42A;"></div>电商新零售 20%</div>
+                        <div class="legend-item"><div class="legend-dot" style="background: #FF7D00;"></div>本地生活服务 20%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-title">🔥 热门商机TOP5</div>
+                <div style="margin-top: 16px;">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                            <span>1. 社区团购团长</span>
+                            <span style="color: var(--brand-purple);">286次</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;">
+                            <div style="width: 95%; height: 100%; background: var(--brand-gradient); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                            <span>2. 便民早餐车</span>
+                            <span style="color: var(--brand-purple);">245次</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;">
+                            <div style="width: 82%; height: 100%; background: var(--brand-gradient); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                            <span>3. 家政服务中介</span>
+                            <span style="color: var(--brand-purple);">198次</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;">
+                            <div style="width: 68%; height: 100%; background: var(--brand-gradient); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                            <span>4. 小区快递驿站</span>
+                            <span style="color: var(--brand-purple);">156次</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;">
+                            <div style="width: 55%; height: 100%; background: var(--brand-gradient); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                            <span>5. 短视频探店</span>
+                            <span style="color: var(--brand-purple);">134次</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;">
+                            <div style="width: 46%; height: 100%; background: var(--brand-gradient); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-card fade-in stagger-4">
+            <div class="chart-title">📋 最近订单</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>用户</th>
+                        <th>商品</th>
+                        <th>金额</th>
+                        <th>状态</th>
+                        <th>时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>202610040001</td>
+                        <td>138****8888</td>
+                        <td>年度会员</td>
+                        <td>¥199.00</td>
+                        <td class="status-paid">✓ 已支付</td>
+                        <td>2026-10-04 10:23</td>
+                    </tr>
+                    <tr>
+                        <td>202610040002</td>
+                        <td>139****6666</td>
+                        <td>单次启动包</td>
+                        <td>¥9.90</td>
+                        <td class="status-paid">✓ 已支付</td>
+                        <td>2026-10-04 10:18</td>
+                    </tr>
+                    <tr>
+                        <td>202610040003</td>
+                        <td>137****2222</td>
+                        <td>月度会员</td>
+                        <td>¥39.00</td>
+                        <td class="status-paid">✓ 已支付</td>
+                        <td>2026-10-04 10:05</td>
+                    </tr>
+                    <tr>
+                        <td>202610040004</td>
+                        <td>135****9999</td>
+                        <td>单次启动包</td>
+                        <td>¥9.90</td>
+                        <td class="status-pending">⏳ 处理中</td>
+                        <td>2026-10-04 09:58</td>
+                    </tr>
+                    <tr>
+                        <td>202610040005</td>
+                        <td>186****3333</td>
+                        <td>年度会员</td>
+                        <td>¥199.00</td>
+                        <td class="status-paid">✓ 已支付</td>
+                        <td>2026-10-04 09:42</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

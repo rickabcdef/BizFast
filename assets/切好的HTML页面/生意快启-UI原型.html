@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生意快启 - UI原型设计</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+body { background: #0F172A; color: white; overflow-x: hidden; }
+.bg-main { background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); }
+.glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+.glass-strong { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); }
+.gradient-primary { background: linear-gradient(90deg, #165DFF 0%, #7B61FF 100%); }
+.gradient-text { background: linear-gradient(90deg, #165DFF 0%, #7B61FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.glow { box-shadow: 0 0 20px rgba(22,93,255,0.4); }
+.glow-purple { box-shadow: 0 0 20px rgba(123,97,255,0.4); }
+.btn-primary { background: linear-gradient(90deg, #165DFF 0%, #7B61FF 100%); box-shadow: 0 0 20px rgba(22,93,255,0.3); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+.btn-primary:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(22,93,255,0.5); }
+.btn-primary:active { transform: scale(0.98); }
+.card { background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; transition: all 0.2s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.15); }
+.nav-item { transition: all 0.2s ease; border-radius: 12px; }
+.nav-item:hover { background: rgba(255,255,255,0.08); }
+.nav-item.active { background: linear-gradient(90deg, rgba(22,93,255,0.2) 0%, rgba(123,97,255,0.2) 100%); border: 1px solid rgba(123,97,255,0.3); }
+.page { display: none; animation: fadeIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes breathe { 0%,100% { box-shadow: 0 0 20px rgba(22,93,255,0.3); } 50% { box-shadow: 0 0 35px rgba(22,93,255,0.6); } }
+.breathe { animation: breathe 2s ease-in-out infinite; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.slide-up { animation: slideUp 0.5s ease forwards; }
+.slide-up-1 { animation-delay: 0.1s; opacity: 0; }
+.slide-up-2 { animation-delay: 0.2s; opacity: 0; }
+.slide-up-3 { animation-delay: 0.3s; opacity: 0; }
+.slide-up-4 { animation-delay: 0.4s; opacity: 0; }
+.slider-track { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.1); outline: none; }
+.slider-track::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(90deg, #165DFF, #7B61FF); cursor: pointer; box-shadow: 0 0 10px rgba(22,93,255,0.5); }
+.bubble { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), rgba(123,97,255,0.3)); border: 2px solid rgba(255,255,255,0.2); cursor: pointer; transition: all 0.15s ease; }
+.bubble:hover { transform: scale(1.1); }
+.bubble.popped { transform: scale(0); opacity: 0; }
+.bubble.popped::after { content: ''; position: absolute; width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(123,97,255,0.8); animation: pop 0.4s ease-out forwards; }
+@keyframes pop { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+.grid-2048 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 280px; height: 280px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 8px; }
+.tile { display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 700; font-size: 20px; background: rgba(255,255,255,0.08); color: white; }
+.tile-2 { background: rgba(22,93,255,0.3); }
+.tile-4 { background: rgba(123,97,255,0.3); }
+.tile-8 { background: rgba(22,93,255,0.5); }
+.tile-16 { background: rgba(123,97,255,0.5); }
+.tile-32 { background: linear-gradient(90deg, #165DFF, #7B61FF); }
+.tile-64 { background: linear-gradient(90deg, #7B61FF, #F87171); }
+.tile-128 { background: linear-gradient(90deg, #F87171, #FBBF24); font-size: 16px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #165DFF 0%, #7B61FF 100%); border-radius: 999px; position: relative; overflow: hidden; }
+.progress-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 2s infinite; }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+.particle { position: absolute; width: 4px; height: 4px; background: rgba(123,97,255,0.3); border-radius: 50%; animation: float 15s infinite ease-in-out; }
+@keyframes float { 0%,100% { transform: translateY(0) translateX(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-100vh) translateX(50px); opacity: 0; } }
+.check-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; transition: all 0.2s; }
+.check-item.done { background: rgba(0,180,42,0.1); }
+.check-item.done .check-icon { background: #00B42A; }
+.check-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.file-card { padding: 16px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 14px; transition: all 0.2s; cursor: pointer; }
+.file-card:hover { background: rgba(22,93,255,0.1); border-color: rgba(123,97,255,0.3); transform: translateX(4px); }
+.tool-card { padding: 24px; border-radius: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; cursor: pointer; text-align: center; }
+.tool-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); border-color: rgba(123,97,255,0.3); }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.phone-frame { width: 390px; height: 844px; border-radius: 40px; border: 8px solid #1E293B; background: #0F172A; overflow: hidden; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+</style>
+</head>
+<body class="bg-main min-h-screen flex">
+
+<!-- 背景粒子 -->
+<div class="particles" id="particles"></div>
+
+<!-- 左侧导航 -->
+<aside class="w-64 h-screen fixed left-0 top-0 glass-strong z-50 flex flex-col p-4 border-r border-white/10">
+  <div class="flex items-center gap-3 px-3 py-4 mb-6">
+    <div class="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center font-bold text-xl glow">启</div>
+    <div>
+      <div class="font-bold text-lg">生意快启</div>
+      <div class="text-xs text-white/50">UI原型设计 v2.0</div>
+    </div>
+  </div>
+  <nav class="flex-1 space-y-1 overflow-y-auto scrollbar-hide">
+    <div class="text-xs text-white/40 uppercase tracking-wider px-3 py-2">核心流程</div>
+    <button onclick="showPage('welcome')" class="nav-item active w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>🚀</span><span>欢迎启动页</span>
+    </button>
+    <button onclick="showPage('home')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>🏠</span><span>商机诊断首页</span>
+    </button>
+    <button onclick="showPage('loading')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>⏳</span><span>诊断等待页</span>
+    </button>
+    <button onclick="showPage('result')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>📊</span><span>商机推荐结果</span>
+    </button>
+    <button onclick="showPage('paywall')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>💎</span><span>付费解锁弹窗</span>
+    </button>
+    <button onclick="showPage('generating')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>⚙️</span><span>启动包生成中</span>
+    </button>
+    <button onclick="showPage('deliver')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>📦</span><span>启动包交付页</span>
+    </button>
+    <div class="text-xs text-white/40 uppercase tracking-wider px-3 py-2 mt-4">附加功能</div>
+    <button onclick="showPage('tools')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>🛠️</span><span>实用工具箱</span>
+    </button>
+    <button onclick="showPage('bubble')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>🫧</span><span>指尖解压游戏</span>
+    </button>
+    <button onclick="showPage('game2048')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>🔢</span><span>数字合成游戏</span>
+    </button>
+    <div class="text-xs text-white/40 uppercase tracking-wider px-3 py-2 mt-4">用户中心</div>
+    <button onclick="showPage('profile')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>👤</span><span>个人中心</span>
+    </button>
+    <button onclick="showPage('vip')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>👑</span><span>会员购买页</span>
+    </button>
+    <div class="text-xs text-white/40 uppercase tracking-wider px-3 py-2 mt-4">管理后台</div>
+    <button onclick="showPage('admin')" class="nav-item w-full flex items-center gap-3 px-3 py-3 text-left text-sm">
+      <span>📈</span><span>数据看板</span>
+    </button>
+  </nav>
+  <div class="pt-4 border-t border-white/10">
+    <div class="text-xs text-white/40 text-center">共 13 个核心页面</div>
+  </div>
+</aside>
+
+<!-- 主内容区 -->
+<main class="ml-64 flex-1 p-8 relative z-10 overflow-y-auto">
+
+<!-- ==================== 1. 欢迎启动页 ==================== -->
+<div id="page-welcome" class="page active">
+  <div class="text-center py-20 relative">
+    <div class="absolute inset-0 flex items-center justify-center opacity-30">
+      <div class="w-96 h-96 rounded-full gradient-primary blur-[120px]"></div>
+    </div>
+    <div class="relative z-10">
+      <div class="w-24 h-24 mx-auto rounded-3xl gradient-primary flex items-center justify-center text-4xl font-bold glow breathe mb-8">启</div>
+      <h1 class="text-5xl font-bold mb-4 slide-up">生意快启</h1>
+      <p class="text-2xl text-white/60 mb-2 slide-up slide-up-1">30分钟，给你能直接开干的</p>
+      <p class="text-2xl gradient-text font-semibold mb-12 slide-up slide-up-1">生意启动包</p>
+      <div class="max-w-md mx-auto space-y-4 slide-up slide-up-2">
+        <div class="flex items-center gap-4 glass rounded-2xl p-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-2xl">🎯</div>
+          <div class="text-left">
+            <div class="font-semibold">精准匹配商机</div>
+            <div class="text-sm text-white/50">基于你的城市、资金、时间智能推荐</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 glass rounded-2xl p-4">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-2xl">📋</div>
+          <div class="text-left">
+            <div class="font-semibold">10件交付物</div>
+            <div class="text-sm text-white/50">回本表、文案、物料、清单一键下载</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 glass rounded-2xl p-4">
+          <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-2xl">⚡</div>
+          <div class="text-left">
+            <div class="font-semibold">今天就能动手</div>
+            <div class="text-sm text-white/50">30天行动日历，每天该做什么都写好</div>
+          </div>
+        </div>
+      </div>
+      <button onclick="showPage('home')" class="mt-12 px-12 py-4 btn-primary rounded-2xl text-lg font-semibold slide-up slide-up-3">开始使用 →</button>
+      <p class="mt-4 text-white/40 text-sm slide-up slide-up-4">无需注册，免费使用基础功能</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 2. 商机诊断首页 ==================== -->
+<div id="page-home" class="page">
+  <div class="max-w-2xl mx-auto py-8">
+    <div class="text-center mb-10">
+      <h1 class="text-3xl font-bold mb-3">告诉我你的情况</h1>
+      <p class="text-white/60">30分钟，帮你找到最适合做的小生意</p>
+    </div>
+    <div class="card p-8 space-y-8">
+      <!-- 城市选择 -->
+      <div>
+        <label class="flex items-center gap-2 mb-4 font-semibold">
+          <span class="text-xl">📍</span>你在哪个城市？
+        </label>
+        <div class="grid grid-cols-4 gap-3">
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">上海</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">北京</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">广州</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">深圳</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">杭州</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">成都</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">武汉</button>
+          <button class="gradient-primary rounded-xl py-3 font-medium glow">其他城市</button>
+        </div>
+      </div>
+      <!-- 启动资金 -->
+      <div>
+        <label class="flex items-center justify-between mb-4 font-semibold">
+          <span class="flex items-center gap-2"><span class="text-xl">💰</span>你能拿出多少启动资金？</span>
+          <span class="gradient-text font-bold text-xl">5万元以内</span>
+        </label>
+        <input type="range" class="slider-track w-full" min="0" max="4" value="2">
+        <div class="flex justify-between text-xs text-white/40 mt-2">
+          <span>1万以下</span><span>1-5万</span><span>5-20万</span><span>20-50万</span><span>50万+</span>
+        </div>
+      </div>
+      <!-- 可投入时间 -->
+      <div>
+        <label class="flex items-center justify-between mb-4 font-semibold">
+          <span class="flex items-center gap-2"><span class="text-xl">⏰</span>你每天能投入几小时？</span>
+          <span class="gradient-text font-bold text-xl">全职8小时+</span>
+        </label>
+        <input type="range" class="slider-track w-full" min="0" max="3" value="3">
+        <div class="flex justify-between text-xs text-white/40 mt-2">
+          <span>偶尔看看</span><span>兼职2小时</span><span>副业4小时</span><span>全职8h+</span>
+        </div>
+      </div>
+      <!-- 经验 -->
+      <div>
+        <label class="flex items-center gap-2 mb-4 font-semibold">
+          <span class="text-xl">📚</span>你之前做过生意吗？
+        </label>
+        <div class="grid grid-cols-3 gap-3">
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">完全没做过</button>
+          <button class="gradient-primary rounded-xl py-3 font-medium glow">做过一点小生意</button>
+          <button class="glass rounded-xl py-3 hover:bg-white/10 transition">有丰富经验</button>
+        </div>
+      </div>
+    </div>
+    <button onclick="showPage('loading')" class="w-full mt-8 py-5 btn-primary rounded-2xl text-lg font-bold breathe">
+      🔍 帮我找最适合我的生意
+    </button>
+    <p class="text-center mt-4 text-white/40 text-sm">⚡ 30秒出初步结果，无需注册登录</p>
+  </div>
+</div>
+
+<!-- ==================== 3. 诊断等待页 ==================== -->
+<div id="page-loading" class="page">
+  <div class="max-w-2xl mx-auto py-8 text-center">
+    <h1 class="text-2xl font-bold mb-2">正在为你匹配最佳商机...</h1>
+    <p class="text-white/50 mb-8">正在分析你所在城市的市场数据</p>
+    <div class="w-full h-3 bg-white/10 rounded-full mb-6 overflow-hidden">
+      <div class="progress-fill" style="width:65%"></div>
+    </div>
+    <div class="text-left space-y-2 mb-8">
+      <div class="check-item done">
+        <div class="check-icon">✓</div>
+        <span>已扫描你所在城市的热门赛道</span>
+      </div>
+      <div class="check-item done">
+        <div class="check-icon">✓</div>
+        <span>已比对 1,247 个小生意案例</span>
+      </div>
+      <div class="check-item" style="background:rgba(22,93,255,0.1)">
+        <div class="check-icon gradient-primary animate-pulse">...</div>
+        <span class="text-white/70">正在计算回本周期与毛利率...</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon" style="background:rgba(255,255,255,0.2)"></div>
+        <span class="text-white/40">正在生成机会热度图</span>
+      </div>
+    </div>
+    <!-- 小游戏入口 -->
+    <div class="card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-xl">🫧</div>
+          <div class="text-left">
+            <div class="font-semibold">等待无聊？玩10秒放松一下</div>
+            <div class="text-sm text-white/50">简单解压，玩完刚好出结果</div>
+          </div>
+        </div>
+        <button onclick="showPage('bubble')" class="px-4 py-2 glass rounded-xl hover:bg-white/10">去玩 →</button>
+      </div>
+      <div class="grid grid-cols-5 gap-2">
+        <div class="bubble mx-auto"></div><div class="bubble mx-auto"></div><div class="bubble mx-auto"></div><div class="bubble mx-auto"></div><div class="bubble mx-auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 4. 商机推荐结果 ==================== -->
+<div id="page-result" class="page">
+  <div class="max-w-4xl mx-auto py-8">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-sm mb-4">
+        <span>📍</span><span>上海市 · 启动资金5万 · 全职</span>
+      </div>
+      <h1 class="text-3xl font-bold mb-2">为你匹配到 3 个最适合的商机</h1>
+      <p class="text-white/60">基于你的城市、资金、时间综合评分排序</p>
+    </div>
+    <!-- 机会热度图 -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-lg flex items-center gap-2"><span>🔥</span>上海当前小生意机会热度图</h2>
+        <button class="text-sm gradient-text font-medium">保存图片 ↓</button>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-orange-400">社区生鲜</div>
+          <div class="text-sm text-white/60 mt-1">热度指数</div>
+          <div class="w-full h-2 bg-white/10 rounded-full mt-2"><div class="h-full bg-orange-400 rounded-full" style="width:92%"></div></div>
+        </div>
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-blue-400">宠物服务</div>
+          <div class="text-sm text-white/60 mt-1">热度指数</div>
+          <div class="w-full h-2 bg-white/10 rounded-full mt-2"><div class="h-full bg-blue-400 rounded-full" style="width:87%"></div></div>
+        </div>
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-purple-400">上门家政</div>
+          <div class="text-sm text-white/60 mt-1">热度指数</div>
+          <div class="w-full h-2 bg-white/10 rounded-full mt-2"><div class="h-full bg-purple-400 rounded-full" style="width:81%"></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- 3个商机卡片 -->
+    <div class="space-y-4 mb-8">
+      <!-- 商机1 -->
+      <div class="card p-6 slide-up">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-md text-xs font-medium">推荐指数 92分</span>
+              <span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-md text-xs font-medium">低风险</span>
+            </div>
+            <h3 class="text-xl font-bold">社区精品生鲜自提站</h3>
+            <p class="text-white/60 text-sm mt-1">在大型小区门口开小型生鲜自提店，主打当日新鲜蔬菜、水果、肉类，线上下单+线下自提</p>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-bold gradient-text">92</div>
+            <div class="text-xs text-white/40">匹配分</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-5 gap-3 mb-4">
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-blue-400">3.5万</div>
+            <div class="text-xs text-white/50 mt-1">启动资金</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-green-400">4个月</div>
+            <div class="text-xs text-white/50 mt-1">预计回本</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-purple-400">38%</div>
+            <div class="text-xs text-white/50 mt-1">毛利率</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-yellow-400">★★</div>
+            <div class="text-xs text-white/50 mt-1">上手难度</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-pink-400">小区门口</div>
+            <div class="text-xs text-white/50 mt-1">第一个客户</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
+          <span>⚠️</span>
+          <div class="text-sm text-orange-300">最大风险：损耗控制，生鲜卖不完当天就坏，初期进货量建议保守。建议从预售模式起步。</div>
+        </div>
+      </div>
+      <!-- 商机2 -->
+      <div class="card p-6 slide-up slide-up-1">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-medium">推荐指数 87分</span>
+              <span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-md text-xs font-medium">中风险</span>
+            </div>
+            <h3 class="text-xl font-bold">社区宠物洗护上门服务</h3>
+            <p class="text-white/60 text-sm mt-1">提供上门给猫狗洗澡、剪毛、护理服务，不用租门面，前期投入低，复购率高</p>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-bold gradient-text">87</div>
+            <div class="text-xs text-white/40">匹配分</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-5 gap-3 mb-4">
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-blue-400">1.2万</div>
+            <div class="text-xs text-white/50 mt-1">启动资金</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-green-400">2个月</div>
+            <div class="text-xs text-white/50 mt-1">预计回本</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-purple-400">55%</div>
+            <div class="text-xs text-white/50 mt-1">毛利率</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-yellow-400">★★★</div>
+            <div class="text-xs text-white/50 mt-1">上手难度</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-pink-400">宠物社群</div>
+            <div class="text-xs text-white/50 mt-1">第一个客户</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
+          <span>⚠️</span>
+          <div class="text-sm text-orange-300">最大风险：需要一定洗护技术，建议先去宠物店打工学习1-2个月再独立做。</div>
+        </div>
+      </div>
+      <!-- 商机3 -->
+      <div class="card p-6 slide-up slide-up-2">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-md text-xs font-medium">推荐指数 81分</span>
+              <span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-md text-xs font-medium">低风险</span>
+            </div>
+            <h3 class="text-xl font-bold">家庭深度保洁服务</h3>
+            <p class="text-white/60 text-sm mt-1">主打新房开荒、家电清洗、深度除螨等高端家政服务，客单价高，竞争小</p>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-bold gradient-text">81</div>
+            <div class="text-xs text-white/40">匹配分</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-5 gap-3 mb-4">
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-blue-400">0.8万</div>
+            <div class="text-xs text-white/50 mt-1">启动资金</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-green-400">1个月</div>
+            <div class="text-xs text-white/50 mt-1">预计回本</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-purple-400">60%</div>
+            <div class="text-xs text-white/50 mt-1">毛利率</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-yellow-400">★</div>
+            <div class="text-xs text-white/50 mt-1">上手难度</div>
+          </div>
+          <div class="glass rounded-lg p-3 text-center">
+            <div class="text-lg font-bold text-pink-400">美团/58</div>
+            <div class="text-xs text-white/50 mt-1">第一个客户</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
+          <span>⚠️</span>
+          <div class="text-sm text-orange-300">最大风险：体力活比较辛苦，初期要自己干，稳定后可以招人扩大。</div>
+        </div>
+      </div>
+    </div>
+    <!-- 第4个专属商机（锁定） -->
+    <div class="card p-6 border-2 border-purple-500/30 relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10"></div>
+      <div class="relative z-10">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center text-2xl glow">🔒</div>
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2 py-1 gradient-primary rounded-md text-xs font-medium">你的专属最佳匹配</span>
+                <span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-md text-xs font-medium">⭐ 推荐</span>
+              </div>
+              <h3 class="text-xl font-bold">第4个商机：你的专属最优解</h3>
+              <p class="text-white/60 text-sm mt-1">结合你的全部条件，匹配度最高、成功率最高的专属商机，含完整10件启动交付物</p>
+            </div>
+          </div>
+          <button onclick="showPage('paywall')" class="px-8 py-4 btn-primary rounded-xl font-bold breathe">
+            立即解锁 →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 5. 付费弹窗 ==================== -->
+<div id="page-paywall" class="page">
+  <div class="max-w-xl mx-auto py-12">
+    <div class="glass-strong rounded-3xl p-8 border border-purple-500/30 relative overflow-hidden">
+      <div class="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-purple-500/20 blur-[60px]"></div>
+      <div class="absolute -bottom-20 -left-20 w-60 h-60 rounded-full bg-blue-500/20 blur-[60px]"></div>
+      <div class="relative z-10">
+        <div class="text-center mb-8">
+          <div class="w-16 h-16 mx-auto rounded-2xl gradient-primary flex items-center justify-center text-3xl mb-4 glow">🎁</div>
+          <h2 class="text-2xl font-bold mb-2">解锁你的专属生意启动包</h2>
+          <p class="text-white/60">付钱后立刻开始生成，3-5分钟交付10件可直接使用的物料</p>
+        </div>
+        <div class="space-y-3 mb-8">
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>最佳商机完整可行性评分卡（优势/劣势/风险/成功率）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span><b>自动算好公式的Excel回本测算表</b>（填数字就能算多久回本）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>精准客户画像 + 第一个月获客地点清单（直接去蹲点）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>一手供应商线索 + 打电话询价话术（照着念就行）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>定价建议表 + 3套开业活动方案（直接照搬）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>开店/摆摊全套流程清单（按顺序做不会漏）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span><b>写好的朋友圈/抖音获客文案10条</b>（复制粘贴直接发）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>店名+宣传海报+收款二维码（直接下载就能用）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span><b>30天逐日行动日历</b>（每天该做什么都写得清清楚楚）</span>
+          </div>
+          <div class="check-item done">
+            <div class="check-icon">✓</div>
+            <span>风险清单与止损线（亏到多少钱立刻收手，不盲目坚持）</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-center gap-1 mb-6">
+          <span class="text-white/40 line-through text-lg">原价 ¥99</span>
+          <span class="text-5xl font-bold gradient-text mx-2">¥9.9</span>
+          <span class="text-white/60">首次体验价</span>
+        </div>
+        <button onclick="showPage('generating')" class="w-full py-5 btn-primary rounded-2xl text-lg font-bold breathe">
+          💳 微信支付 ¥9.9，立即生成启动包
+        </button>
+        <div class="flex items-center justify-center gap-6 mt-4 text-sm text-white/40">
+          <span class="flex items-center gap-1">🔒 安全支付</span>
+          <span class="flex items-center gap-1">⏱️ 5分钟内交付</span>
+          <span class="flex items-center gap-1">💯 不满意全额退</span>
+        </div>
+        <p class="text-center mt-4 text-xs text-white/30">支付即表示同意《服务协议》，虚拟商品一经交付不支持退款</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 6. 启动包生成中 ==================== -->
+<div id="page-generating" class="page">
+  <div class="max-w-2xl mx-auto py-12 text-center">
+    <div class="w-24 h-24 mx-auto rounded-full gradient-primary flex items-center justify-center text-4xl mb-6 glow breathe">
+      ⚙️
+    </div>
+    <h1 class="text-2xl font-bold mb-2">正在为你生成专属启动包...</h1>
+    <p class="text-white/50 mb-8">预计还需要 3-5 分钟，请稍等</p>
+    <div class="w-full h-3 bg-white/10 rounded-full mb-8 overflow-hidden">
+      <div class="progress-fill" style="width:45%"></div>
+    </div>
+    <div class="text-left space-y-2 mb-8 card p-6">
+      <div class="check-item done"><div class="check-icon">✓</div><span>已锁定最佳匹配商机：社区精品生鲜自提站</span></div>
+      <div class="check-item done"><div class="check-icon">✓</div><span>已完成可行性评分与风险评估</span></div>
+      <div class="check-item done"><div class="check-icon">✓</div><span>已生成本地供应商线索清单（12家）</span></div>
+      <div class="check-item" style="background:rgba(22,93,255,0.1)"><div class="check-icon gradient-primary animate-pulse">...</div><span class="text-white/70">正在自动计算回本测算Excel公式...</span></div>
+      <div class="check-item"><div class="check-icon" style="background:rgba(255,255,255,0.2)"></div><span class="text-white/40">正在撰写朋友圈获客文案</span></div>
+      <div class="check-item"><div class="check-icon" style="background:rgba(255,255,255,0.2)"></div><span class="text-white/40">正在生成宣传海报与二维码</span></div>
+      <div class="check-item"><div class="check-icon" style="background:rgba(255,255,255,0.2)"></div><span class="text-white/40">正在制作30天行动日历</span></div>
+    </div>
+    <div class="card p-6">
+      <p class="text-white/60 mb-3">🎮 生成需要一点时间，玩两把小游戏等一下</p>
+      <div class="flex justify-center gap-4">
+        <button onclick="showPage('bubble')" class="px-6 py-3 glass rounded-xl hover:bg-white/10 transition flex items-center gap-2">
+          <span class="text-xl">🫧</span><span>指尖解压</span>
+        </button>
+        <button onclick="showPage('game2048')" class="px-6 py-3 glass rounded-xl hover:bg-white/10 transition flex items-center gap-2">
+          <span class="text-xl">🔢</span><span>数字合成</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 7. 启动包交付页 ==================== -->
+<div id="page-deliver" class="page">
+  <div class="max-w-3xl mx-auto py-8">
+    <div class="text-center mb-8">
+      <div class="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center text-4xl mb-4">🎉</div>
+      <h1 class="text-3xl font-bold mb-2">你的专属启动包已生成完毕！</h1>
+      <p class="text-white/60">祝你开业大吉，生意兴隆 🎊</p>
+    </div>
+    <div class="glass-strong rounded-2xl p-3 mb-6 text-center border border-green-500/30 bg-green-500/5">
+      <p class="text-green-300 font-medium">💡 小提示：所有文件都可以单独下载，旁边有配套小工具帮你快速处理</p>
+    </div>
+    <h2 class="font-bold text-lg mb-4 flex items-center gap-2"><span>📦</span>10件交付物，点击即可下载</h2>
+    <div class="grid grid-cols-1 gap-3 mb-8">
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-2xl">📊</div>
+        <div class="flex-1">
+          <div class="font-semibold">01-可行性评分卡.pdf</div>
+          <div class="text-sm text-white/50">优势/劣势/风险/成功率完整评估</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+      </div>
+      <div class="file-card border-l-4 border-l-green-500">
+        <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-2xl">📈</div>
+        <div class="flex-1">
+          <div class="font-semibold">02-回本测算表.xlsx ⭐</div>
+          <div class="text-sm text-white/50">公式已设好，填房租货钱自动算回本</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium glow">下载 ↓</button>
+      </div>
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-2xl">👥</div>
+        <div class="flex-1">
+          <div class="font-semibold">03-客户画像与获客清单.pdf</div>
+          <div class="text-sm text-white/50">精准客户是谁、去哪里找、怎么转化</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+      </div>
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-2xl">📞</div>
+        <div class="flex-1">
+          <div class="font-semibold">04-供应商线索与询价话术.pdf</div>
+          <div class="text-sm text-white/50">本地12家供应商联系方式+照着念的话术</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+      </div>
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center text-2xl">💵</div>
+        <div class="flex-1">
+          <div class="font-semibold">05-定价与开业活动方案.pdf</div>
+          <div class="text-sm text-white/50">3档定价+3套开业活动方案直接照搬</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+      </div>
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-2xl">📋</div>
+        <div class="flex-1">
+          <div class="font-semibold">06-全套流程清单.pdf</div>
+          <div class="text-sm text-white/50">从选址到开业每一步，按顺序做不遗漏</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 glass rounded-lg text-sm" onclick="showPage('tools')">合并PDF 🔧</button>
+          <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+        </div>
+      </div>
+      <div class="file-card border-l-4 border-l-purple-500">
+        <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-2xl">✍️</div>
+        <div class="flex-1">
+          <div class="font-semibold">07-获客文案10条.docx ⭐</div>
+          <div class="text-sm text-white/50">朋友圈/抖音文案，复制粘贴直接发</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 glass rounded-lg text-sm" onclick="showPage('tools')">改文案 🔧</button>
+          <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium glow">下载 ↓</button>
+        </div>
+      </div>
+      <div class="file-card border-l-4 border-l-blue-500">
+        <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-2xl">🎨</div>
+        <div class="flex-1">
+          <div class="font-semibold">08-宣传物料包.zip ⭐</div>
+          <div class="text-sm text-white/50">店名+海报+收款二维码，直接下载用</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 glass rounded-lg text-sm" onclick="showPage('tools')">压缩图 🔧</button>
+          <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium glow">下载 ↓</button>
+        </div>
+      </div>
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-2xl">📅</div>
+        <div class="flex-1">
+          <div class="font-semibold">09-30天行动日历.pdf</div>
+          <div class="text-sm text-white/50">每天该做什么都写好，照着执行即可</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+      </div>
+      <div class="file-card">
+        <div class="w-12 h-12 rounded-xl bg-gray-500/20 flex items-center justify-center text-2xl">⚠️</div>
+        <div class="flex-1">
+          <div class="font-semibold">10-风险清单与止损线.pdf</div>
+          <div class="text-sm text-white/50">亏到多少钱立刻停，不盲目坚持</div>
+        </div>
+        <button class="px-4 py-2 gradient-primary rounded-lg text-sm font-medium">下载 ↓</button>
+      </div>
+    </div>
+    <div class="card p-6 text-center">
+      <button class="w-full py-4 glass rounded-xl text-lg font-semibold mb-3 hover:bg-white/10">
+        📱 一键生成开业喜报发朋友圈
+      </button>
+      <button class="w-full py-3 text-white/50 hover:text-white transition text-sm" onclick="showPage('home')">
+        再生成一个其他方向的启动包
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 8. 实用工具箱 ==================== -->
+<div id="page-tools" class="page">
+  <div class="max-w-3xl mx-auto py-8">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold mb-2">🛠️ 实用小工具</h1>
+      <p class="text-white/60">做生意常用的小工具，全部免费，不用再到处找网站</p>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-8">
+      <div class="tool-card" onclick="showTool('compress')">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-500/20 flex items-center justify-center text-3xl mb-4">🖼️</div>
+        <h3 class="font-bold text-lg mb-2">图片压缩转换</h3>
+        <p class="text-sm text-white/50">压缩图片大小，JPG/PNG/WebP格式互转，发朋友圈/发群必备</p>
+      </div>
+      <div class="tool-card" onclick="showTool('pdf')">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-red-500/20 flex items-center justify-center text-3xl mb-4">📄</div>
+        <h3 class="font-bold text-lg mb-2">PDF合并拆分</h3>
+        <p class="text-sm text-white/50">多个PDF合并成一份，或把一个PDF拆成多页，打印前必备</p>
+      </div>
+      <div class="tool-card" onclick="showTool('qrcode')">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-green-500/20 flex items-center justify-center text-3xl mb-4">📱</div>
+        <h3 class="font-bold text-lg mb-2">二维码生成</h3>
+        <p class="text-sm text-white/50">自定义颜色、加Logo，生成收款码/引流码/加好友码</p>
+      </div>
+      <div class="tool-card" onclick="showTool('text')">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-purple-500/20 flex items-center justify-center text-3xl mb-4">✍️</div>
+        <h3 class="font-bold text-lg mb-2">文案小助手</h3>
+        <p class="text-sm text-white/50">润色文案、改写风格、算字数、生成适合你的专属文案</p>
+      </div>
+    </div>
+    <!-- 图片压缩工具示意 -->
+    <div id="tool-compress" class="card p-6">
+      <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span>🖼️</span>图片压缩转换</h3>
+      <div class="border-2 border-dashed border-white/20 rounded-2xl p-10 text-center mb-4">
+        <div class="text-4xl mb-3">📁</div>
+        <p class="text-white/60 mb-3">拖拽图片到这里，或点击选择文件</p>
+        <button class="px-6 py-2 glass rounded-lg">选择图片</button>
+        <p class="text-xs text-white/40 mt-3">支持 JPG/PNG/WebP，单文件最大20MB</p>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="text-sm text-white/60 mb-2 block">压缩质量</label>
+          <input type="range" class="slider-track w-full" value="70">
+          <div class="text-xs text-white/40 text-center mt-1">70%（推荐）</div>
+        </div>
+        <div>
+          <label class="text-sm text-white/60 mb-2 block">输出格式</label>
+          <select class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm">
+            <option>保持原格式</option><option>JPG</option><option>PNG</option><option>WebP</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-white/60 mb-2 block">最大宽度</label>
+          <select class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm">
+            <option>不限制</option><option>1080px（朋友圈）</option><option>1920px</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 9. 指尖解压小游戏 ==================== -->
+<div id="page-bubble" class="page">
+  <div class="max-w-md mx-auto py-8 text-center">
+    <h1 class="text-2xl font-bold mb-2">🫧 指尖解压</h1>
+    <p class="text-white/50 mb-6">点破气泡，释放压力</p>
+    <div class="card p-6 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-white/60">已点破：<span class="gradient-text font-bold text-xl" id="bubbleCount">0</span> 个</span>
+        <button onclick="resetBubbles()" class="px-4 py-2 glass rounded-lg text-sm">重置</button>
+      </div>
+      <div class="grid grid-cols-5 gap-3" id="bubbleGrid"></div>
+    </div>
+    <button onclick="showPage('loading')" class="px-6 py-3 glass rounded-xl hover:bg-white/10">← 返回等待页</button>
+  </div>
+</div>
+
+<!-- ==================== 10. 数字合成游戏 ==================== -->
+<div id="page-game2048" class="page">
+  <div class="max-w-md mx-auto py-8 text-center">
+    <h1 class="text-2xl font-bold mb-2">🔢 数字合成</h1>
+    <p class="text-white/50 mb-6">相同数字合并，挑战最高分！</p>
+    <div class="card p-6 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <div class="text-xs text-white/50">当前分数</div>
+          <div class="text-2xl font-bold gradient-text">328</div>
+        </div>
+        <div>
+          <div class="text-xs text-white/50">最高分数</div>
+          <div class="text-2xl font-bold">1024</div>
+        </div>
+        <button onclick="reset2048()" class="px-4 py-2 glass rounded-lg text-sm">新游戏</button>
+      </div>
+      <div class="grid-2048 mx-auto">
+        <div class="tile tile-2">2</div><div class="tile"></div><div class="tile tile-4">4</div><div class="tile"></div>
+        <div class="tile"></div><div class="tile tile-8">8</div><div class="tile"></div><div class="tile tile-2">2</div>
+        <div class="tile tile-4">4</div><div class="tile"></div><div class="tile tile-16">16</div><div class="tile"></div>
+        <div class="tile"></div><div class="tile tile-2">2</div><div class="tile"></div><div class="tile tile-32">32</div>
+      </div>
+      <p class="text-xs text-white/40 mt-4">使用方向键 ↑↓←→ 控制</p>
+    </div>
+    <button onclick="showPage('generating')" class="px-6 py-3 glass rounded-xl hover:bg-white/10">← 返回生成页</button>
+  </div>
+</div>
+
+<!-- ==================== 11. 个人中心 ==================== -->
+<div id="page-profile" class="page">
+  <div class="max-w-2xl mx-auto py-8">
+    <div class="card p-6 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-full gradient-primary flex items-center justify-center text-2xl font-bold glow">U</div>
+        <div class="flex-1">
+          <div class="font-bold text-xl">微信用户</div>
+          <div class="text-white/50 text-sm">未开通会员</div>
+        </div>
+        <button onclick="showPage('vip')" class="px-5 py-2 btn-primary rounded-lg font-medium">开通会员</button>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-bold gradient-text">3</div>
+        <div class="text-sm text-white/50 mt-1">生成次数</div>
+      </div>
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-bold text-green-400">1</div>
+        <div class="text-sm text-white/50 mt-1">已下载</div>
+      </div>
+      <div class="card p-4 text-center">
+        <div class="text-2xl font-bold text-purple-400">0</div>
+        <div class="text-sm text-white/50 mt-1">收藏商机</div>
+      </div>
+    </div>
+    <h3 class="font-bold mb-3">我的启动包</h3>
+    <div class="space-y-3 mb-6">
+      <div class="file-card">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">🥬</div>
+        <div class="flex-1">
+          <div class="font-medium">社区精品生鲜自提站</div>
+          <div class="text-xs text-white/50">2026-10-04 生成 · 上海</div>
+        </div>
+        <button class="px-3 py-1 glass rounded text-sm">查看</button>
+      </div>
+    </div>
+    <h3 class="font-bold mb-3">更多功能</h3>
+    <div class="card divide-y divide-white/10">
+      <button class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition rounded-t-xl" onclick="showPage('tools')">
+        <span class="flex items-center gap-3"><span>🛠️</span><span>实用工具箱</span></span>
+        <span class="text-white/40">→</span>
+      </button>
+      <button class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+        <span class="flex items-center gap-3"><span>⭐</span><span>我的收藏</span></span>
+        <span class="text-white/40">→</span>
+      </button>
+      <button class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+        <span class="flex items-center gap-3"><span>💬</span><span>意见反馈</span></span>
+        <span class="text-white/40">→</span>
+      </button>
+      <button class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+        <span class="flex items-center gap-3"><span>⚙️</span><span>设置</span></span>
+        <span class="text-white/40">→</span>
+      </button>
+      <button class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition rounded-b-xl">
+        <span class="flex items-center gap-3"><span>ℹ️</span><span>关于我们</span></span>
+        <span class="text-white/40">v1.0.0 →</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 12. 会员购买页 ==================== -->
+<div id="page-vip" class="page">
+  <div class="max-w-xl mx-auto py-8">
+    <div class="text-center mb-8">
+      <div class="w-20 h-20 mx-auto rounded-2xl gradient-primary flex items-center justify-center text-4xl mb-4 glow">👑</div>
+      <h1 class="text-3xl font-bold mb-2">开通生意快启会员</h1>
+      <p class="text-white/60">无限次生成启动包，每周更新最新商机</p>
+    </div>
+    <div class="space-y-4 mb-8">
+      <div class="card p-5 border-2 border-purple-500/50 relative">
+        <div class="absolute -top-3 right-6 px-3 py-1 gradient-primary rounded-full text-xs font-medium">推荐</div>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-bold text-lg">年度会员</div>
+            <div class="text-sm text-white/50 mt-1">无限次生成 + 专属诊断1次 + 陪跑社群</div>
+          </div>
+          <div class="text-right">
+            <div class="text-white/40 line-through text-sm">¥399</div>
+            <div class="text-3xl font-bold gradient-text">¥199<span class="text-sm text-white/50 font-normal">/年</span></div>
+            <div class="text-xs text-green-400">折合每月16.6元</div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-bold text-lg">月度会员</div>
+            <div class="text-sm text-white/50 mt-1">无限次生成 + 供应商库/获客库全开放</div>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-bold">¥39<span class="text-sm text-white/50 font-normal">/月</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-bold text-lg">单次启动包</div>
+            <div class="text-sm text-white/50 mt-1">一次性生成，永久可下载</div>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-bold">¥9.9<span class="text-sm text-white/50 font-normal">/次</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card p-5 mb-6">
+      <h3 class="font-bold mb-3">会员权益</h3>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="flex items-center gap-2"><span class="text-green-400">✓</span><span>无限次生成启动包</span></div>
+        <div class="flex items-center gap-2"><span class="text-green-400">✓</span><span>每周更新最新商机</span></div>
+        <div class="flex items-center gap-2"><span class="text-green-400">✓</span><span>供应商库全开放</span></div>
+        <div class="flex items-center gap-2"><span class="text-green-400">✓</span><span>获客渠道库全开放</span></div>
+        <div class="flex items-center gap-2"><span class="text-green-400">✓</span><span>1v1商机诊断（年卡）</span></div>
+        <div class="flex items-center gap-2"><span class="text-green-400">✓</span><span>陪跑社群（年卡）</span></div>
+      </div>
+    </div>
+    <button class="w-full py-5 btn-primary rounded-2xl text-lg font-bold breathe">
+      立即开通 ¥199/年
+    </button>
+    <p class="text-center mt-4 text-xs text-white/40">自动续费可随时取消 · 7天无理由退款</p>
+  </div>
+</div>
+
+<!-- ==================== 13. 管理后台数据看板 ==================== -->
+<div id="page-admin" class="page">
+  <h1 class="text-2xl font-bold mb-6 flex items-center gap-2"><span>📈</span>数据看板</h1>
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="card p-5">
+      <div class="text-sm text-white/50 mb-1">今日新增用户</div>
+      <div class="text-3xl font-bold gradient-text">1,247</div>
+      <div class="text-xs text-green-400 mt-2">↑ 12.5% 较昨日</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-sm text-white/50 mb-1">今日付费订单</div>
+      <div class="text-3xl font-bold text-green-400">328</div>
+      <div class="text-xs text-green-400 mt-2">↑ 8.3% 较昨日</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-sm text-white/50 mb-1">今日营收</div>
+      <div class="text-3xl font-bold text-yellow-400">¥4,872</div>
+      <div class="text-xs text-green-400 mt-2">↑ 15.2% 较昨日</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-sm text-white/50 mb-1">付费转化率</div>
+      <div class="text-3xl font-bold text-purple-400">26.3%</div>
+      <div class="text-xs text-green-400 mt-2">↑ 2.1% 较昨日</div>
+    </div>
+  </div>
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="card p-5 col-span-2">
+      <h3 class="font-bold mb-4">7天营收趋势</h3>
+      <div class="h-48 flex items-end gap-2">
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg" style="height:45%"></div>
+          <span class="text-xs text-white/40">9/28</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg" style="height:58%"></div>
+          <span class="text-xs text-white/40">9/29</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg" style="height:52%"></div>
+          <span class="text-xs text-white/40">9/30</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg" style="height:75%"></div>
+          <span class="text-xs text-white/40">10/1</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg" style="height:82%"></div>
+          <span class="text-xs text-white/40">10/2</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg" style="height:88%"></div>
+          <span class="text-xs text-white/40">10/3</span>
+        </div>
+        <div class="flex-1 flex flex-col items-center gap-2">
+          <div class="w-full gradient-primary rounded-t-lg glow" style="height:95%"></div>
+          <span class="text-xs text-white/40">今日</span>
+        </div>
+      </div>
+    </div>
+    <div class="card p-5">
+      <h3 class="font-bold mb-4">热门商机TOP5</h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <span class="w-6 h-6 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-xs font-bold">1</span>
+          <span class="flex-1 text-sm">社区生鲜自提站</span>
+          <span class="text-sm gradient-text font-bold">32%</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-6 h-6 rounded-full bg-gray-500/20 text-gray-300 flex items-center justify-center text-xs font-bold">2</span>
+          <span class="flex-1 text-sm">宠物上门洗护</span>
+          <span class="text-sm gradient-text font-bold">24%</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">3</span>
+          <span class="flex-1 text-sm">家庭深度保洁</span>
+          <span class="text-sm gradient-text font-bold">18%</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-6 h-6 rounded-full bg-white/10 text-white/50 flex items-center justify-center text-xs font-bold">4</span>
+          <span class="flex-1 text-sm">夜市特色小吃</span>
+          <span class="text-sm gradient-text font-bold">14%</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-6 h-6 rounded-full bg-white/10 text-white/50 flex items-center justify-center text-xs font-bold">5</span>
+          <span class="flex-1 text-sm">自媒体短视频</span>
+          <span class="text-sm gradient-text font-bold">12%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card p-5">
+    <h3 class="font-bold mb-4">最近订单</h3>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-white/40 border-b border-white/10">
+          <th class="text-left py-3 font-normal">订单号</th>
+          <th class="text-left py-3 font-normal">用户</th>
+          <th class="text-left py-3 font-normal">商机方向</th>
+          <th class="text-left py-3 font-normal">金额</th>
+          <th class="text-left py-3 font-normal">时间</th>
+          <th class="text-left py-3 font-normal">状态</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/5">
+        <tr><td class="py-3 text-white/60">#202610040012</td><td class="py-3">微信用户***88</td><td class="py-3">社区生鲜</td><td class="py-3 text-green-400">¥9.9</td><td class="py-3 text-white/50">2分钟前</td><td class="py-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">已完成</span></td></tr>
+        <tr><td class="py-3 text-white/60">#202610040011</td><td class="py-3">微信用户***23</td><td class="py-3">宠物洗护</td><td class="py-3 text-green-400">¥199</td><td class="py-3 text-white/50">5分钟前</td><td class="py-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">已完成</span></td></tr>
+        <tr><td class="py-3 text-white/60">#202610040010</td><td class="py-3">微信用户***71</td><td class="py-3">深度保洁</td><td class="py-3 text-green-400">¥9.9</td><td class="py-3 text-white/50">8分钟前</td><td class="py-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">已完成</span></td></tr>
+        <tr><td class="py-3 text-white/60">#202610040009</td><td class="py-3">微信用户***45</td><td class="py-3">夜市小吃</td><td class="py-3 text-green-400">¥39</td><td class="py-3 text-white/50">12分钟前</td><td class="py-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">已完成</span></td></tr>
+        <tr><td class="py-3 text-white/60">#202610040008</td><td class="py-3">微信用户***09</td><td class="py-3">社区生鲜</td><td class="py-3 text-green-400">¥9.9</td><td class="py-3 text-white/50">15分钟前</td><td class="py-3"><span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">生成中</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+<script>
+// 页面切换
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+  window.scrollTo(0,0);
+}
+// 粒子背景
+for(let i=0;i<30;i++){
+  const p=document.createElement('div');
+  p.className='particle';
+  p.style.left=Math.random()*100+'%';
+  p.style.animationDelay=Math.random()*15+'s';
+  p.style.animationDuration=(10+Math.random()*10)+'s';
+  document.getElementById('particles').appendChild(p);
+}
+// 气泡游戏
+function initBubbles(){
+  const grid=document.getElementById('bubbleGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  let count=0;
+  for(let i=0;i<20;i++){
+    const b=document.createElement('div');
+    b.className='bubble';
+    b.onclick=function(){
+      if(this.classList.contains('popped'))return;
+      this.classList.add('popped');
+      count++;
+      document.getElementById('bubbleCount').textContent=count;
+    };
+    grid.appendChild(b);
+  }
+}
+function resetBubbles(){initBubbles();}
+initBubbles();
+function reset2048(){alert('新游戏开始！（原型演示）');}
+function showTool(id){document.getElementById('tool-'+id)?.scrollIntoView({behavior:'smooth'});}
+</script>
+</body>
+</html><!--22599087532395614730100410-->
