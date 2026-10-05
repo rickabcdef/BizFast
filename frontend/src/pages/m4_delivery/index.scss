@@ -288,10 +288,28 @@
   display: flex;
   align-items: center;
 }
-.m4-file__actions {
+
+// 多格式交付物：每个格式一行（格式名 + 预览 + 下载）
+.m4-file__rows {
   display: flex;
-  gap: 12rpx;
+  flex-direction: column;
+  gap: 10rpx;
   margin-top: 16rpx;
+}
+.m4-file__row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.m4-file__rowfmt {
+  width: 108rpx;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  text-align: center;
+  color: #c9ccff;
+  background: rgba(123, 108, 255, 0.2);
+  border-radius: 999rpx;
+  padding: 6rpx 0;
 }
 .m4-file__act {
   flex: 1;

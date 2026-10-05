@@ -63,10 +63,11 @@
 
 ### M4 启动包生成（B）
 - `POST /api/package/create` body:{orderId?, matchId?} → 需先完成支付 → {orderId}（幂等：重复请求返回 40901 但可继续轮询）
-- `GET /api/package/{orderId}/progress` → {stage, percent, done, total, currentItem, retryCount, status}（真实进度，percent=done/total×100）
+- `GET /api/package/{orderId}/progress` → {stage, percent, done, total, currentItem, retryCount, status}（真实进度，percent=done/total×100；生成失败自动重试 2 次，仍失败 status=failed 并全额退款）
 - `GET /api/package/{orderId}` → {items:[D01..D10 元数据], zipUrl, status, retryCount}
-- `GET /api/package/{orderId}/item/{code}` 单件下载/预览（预览不产生额外费用）。
-- `GET /api/package/{orderId}/zip` 打包 ZIP 下载（包内中文命名）。
+  - 每件元数据：{code, name, fileType(主格式), url, formats:[{fileType, url}...]}；PRD 4.4.1 多格式交付物：D03/D06 = PDF+Word、D07 = Word+TXT、D08 = PNG+SVG、D09 = PDF+Excel，其余单格式。
+- `GET /api/package/{orderId}/item/{code}?format=` 单件下载/预览（预览不产生额外费用）；format 缺省返回主格式，可选 pdf|excel|word|png|svg|txt。
+- `GET /api/package/{orderId}/zip` 打包 ZIP 下载（包内全部格式，中文命名「生意快启_交付物名称_生成日期.扩展名」）。
 - `POST /api/package/{orderId}/regenerate`（P1，限次：会员无限次 / 单次购买 1 次）。
 - `GET /api/packages` 我的启动包列表（云端永久保存，M4-05 / M10-01 共用，按时间倒序）。
 

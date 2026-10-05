@@ -47,11 +47,20 @@ export interface Opportunity {
 }
 
 // 交付物（M4 / D01–D10）
+// PRD 4.4.1：部分交付物同时交付多种格式（如 D03 = PDF + Word）。
+// fileType / url 为「主格式」，formats 为完整格式列表（第一项即主格式）；
+// 兼容旧数据：formats 缺省时按单一主格式处理。
+export interface DeliverableFormat {
+  fileType: 'pdf' | 'excel' | 'word' | 'png' | 'svg' | 'txt' | 'zip'
+  url: string
+}
+
 export interface DeliverableFile {
   code: string // D01..D10
   name: string
   fileType: 'pdf' | 'excel' | 'word' | 'png' | 'svg' | 'txt' | 'zip'
   url: string
+  formats?: DeliverableFormat[]
 }
 
 export interface PackageResult {

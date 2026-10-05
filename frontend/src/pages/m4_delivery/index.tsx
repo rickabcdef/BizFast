@@ -16,7 +16,7 @@ import {
   regeneratePackage,
   type PackageProgress
 } from '@/services/bApi'
-import type { DeliverableFile, PackageResult } from '@/types'
+import type { DeliverableFile, DeliverableFormat, PackageResult } from '@/types'
 import './index.scss'
 
 // m4_delivery 启动包生成与交付 | 负责人: B | 优先级: P0
@@ -27,6 +27,7 @@ import './index.scss'
 //   M4-04 单件下载 + 在线预览 PDF / 图片（预览不产生额外费用）
 //   M4-05 云端永久保存，换端登录后可重新下载
 //   M4-06 重新生成（会员免费，单次购买可用 1 次，规则界面明示）
+//   M4-07 生成完成通知（网页端：浏览器桌面通知；离开页面仍可收到）
 //   M4-08 失败自动重试 2 次；仍失败全额退款并提示（失败必有补偿）
 // 页面承载 P07 生成进度页 + P08 启动包交付页两个状态。
 
@@ -49,17 +50,55 @@ const FILE_LABEL: Record<string, string> = {
   zip: 'ZIP'
 }
 
+/** 一件交付物的全部格式（formats 缺省时按单一主格式处理）。 */
+function itemFormats(item: DeliverableFile): DeliverableFormat[] {
+  return item.formats && item.formats.length ? item.formats : [{ fileType: item.fileType, url: item.url }]
+}
+
+/** 格式标签列表（如 D03 → ['PDF', 'Word']）。 */
+function fmtLabels(item: DeliverableFile): string[] {
+  return itemFormats(item).map((f) => FILE_LABEL[f.fileType] || f.fileType)
+}
+
 /** M4-04：PDF 与图片支持在线预览；其余格式直接下载。 */
 function canPreview(t: string): boolean {
   return t === 'pdf' || t === 'png' || t === 'svg'
 }
 
-/** 文件中文命名：生意快启_交付物名称_生成日期（PRD 3.7）。 */
-function downloadName(item: DeliverableFile, suffix?: string): string {
+/** 文件中文命名：生意快启_交付物名称_生成日期（PRD 3.7）；多格式同名不同扩展名区分。 */
+function downloadName(item: DeliverableFile, fmt: DeliverableFormat): string {
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   const date = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
-  return `生意快启_${item.name}${suffix || ''}_${date}.${FILE_EXT[item.fileType] || 'file'}`
+  return `生意快启_${item.name}_${date}.${FILE_EXT[fmt.fileType] || 'file'}`
+}
+
+/** M4-07：生成完成桌面通知（网页端；页面不可见时提醒，用户离开后仍能收到）。 */
+function ensureNotifyPermission(): void {
+  if (typeof window === 'undefined' || typeof Notification === 'undefined') return
+  if (Notification.permission === 'default') {
+    try {
+      void Notification.requestPermission()
+    } catch {
+      /* 忽略：用户拒绝或环境不支持时静默降级 */
+    }
+  }
+}
+
+function notifyDone(orderId: string): void {
+  if (typeof window === 'undefined' || typeof Notification === 'undefined') return
+  if (Notification.permission !== 'granted' || !document.hidden) return
+  try {
+    const n = new Notification('生意快启 · 启动包已生成', {
+      body: `订单 ${orderId} 的 10 件交付物已就绪，点击查看与下载`
+    })
+    n.onclick = () => {
+      window.focus()
+      window.location.hash = `#/pages/m4_delivery/index?orderId=${orderId}`
+    }
+  } catch {
+    /* 忽略：部分环境禁止脚本创建通知 */
+  }
 }
 
 export default function M4Delivery() {
@@ -76,52 +115,76 @@ export default function M4Delivery() {
   const [redoBusy, setRedoBusy] = useState(false)
   // M4-04 预览
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null)
-  const pollRef = useRef<any>(null)
+  const pollRef = useRef<{ stop: () => void } | null>(null)
 
   const stopPoll = useCallback(() => {
     if (pollRef.current) {
-      clearInterval(pollRef.current)
+      pollRef.current.stop()
       pollRef.current = null
     }
   }, [])
 
   const pollProgress = useCallback(
     (id: string) => {
+      // 幂等：同步阶段已有轮询则不重复启动（双 effect / 重复挂载只保留一个轮询，
+      // 避免旧轮询在失败分支后继续 tick 覆盖状态）
+      if (pollRef.current) return
       stopPoll()
+      // 局部 interval 句柄：tick 内用局部 stop 精确清理自己注册的轮询，
+      // 不依赖 pollRef（页面被重复挂载/重复启动时不会泄漏第二个轮询）。
+      let timer: any = null
+      let stopped = false
+      const stop = () => {
+        stopped = true
+        if (timer) {
+          clearInterval(timer)
+          timer = null
+        }
+        // 若 pollRef 指向当前轮询则一并清空，避免 startGenerate 的幂等防护误判
+        if (pollRef.current && pollRef.current.stop === stop) pollRef.current = null
+      }
       const tick = async () => {
         try {
           const p = await getPackageProgress(id)
-          setProgress(p)
+          if (stopped) return
+          if (p.status === 'failed') {
+            // M4-08：失败态（自动重试 2 次由后端完成），页面给出补偿说明与重试入口
+            stop()
+            setProgress(p)
+            setError(p.failReason || '生成失败了，系统已自动重试 2 次仍未成功，我们将全额退款并第一时间通知你')
+            return
+          }
           if (p.status === 'delivered') {
-            stopPoll()
+            stop()
+            setProgress(p)
+            notifyDone(id) // M4-07：页面不可见时发桌面通知
             const detail = await getPackage(id)
             setPkg(detail)
             return
           }
-          if (p.status === 'failed') {
-            stopPoll()
-            setError(
-              p.failReason || '生成失败了，系统已自动重试 2 次仍未成功，我们将全额退款并第一时间通知你'
-            )
-            return
-          }
+          setProgress(p)
         } catch (e: any) {
+          if (stopped) return
           // 单次轮询失败不中断：提示可重试，不伪造进度
+          stop()
           setError(e?.message || '进度查询失败，请重试')
-          stopPoll()
         }
       }
       void tick()
-      pollRef.current = setInterval(tick, 2000)
+      timer = setInterval(tick, 2000)
+      pollRef.current = { stop }
     },
     [getPackage, stopPoll]
   )
 
-  /** M4-01：创建生成任务（幂等）→ 轮询真实进度直到 已交付 / 失败。 */
+  /** M4-01：创建生成任务（幂等）→ 轮询真实进度直到 已交付 / 失败。
+   *  幂等防护：已有轮询在跑时不重复启动（页面重复挂载 / 双 effect 只走一轮）。 */
   const startGenerate = useCallback(
     async (id: string) => {
+      if (pollRef.current) return
       setError('')
       setLoading(true)
+      ensureNotifyPermission() // M4-07：进入生成流程时申请通知权限（用户拒绝则静默降级）
       try {
         // 已存在则直接返回 orderId；不存在则由后端入队（重复请求后端返回 40901 同样可轮询）
         await createPackage({ orderId: id, matchId })
@@ -201,12 +264,15 @@ export default function M4Delivery() {
   }
 
   // ---------------- 下载与预览 ----------------
-  /** Mock 模式下条目自带 data URL（离线可打开）；真实模式按后端路径取。 */
-  const itemUrl = (item: DeliverableFile) =>
-    item.url && item.url.startsWith('data:') ? item.url : packageItemUrl(orderId, item.code)
+  /** Mock 模式下条目自带 data URL（离线可打开）；真实模式按后端路径取（可带 format 选择格式）。 */
+  const itemUrl = (item: DeliverableFile, fmt?: DeliverableFormat) => {
+    if (fmt && fmt.url) return fmt.url.startsWith('data:') ? fmt.url : packageItemUrl(orderId, item.code, fmt.fileType)
+    return item.url && item.url.startsWith('data:') ? item.url : packageItemUrl(orderId, item.code)
+  }
 
-  const downloadItem = (item: DeliverableFile) => {
-    saveFile(itemUrl(item), downloadName(item))
+  const downloadItem = (item: DeliverableFile, fmt?: DeliverableFormat) => {
+    const f = fmt || itemFormats(item)[0]
+    saveFile(itemUrl(item, f), downloadName(item, f))
   }
 
   const downloadZip = () => {
@@ -217,9 +283,10 @@ export default function M4Delivery() {
     saveFile(pkg.zipUrl, `生意快启_完整启动包10件_${date}.zip`)
   }
 
-  const openPreview = (item: DeliverableFile) => {
-    const url = itemUrl(item)
-    if (item.fileType === 'png' || item.fileType === 'svg') {
+  const openPreview = (item: DeliverableFile, fmt?: DeliverableFormat) => {
+    const f = fmt || itemFormats(item)[0]
+    const url = itemUrl(item, f)
+    if (f.fileType === 'png' || f.fileType === 'svg') {
       setPreview({ url, name: item.name })
       return
     }
@@ -271,7 +338,7 @@ export default function M4Delivery() {
               <View key={it.code} className={`m4-pg__item ${done ? 'is-done' : ''}`}>
                 <Text className='m4-pg__check'>{done ? '✓' : doing ? '◐' : '○'}</Text>
                 <Text className='m4-pg__name'>{it.code} {it.name}</Text>
-                <Text className='m4-pg__tag'>{FILE_LABEL[it.fileType] || ''}</Text>
+                <Text className='m4-pg__tag'>{fmtLabels(it).join(' · ')}</Text>
               </View>
             )
           })}
@@ -328,26 +395,29 @@ export default function M4Delivery() {
           <Text className='bf-muted m4-done__tip'>包内文件均为中文命名，可直接保存、打印、发给合作伙伴</Text>
         </View>
 
-        {/* M4-03/04：10 张文件卡片网格 */}
+        {/* M4-03/04：10 张文件卡片网格（多格式交付物每格式一行：预览/下载） */}
         <View className='m4-grid'>
           {pkg.items.map((it) => (
             <View key={it.code} className='bf-card m4-file'>
               <View className='m4-file__head'>
                 <Text className='m4-file__code'>{it.code}</Text>
-                <Text className={`m4-file__fmt m4-file__fmt--${it.fileType}`}>
-                  {FILE_LABEL[it.fileType] || it.fileType}
-                </Text>
+                <Text className='m4-file__fmt'>{fmtLabels(it).join(' · ')}</Text>
               </View>
               <Text className='m4-file__name'>{it.name}</Text>
-              <View className='m4-file__actions'>
-                {canPreview(it.fileType) && (
-                  <View className='m4-file__act' onClick={() => openPreview(it)}>
-                    预览
+              <View className='m4-file__rows'>
+                {itemFormats(it).map((f, fi) => (
+                  <View key={fi} className='m4-file__row'>
+                    <Text className='m4-file__rowfmt'>{FILE_LABEL[f.fileType] || f.fileType}</Text>
+                    {canPreview(f.fileType) && (
+                      <View className='m4-file__act' onClick={() => openPreview(it, f)}>
+                        预览
+                      </View>
+                    )}
+                    <View className='m4-file__act m4-file__act--main' onClick={() => downloadItem(it, f)}>
+                      下载
+                    </View>
                   </View>
-                )}
-                <View className='m4-file__act m4-file__act--main' onClick={() => downloadItem(it)}>
-                  下载
-                </View>
+                ))}
               </View>
             </View>
           ))}
@@ -472,16 +542,16 @@ export default function M4Delivery() {
   )
 }
 
-/** 十件交付物清单（D01–D10，用于进度页逐项打勾展示）。 */
+/** 十件交付物清单（D01–D10，用于进度页逐项打勾展示；格式与 PRD 4.4.1 一致）。 */
 const ALL_ITEMS: DeliverableFile[] = [
-  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '' },
-  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '' },
-  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '' },
-  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '' },
-  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '' },
-  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '' },
-  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '' },
-  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '' },
-  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '' },
-  { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '' }
+  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '', formats: [{ fileType: 'excel', url: '' }] },
+  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '', formats: [{ fileType: 'word', url: '' }, { fileType: 'txt', url: '' }] },
+  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '', formats: [{ fileType: 'png', url: '' }, { fileType: 'svg', url: '' }] },
+  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'excel', url: '' }] },
+  { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] }
 ]

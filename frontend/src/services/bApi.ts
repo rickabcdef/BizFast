@@ -2,6 +2,7 @@
 // 契约见 docs/api-contract.md；USE_MOCK 由 frontend/config/index.ts 注入
 //（开发默认开，便于无后端时调试页面；生产默认关，必须直连真实后端）。
 import { api, resolveUrl } from '@/services/api'
+import JSZip from 'jszip'
 import type { DeliverableFile, PackageResult, OrderStatus } from '@/types'
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -62,14 +63,19 @@ export function getPackage(orderId: string): Promise<PackageResult> {
 }
 
 /** 我的启动包列表（M4-05 / M10-01 共用；按时间倒序）。 */
-export function getMyPackages(): Promise<PackageResult[]> {
-  if (USE_MOCK) return delay(400).then(() => [mockPackage('ORD-2026-0001')])
+export async function getMyPackages(): Promise<PackageResult[]> {
+  if (USE_MOCK) {
+    await delay(400)
+    return [await mockPackage('ORD-2026-0001')]
+  }
   return api.get<PackageResult[]>('/api/packages')
 }
 
-/** 单件下载 / 预览地址（M4-04：预览不产生额外费用）。 */
-export function packageItemUrl(orderId: string, code: string): string {
-  return resolveUrl(`/api/package/${orderId}/item/${code}`)
+/** 单件下载 / 预览地址（M4-04：预览不产生额外费用；format 选择多格式交付物的具体格式）。 */
+export function packageItemUrl(orderId: string, code: string, format?: string): string {
+  const url = resolveUrl(`/api/package/${orderId}/item/${code}`)
+  if (!format) return url
+  return `${url}?format=${encodeURIComponent(format)}`
 }
 
 /** 打包下载地址（M4-03：10 件交付物 ZIP 一键下载，包内均为中文命名）。 */
@@ -87,23 +93,46 @@ export function regeneratePackage(orderId: string): Promise<{ orderId: string; s
 
 // ---------------- M4 Mock ----------------
 
+// PRD 4.4.1 十件交付物清单：部分交付物同时交付多格式（如 D03 = PDF + Word）。
+// fileType 为卡片主格式（第一项），formats 为完整格式列表。
 const D01_D10_MOCK: DeliverableFile[] = [
-  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '/mock/D01.pdf' },
-  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '/mock/D02.xlsx' },
-  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '/mock/D03.pdf' },
-  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '/mock/D04.pdf' },
-  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '/mock/D05.pdf' },
-  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '/mock/D06.pdf' },
-  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '/mock/D07.docx' },
-  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '/mock/D08.png' },
-  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '/mock/D09.pdf' },
-  { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '/mock/D10.pdf' }
+  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '', formats: [{ fileType: 'excel', url: '' }] },
+  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '', formats: [{ fileType: 'word', url: '' }, { fileType: 'txt', url: '' }] },
+  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '', formats: [{ fileType: 'png', url: '' }, { fileType: 'svg', url: '' }] },
+  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'excel', url: '' }] },
+  { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] }
 ]
 
+const FILE_EXT: Record<string, string> = { pdf: 'pdf', excel: 'xlsx', word: 'docx', png: 'png', svg: 'svg', txt: 'txt', zip: 'zip' }
+const FILE_LABEL: Record<string, string> = { pdf: 'PDF', excel: 'Excel', word: 'Word', png: 'PNG', svg: 'SVG', txt: 'TXT', zip: 'ZIP' }
+
 // 顺序生成：每次轮询前进 2 件（联调演示用；真实进度以后端为准）
-const mockState = new Map<string, { done: number }>()
+// 失败演示：orderId 为 ORD-2026-0999 时第一次轮询返回失败（M4-08 失败态联调），重试后正常生成。
+const mockState = new Map<string, { done: number; tried?: boolean }>()
 function mockProgress(orderId: string): PackageProgress {
   const st = mockState.get(orderId) || { done: 0 }
+  if (orderId === 'ORD-2026-0999' && !st.tried) {
+    st.tried = true
+    mockState.set(orderId, st)
+    return {
+      orderId,
+      status: 'failed',
+      percent: 20,
+      done: 2,
+      total: 10,
+      stage: 'AI 服务暂时不可用',
+      message: '生成失败，正在自动重试（第 1/2 次）',
+      currentItem: null,
+      retryCount: 1,
+      failed: true,
+      failReason: 'AI 服务暂时不可用，系统已自动重试 2 次仍未成功（模拟）'
+    }
+  }
   st.done = Math.min(10, st.done + 2)
   mockState.set(orderId, st)
   const done = st.done
@@ -123,34 +152,86 @@ function mockProgress(orderId: string): PackageProgress {
   }
 }
 
-function mockPackage(orderId: string): PackageResult {
-  return {
+async function mockPackage(orderId: string): Promise<PackageResult> {
+  const data: PackageResult = {
     orderId,
     status: 'delivered',
-    items: D01_D10_MOCK.map((it) => ({ ...it, url: mockItemDataUrl(it) })),
+    items: D01_D10_MOCK.map((it) => {
+      const formats = (it.formats || [{ fileType: it.fileType, url: '' }]).map((f) => ({
+        fileType: f.fileType,
+        url: mockItemDataUrl(it.name, f.fileType)
+      }))
+      return {
+        code: it.code,
+        name: it.name,
+        fileType: formats[0].fileType,
+        url: formats[0].url,
+        formats
+      }
+    }),
     zipUrl: MOCK_EMPTY_ZIP,
     retryCount: 0
   }
+  data.zipUrl = await buildMockZipUrl(data)
+  return data
 }
 
 // ---------------- Mock 占位文件（离线演示可用，真实环境以后端为准） ----------------
 const MOCK_EMPTY_ZIP = 'data:application/zip;base64,UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
-function mockItemDataUrl(item: DeliverableFile): string {
-  const name = encodeURIComponent(`生意快启_${item.name}`)
-  switch (item.fileType) {
+function mockItemDataUrl(name: string, fileType: string): string {
+  const safeName = encodeURIComponent(`生意快启_${name}`)
+  switch (fileType) {
     case 'pdf':
-      return mockPdfDataUrl(`生意快启_${item.name}`)
+      return mockPdfDataUrl(`生意快启_${name}`)
     case 'png':
       // 1x1 透明 PNG（演示占位）
       return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
     case 'svg':
-      return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="%230F172A"/><text x="40" y="200" font-size="32" fill="white">${name}</text><text x="40" y="240" font-size="20" fill="%238B93B8">生意快启 · 演示物料（Mock）</text></svg>`
+      return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="%230F172A"/><text x="40" y="200" font-size="32" fill="white">${safeName}</text><text x="40" y="240" font-size="20" fill="%238B93B8">生意快启 · 演示物料（Mock）</text></svg>`
     case 'txt':
-      return `data:text/plain;charset=utf-8,${name}%0A%0A这是生意快启的演示文件（Mock）。真实环境由后端生成实体文件。`
+      return `data:text/plain;charset=utf-8,${safeName}%0A%0A这是生意快启的演示文件（Mock）。真实环境由后端生成实体文件。`
+    case 'word':
+    case 'excel':
     default:
-      // excel / word / zip 等：给一个可下载的占位文本
-      return `data:text/plain;charset=utf-8,${name}%0A%0A演示文件（Mock）：真实环境由后端生成。`
+      // excel / word 等：给一个可下载的占位文本
+      return `data:text/plain;charset=utf-8,${safeName}%0A%0A演示文件（Mock）：真实环境由后端生成对应格式的实体文件。`
+  }
+}
+
+/** Mock ZIP：用 JSZip 把 10 件交付物的全部格式打包为「中文命名」的真实 ZIP（M4-03 演示）。 */
+async function buildMockZipUrl(pkg: PackageResult): Promise<string> {
+  if (typeof window === 'undefined' || typeof URL === 'undefined') return MOCK_EMPTY_ZIP
+  const zip = new JSZip()
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
+  for (const it of pkg.items) {
+    const formats = it.formats || [{ fileType: it.fileType, url: it.url }]
+    for (const f of formats) {
+      // data URL → Blob → 写入 ZIP；文件名「生意快启_交付物名称_生成日期.扩展名」
+      const ext = FILE_EXT[f.fileType] || 'file'
+      zip.file(`生意快启_${it.name}_${date}.${ext}`, dataUrlToBlob(f.url))
+    }
+  }
+  try {
+    const blob = await zip.generateAsync({ type: 'blob' })
+    return URL.createObjectURL(blob)
+  } catch {
+    return MOCK_EMPTY_ZIP
+  }
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  try {
+    const [head, body] = dataUrl.split(',')
+    const mime = /data:([^;]+)/.exec(head || '')?.[1] || 'application/octet-stream'
+    const bin = atob(body || '')
+    const u8 = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i)
+    return new Blob([u8], { type: mime })
+  } catch {
+    return new Blob([dataUrl], { type: 'application/octet-stream' })
   }
 }
 
