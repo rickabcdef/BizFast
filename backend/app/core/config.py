@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24
     refresh_token_expire_days: int = 30
 
+    # 运营管理后台登录（M11）：密钥只走环境变量，不进代码库。
+    # 生产务必通过 .env 覆盖；此处仅为本地联调默认值。
+    admin_username: str = "admin"
+    admin_password: str = "admin123"
+
     # 合规：不存储用户输入原文
     retention_keep_user_input: bool = False
 

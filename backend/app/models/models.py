@@ -1,4 +1,5 @@
 """核心实体（SQLAlchemy 2 风格）。详见 docs/data-model.md。"""
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
@@ -34,12 +35,23 @@ class User(Base):
     # M5-08 自动续费签约：会员可自助开启/取消，取消入口不超过 3 步
     auto_renew: Mapped[bool] = mapped_column(Boolean, default=False)
     renew_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # M8-03 邀请：每位用户一个唯一邀请码（注册时生成）
+    invite_code: Mapped[str | None] = mapped_column(String(16), unique=True)
+    # M10 注销：15 日内清隐私数据（先标记，定时任务到点后物理清除）
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    purge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
+    sent_invites: Mapped[list["InviteRelation"]] = relationship(
+        back_populates="inviter", foreign_keys="InviteRelation.inviter_user_id"
+    )
+    received_invites: Mapped[list["InviteRelation"]] = relationship(
+        back_populates="invitee", foreign_keys="InviteRelation.invitee_user_id"
+    )
 
 
 class Order(Base):
@@ -201,6 +213,44 @@ class Notification(Base):
     link: Mapped[str | None] = mapped_column(String(200))
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class ShareEvent(Base):
+    """分享行为埋点（M8-02 / 1.3 分享率指标）。
+
+    event_type: share=点击分享；register=被邀请人注册；pay=被邀请人付费。
+    channel: 微信好友 / 朋友圈 / 抖音 / 小红书 / 复制链接 / 保存图片 / direct。
+    """
+    __tablename__ = "share_events"
+    __table_args__ = (Index("ix_share_event_channel_created", "channel", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_key: Mapped[str] = mapped_column(String(64), index=True)
+    card_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    channel: Mapped[str] = mapped_column(String(16), default="direct")
+    event_type: Mapped[str] = mapped_column(String(16), default="share")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class InviteRelation(Base):
+    """邀请关系（M8-03 老邀新，双方各得券）。"""
+    __tablename__ = "invite_relations"
+    __table_args__ = (
+        UniqueConstraint("invitee_user_id", name="uq_invite_invitee"),
+        Index("ix_invite_inviter", "inviter_user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    inviter_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    invitee_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    coupon_code: Mapped[str | None] = mapped_column(String(32))
+    # pending/issued/done
+    status: Mapped[str] = mapped_column(String(16), default="issued")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    rewarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    inviter: Mapped["User"] = relationship(back_populates="sent_invites", foreign_keys=[inviter_user_id])
+    invitee: Mapped["User"] = relationship(back_populates="received_invites", foreign_keys=[invitee_user_id])
 
 
 class NotifySetting(Base):

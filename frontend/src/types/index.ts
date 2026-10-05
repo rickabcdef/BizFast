@@ -78,6 +78,15 @@ export interface UserProfile {
   plan: Plan
   city?: string
   inviteCode?: string
+  role?: string
+  expireAt?: string
+  autoRenew?: boolean
+}
+
+// 登录返回：token 存本地，user 更新全局态
+export interface AuthResult {
+  token: string
+  user: UserProfile
 }
 
 export interface OrderView {
@@ -105,8 +114,34 @@ export interface InviteInfo {
 export interface ShareStatsRow {
   channel: string
   clicks: number
+}
+
+export interface ShareStatsSummary {
+  shares: number
   registers: number
   pays: number
+  shareRate: number
+}
+
+export interface ShareStats {
+  rows: ShareStatsRow[]
+  summary: ShareStatsSummary
+}
+
+// M8-01 生成成果分享卡片入参
+export interface ShareCardData {
+  productName: string
+  subtitle?: string
+  lines: string[]
+  qrText?: string
+  inviterCode?: string
+}
+
+// M1 首屏配置
+export interface HomeConfig {
+  capitals: { label: string; value: number }[]
+  dailyHours: { label: string; value: number }[]
+  cityVersion: string
 }
 
 // 统一响应（见 docs/api-contract.md）

@@ -1,5 +1,5 @@
 // 数据层（D 端）：封装 api 调用，并在无后端时提供 Mock 数据，便于网页端联调与演示。
-// 真实接口路径见 docs/api-contract.md；USE_MOCK 由构建常量控制（开发默认开，生产设 false）。
+// 真实接口路径严格对齐 docs/api-contract.md；USE_MOCK 由构建常量控制（开发默认开，生产设 false）。
 import { api } from '@/services/api'
 import type {
   StartupInput,
@@ -9,7 +9,10 @@ import type {
   OrderView,
   Membership,
   InviteInfo,
-  ShareStatsRow
+  ShareStats,
+  AuthResult,
+  ShareCardData,
+  HomeConfig
 } from '@/types'
 
 // USE_MOCK 由 frontend/config/index.ts 的 defineConstants 注入（始终有值）
@@ -44,13 +47,16 @@ const MOCK_MEMBERSHIP: Membership = {
   autoRenew: true
 }
 
-const MOCK_SHARE_STATS: ShareStatsRow[] = [
-  { channel: '微信好友', clicks: 1280, registers: 86, pays: 12 },
-  { channel: '朋友圈', clicks: 3420, registers: 210, pays: 31 },
-  { channel: '抖音', clicks: 980, registers: 40, pays: 5 },
-  { channel: '小红书', clicks: 1560, registers: 95, pays: 14 },
-  { channel: '复制链接', clicks: 760, registers: 33, pays: 4 }
-]
+const MOCK_SHARE_STATS: ShareStats = {
+  rows: [
+    { channel: '微信好友', clicks: 1280 },
+    { channel: '朋友圈', clicks: 3420 },
+    { channel: '抖音', clicks: 980 },
+    { channel: '小红书', clicks: 1560 },
+    { channel: '复制链接', clicks: 760 }
+  ],
+  summary: { shares: 8000, registers: 464, pays: 66, shareRate: 0.18 }
+}
 
 const MOCK_INVITE: InviteInfo = {
   code: 'BF-7Q2X9',
@@ -81,7 +87,7 @@ export async function getOrders(): Promise<OrderView[]> {
     await delay(300)
     return MOCK_ORDERS
   }
-  return api.get<OrderView[]>('/api/orders')
+  return api.get<OrderView[]>('/api/user/orders')
 }
 
 export async function getMembership(): Promise<Membership> {
@@ -89,15 +95,22 @@ export async function getMembership(): Promise<Membership> {
     await delay(200)
     return MOCK_MEMBERSHIP
   }
-  return api.get<Membership>('/api/membership')
+  // 会员信息包含在 /api/user/me 中（M10 3.1 账号体系）
+  const me = await api.get<UserProfile>('/api/user/me')
+  return {
+    plan: me.plan === 'none' ? 'single' : (me.plan as Membership['plan']),
+    expireAt: me.expireAt || '',
+    autoRenew: !!me.autoRenew
+  }
 }
 
-export async function getShareStats(): Promise<ShareStatsRow[]> {
+export async function getShareStats(): Promise<ShareStats> {
   if (USE_MOCK) {
     await delay(400)
     return MOCK_SHARE_STATS
   }
-  return api.get<ShareStatsRow[]>('/api/admin/share-stats')
+  // M11(D) 分享转化概览（M8-04）
+  return api.get<ShareStats>('/api/admin/share/stats')
 }
 
 export async function getInviteInfo(): Promise<InviteInfo> {
@@ -105,21 +118,73 @@ export async function getInviteInfo(): Promise<InviteInfo> {
     await delay(200)
     return MOCK_INVITE
   }
-  return api.get<InviteInfo>('/api/invite')
+  // M8-03 我的邀请信息（实时可见）
+  return api.get<InviteInfo>('/api/share/invite/info')
 }
 
-export async function phoneLogin(phone: string, code: string): Promise<UserProfile> {
+export async function phoneLogin(phone: string, code: string, inviterCode?: string): Promise<AuthResult> {
   if (USE_MOCK) {
     await delay(500)
-    return { isGuest: false, phone, plan: 'single', inviteCode: 'BF-7Q2X9' }
+    return { token: 'mock-token', user: { isGuest: false, phone, plan: 'single', inviteCode: 'BF-7Q2X9' } }
   }
-  return api.post<UserProfile>('/api/auth/phone-login', { phone, code })
+  // M10 3.1 手机号 + 验证码登录
+  return api.post<AuthResult>('/api/auth/login', { phone, code, inviterCode })
 }
 
-export async function wechatLogin(): Promise<UserProfile> {
+export async function wechatLogin(unionid?: string): Promise<AuthResult> {
   if (USE_MOCK) {
     await delay(500)
-    return { isGuest: false, plan: 'month', inviteCode: 'BF-7Q2X9' }
+    return { token: 'mock-token', user: { isGuest: false, plan: 'month', inviteCode: 'BF-7Q2X9' } }
   }
-  return api.post<UserProfile>('/api/auth/wechat-login', {})
+  // M10 3.1 微信 unionid 登录（网页端无真实微信 SDK，dev 用占位 unionid）
+  return api.post<AuthResult>('/api/auth/wechat', { unionid: unionid || `web-${Date.now()}` })
+}
+
+export async function deleteAccount(): Promise<{ deletedAt: string; purgeAt: string }> {
+  if (USE_MOCK) {
+    await delay(300)
+    return { deletedAt: new Date().toISOString(), purgeAt: '' }
+  }
+  // M10 3.1 注销账号：15 日内清隐私数据
+  return api.delete<{ deletedAt: string; purgeAt: string }>('/api/user/account')
+}
+
+// ---------------- 分享 / 增长（M8） ----------------
+export async function createShareCard(data: ShareCardData): Promise<{ id: string; shareUrl: string }> {
+  if (USE_MOCK) {
+    await delay(200)
+    return { id: 'mock-card', shareUrl: data.qrText || 'https://bizfast.app/s/mock' }
+  }
+  // M8-01 生成成果分享卡片
+  return api.post<{ id: string; shareUrl: string }>('/api/share/card', data)
+}
+
+export async function trackShare(cardId: string | null, channel: string): Promise<{ ok: boolean }> {
+  if (USE_MOCK) {
+    await delay(100)
+    return { ok: true }
+  }
+  // M8-02 分享行为埋点
+  return api.post<{ ok: boolean }>('/api/share/track', { cardId, channel })
+}
+
+// ---------------- 首屏配置（M1） ----------------
+export async function getHomeConfig(): Promise<HomeConfig> {
+  if (USE_MOCK) {
+    await delay(100)
+    return {
+      capitals: [
+        { label: '1万以下', value: 1 },
+        { label: '1–5万', value: 2 },
+        { label: '5–20万', value: 3 },
+        { label: '20万以上', value: 4 }
+      ],
+      dailyHours: [
+        { label: '兼职（每天约2小时）', value: 2 },
+        { label: '全职（每天8小时以上）', value: 8 }
+      ],
+      cityVersion: '2026.1'
+    }
+  }
+  return api.get<HomeConfig>('/api/home/config')
 }

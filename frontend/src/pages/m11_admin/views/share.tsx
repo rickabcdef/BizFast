@@ -3,19 +3,19 @@ import { View, Text } from '@tarojs/components'
 import Loading from '@/components/Loading'
 import ErrorTip from '@/components/ErrorTip'
 import { getShareStats } from '@/services/repo'
-import type { ShareStatsRow } from '@/types'
+import type { ShareStats } from '@/types'
 
 // M8-04 分享数据回收（按渠道转化）| 负责人: D | 在运营后台呈现
 export default function ShareView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [rows, setRows] = useState<ShareStatsRow[]>([])
+  const [stats, setStats] = useState<ShareStats | null>(null)
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
-      setRows(await getShareStats())
+      setStats(await getShareStats())
     } catch (e: any) {
       setError(e?.message || '加载失败')
     } finally {
@@ -27,14 +27,8 @@ export default function ShareView() {
     void load()
   }, [])
 
-  const total = rows.reduce(
-    (a, r) => ({
-      clicks: a.clicks + r.clicks,
-      registers: a.registers + r.registers,
-      pays: a.pays + r.pays
-    }),
-    { clicks: 0, registers: 0, pays: 0 }
-  )
+  const summary = stats?.summary
+  const rows = stats?.rows || []
 
   return (
     <View>
@@ -44,17 +38,16 @@ export default function ShareView() {
       {!loading && !error && (
         <View className='bf-card'>
           <View className='bf-row m11-sum'>
-            <Text>点击 {total.clicks}</Text>
-            <Text>注册 {total.registers}</Text>
-            <Text>付费 {total.pays}</Text>
+            <Text>分享 {summary?.shares ?? 0}</Text>
+            <Text>注册 {summary?.registers ?? 0}</Text>
+            <Text>付费 {summary?.pays ?? 0}</Text>
+            <Text>分享率 {Math.round((summary?.shareRate ?? 0) * 100)}%</Text>
           </View>
           <View className='bf-list'>
             {rows.map((r) => (
               <View key={r.channel} className='bf-list__item'>
                 <Text>{r.channel}</Text>
-                <Text className='bf-muted'>
-                  点击{r.clicks} · 注册{r.registers} · 付费{r.pays}
-                </Text>
+                <Text className='bf-muted'>点击 {r.clicks}</Text>
               </View>
             ))}
           </View>

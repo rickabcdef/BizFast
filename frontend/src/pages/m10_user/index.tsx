@@ -9,7 +9,8 @@ import {
   getMembership,
   getInviteInfo,
   phoneLogin,
-  wechatLogin
+  wechatLogin,
+  deleteAccount
 } from '@/services/repo'
 import { useAppStore } from '@/store'
 import type { PackageResult, OrderView, Membership, InviteInfo } from '@/types'
@@ -36,6 +37,7 @@ export default function M10User() {
   const token = useAppStore((s) => s.token)
   const logout = useAppStore((s) => s.logout)
   const setUser = useAppStore((s) => s.setUser)
+  const setToken = useAppStore((s) => s.setToken)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -82,8 +84,9 @@ export default function M10User() {
     }
     setLoading(true)
     try {
-      const u = await phoneLogin(phone, code)
-      setUser(u)
+      const res = await phoneLogin(phone, code)
+      setToken(res.token)
+      setUser(res.user)
       Taro.showToast({ title: '登录成功', icon: 'success' })
     } catch (e: any) {
       setError(e?.message || '登录失败，请重试')
@@ -95,8 +98,9 @@ export default function M10User() {
   const doWechat = async () => {
     setLoading(true)
     try {
-      const u = await wechatLogin()
-      setUser(u)
+      const res = await wechatLogin()
+      setToken(res.token)
+      setUser(res.user)
       Taro.showToast({ title: '登录成功', icon: 'success' })
     } catch (e: any) {
       setError(e?.message || '登录失败，请重试')
@@ -108,6 +112,16 @@ export default function M10User() {
   const onLogout = () => {
     logout()
     Taro.showToast({ title: '已退出（15日内清除隐私数据）', icon: 'none' })
+  }
+
+  const onDeleteAccount = async () => {
+    try {
+      await deleteAccount()
+      logout()
+      Taro.showToast({ title: '已提交注销，15日内清除隐私数据', icon: 'none' })
+    } catch (e: any) {
+      setError(e?.message || '注销失败，请重试')
+    }
   }
 
   if (!token) {
@@ -276,6 +290,14 @@ export default function M10User() {
           >
             休息一下
           </View>
+        </View>
+      </View>
+
+      <View className='bf-card'>
+        <Text className='bf-card__title'>账号安全</Text>
+        <Text className='bf-muted'>注销后 15 日内保留数据用于找回，到期自动清除隐私信息。</Text>
+        <View className='bf-btn bf-btn--ghost bf-btn--sm m10-delete' onClick={onDeleteAccount}>
+          注销账号
         </View>
       </View>
     </View>

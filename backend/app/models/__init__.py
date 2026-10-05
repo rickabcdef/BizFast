@@ -5,6 +5,7 @@ from app.models.models import (
     DeliverableFile,
     DiagnosisTask,
     Favorite,
+    InviteRelation,
     Notification,
     NotifySetting,
     Order,
@@ -12,6 +13,7 @@ from app.models.models import (
     PaymentRecord,
     RiskEvent,
     ShareCard,
+    ShareEvent,
     User,
 )
 
@@ -22,10 +24,12 @@ __all__ = [
     "DeliverableFile",
     "DiagnosisTask",
     "Favorite",
+    "InviteRelation",
     "Notification",
     "NotifySetting",
     "PaymentRecord",
     "ShareCard",
+    "ShareEvent",
     "Coupon",
     "CouponRedemption",
     "RiskEvent",
