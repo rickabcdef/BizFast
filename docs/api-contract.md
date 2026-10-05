@@ -62,11 +62,13 @@
 - 第 4 个锁定商机 → 触发 `M5` 付费弹窗。
 
 ### M4 启动包生成（B）
-- `POST /api/package/create` body:{matchId} → 需先完成支付 → {orderId}
-- `GET /api/package/{orderId}/progress` → {stage, percent}（真实进度）
-- `GET /api/package/{orderId}` → {items:[D01..D10 元数据], zipUrl, status}
-- `GET /api/package/{orderId}/item/{code}` 单件下载/预览。
-- `POST /api/package/{orderId}/regenerate`（P1，限次）。
+- `POST /api/package/create` body:{orderId?, matchId?} → 需先完成支付 → {orderId}（幂等：重复请求返回 40901 但可继续轮询）
+- `GET /api/package/{orderId}/progress` → {stage, percent, done, total, currentItem, retryCount, status}（真实进度，percent=done/total×100）
+- `GET /api/package/{orderId}` → {items:[D01..D10 元数据], zipUrl, status, retryCount}
+- `GET /api/package/{orderId}/item/{code}` 单件下载/预览（预览不产生额外费用）。
+- `GET /api/package/{orderId}/zip` 打包 ZIP 下载（包内中文命名）。
+- `POST /api/package/{orderId}/regenerate`（P1，限次：会员无限次 / 单次购买 1 次）。
+- `GET /api/packages` 我的启动包列表（云端永久保存，M4-05 / M10-01 共用，按时间倒序）。
 
 ### M5 付费与订单（A）
 - `POST /api/payment/create` body:{plan:'single|month|year', platform, matchId} → {orderId, payParams}
@@ -91,7 +93,16 @@
 - `POST /api/auth/login`(手机号/验证码) · `POST /api/auth/wechat`(unionid) · `GET /api/user/me` · `GET /api/user/orders` · `POST /api/user/logout` · `DELETE /api/user/account`(注销，15 日清隐私)。
 
 ### M11 运营后台（B+D，内部）
-- `GET /api/admin/share/stats` · `GET /api/admin/users` · `GET /api/admin/orders`。
+- 登录：`POST /api/admin/login` body:{username, password} → {token, name, role:'admin|operator|support'}（密钥走环境变量，不进代码库）
+- 数据看板：`GET /api/admin/dashboard` → {kpis:{diagnoseCount, payCount, revenueYuan, refundRate, conversionRate, packageDoneRate, avgOrderYuan}, trend:[{date, orders, revenue}], refreshAt}（数据延迟 ≤ 5 分钟）
+- 用户管理：`GET /api/admin/users?page=&pageSize=&keyword=&memberStatus=` → {items, total, page, pageSize}；`GET /api/admin/users/{id}` → {user, consumption}
+- 订单管理：`GET /api/admin/orders?page=&pageSize=&status=&keyword=`；`POST /api/admin/orders/{id}/refund` body:{action:'approve|reject', reason}
+- 商机库管理（P0）：`GET /api/admin/opportunities?page=&pageSize=&status=&keyword=`；`POST /api/admin/opportunities/import` body:{items[]}；`POST /api/admin/opportunities/{id}/review` body:{action:'approve|reject', reason}
+- 提示词配置：`GET /api/admin/prompts`；`PUT /api/admin/prompts/{key}` body:{content, model}（改后无需发版生效）
+- 内容审核：`GET /api/admin/reviews?page=&pageSize=&status=&keyword=`；`POST /api/admin/reviews/{id}` body:{action:'pass|reject', reason}
+- 权限管理：`GET /api/admin/roles`；`PUT /api/admin/roles/{role}` body:{perms[]}（操作记录操作人）
+- 审计日志：`GET /api/admin/audit-logs?page=&pageSize=&operator=&action=`（保留 ≥ 180 天）
+- 分享转化（D）：`GET /api/admin/share/stats` · `GET /api/admin/users` · `GET /api/admin/orders`。
 
 ## 3. 订单状态机（M5-05）
 ```

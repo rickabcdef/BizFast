@@ -1,2 +1,423 @@
-.page.m4-delivery { min-height: 100vh; }
-.placeholder { color: #8b93b8; padding: 32px; display: block; }
+// M4 启动包生成与交付（P07 生成进度页 + P08 启动包交付页）| 负责人 B
+// 科技风规范：藏蓝背景 / 蓝紫渐变 / 毛玻璃卡片 / 呼吸光效（PRD 第 5 章）
+.page.m4-delivery {
+  min-height: 100vh;
+  padding: 32rpx;
+  box-sizing: border-box;
+  background: var(--bf-bg, #0b1026);
+}
+
+// ---------- 通用头部 ----------
+.m4-head__title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+}
+.m4-head__sub {
+  font-size: 24rpx;
+  display: block;
+  margin-top: 8rpx;
+}
+
+// ================= P07 生成进度页 =================
+.m4-progress {
+  display: flex;
+  flex-direction: column;
+}
+.m4-pg__title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 24rpx;
+}
+.m4-pg__sub {
+  font-size: 26rpx;
+  margin-top: 12rpx;
+}
+
+// 真实进度条（蓝紫渐变 + 流光）
+.m4-pg__bar {
+  height: 24rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-top: 48rpx;
+  position: relative;
+}
+.m4-pg__fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #5b6cff 0%, #9b5cff 100%);
+  box-shadow: 0 0 20rpx rgba(123, 108, 255, 0.45);
+  transition: width 0.6s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+.m4-pg__fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: m4-flow 1.4s linear infinite;
+}
+@keyframes m4-flow {
+  0% { left: -40%; }
+  100% { left: 120%; }
+}
+.m4-pg__meta {
+  margin-top: 16rpx;
+}
+.m4-pg__count {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+.m4-pg__pct {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #b9c4ff;
+}
+.m4-pg__stage {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  color: #e8ecff;
+}
+
+// 已完成清单（打勾 + 正在生成的文件名）
+.m4-pg__list {
+  margin-top: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.m4-pg__now {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(123, 108, 255, 0.14);
+  border: 2rpx solid rgba(123, 108, 255, 0.5);
+  margin-bottom: 8rpx;
+}
+.m4-pg__nowdot {
+  color: #9b5cff;
+  font-size: 20rpx;
+  animation: m4-blink 1s ease-in-out infinite;
+}
+@keyframes m4-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.m4-pg__nowtext {
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 600;
+}
+.m4-pg__item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 14rpx 4rpx;
+  border-bottom: 2rpx solid rgba(139, 147, 184, 0.1);
+}
+.m4-pg__item.is-done {
+  opacity: 0.75;
+}
+.m4-pg__check {
+  width: 36rpx;
+  color: #8b93b8;
+  font-size: 26rpx;
+}
+.m4-pg__item.is-done .m4-pg__check {
+  color: #39d98a;
+}
+.m4-pg__name {
+  flex: 1;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+.m4-pg__item.is-done .m4-pg__name {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.3);
+}
+.m4-pg__tag {
+  font-size: 22rpx;
+  color: #8b93b8;
+  background: rgba(139, 147, 184, 0.15);
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+}
+
+// 等待小游戏入口气泡（右下角）
+.m4-pg__game {
+  position: fixed;
+  right: 32rpx;
+  bottom: 120rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: rgba(20, 26, 58, 0.85);
+  border: 2rpx solid rgba(123, 108, 255, 0.5);
+  border-radius: 999rpx;
+  padding: 16rpx 28rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
+  animation: m4-breathe 2.4s ease-in-out infinite;
+}
+@keyframes m4-breathe {
+  0%, 100% { box-shadow: 0 0 16rpx rgba(123, 108, 255, 0.35); }
+  50% { box-shadow: 0 0 32rpx rgba(155, 92, 255, 0.6); }
+}
+.m4-pg__gameemoji {
+  font-size: 36rpx;
+}
+.m4-pg__gametext {
+  font-size: 26rpx;
+  color: #e8ecff;
+}
+.m4-pg__foot {
+  font-size: 22rpx;
+  margin-top: 48rpx;
+  display: block;
+}
+
+// 失败态
+.m4-pg__fail {
+  margin-top: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.m4-pg__failitem {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+.m4-pg__retry {
+  margin-top: 32rpx;
+  text-align: center;
+  padding: 24rpx 0;
+}
+
+// ================= P08 启动包交付页 =================
+.m4-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48rpx 24rpx;
+  background: rgba(20, 26, 58, 0.6);
+  border: 2rpx solid rgba(123, 108, 255, 0.35);
+  border-radius: 24rpx;
+  margin-bottom: 24rpx;
+}
+.m4-done__title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #fff;
+}
+.m4-done__sub {
+  font-size: 24rpx;
+  margin-top: 12rpx;
+  display: block;
+}
+.m4-done__zip {
+  margin-top: 32rpx;
+  padding: 24rpx 64rpx;
+  font-size: 30rpx;
+}
+.m4-done__tip {
+  font-size: 22rpx;
+  margin-top: 16rpx;
+  display: block;
+}
+
+// 10 张文件卡片网格（图标 + 文件名 + 格式标签 + 下载按钮）
+.m4-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+}
+.m4-file {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 20rpx;
+}
+.m4-file__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.m4-file__code {
+  font-size: 22rpx;
+  color: #8b93b8;
+  background: rgba(139, 147, 184, 0.15);
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+}
+.m4-file__fmt {
+  font-size: 20rpx;
+  border-radius: 999rpx;
+  padding: 4rpx 14rpx;
+  color: #c9ccff;
+  background: rgba(123, 108, 255, 0.2);
+}
+.m4-file__fmt--png,
+.m4-file__fmt--svg {
+  background: rgba(57, 217, 138, 0.18);
+  color: #9df3c4;
+}
+.m4-file__fmt--excel {
+  background: rgba(57, 217, 138, 0.18);
+  color: #9df3c4;
+}
+.m4-file__fmt--word,
+.m4-file__fmt--txt {
+  background: rgba(255, 180, 84, 0.16);
+  color: #ffd29b;
+}
+.m4-file__name {
+  font-size: 26rpx;
+  color: #e8ecff;
+  line-height: 1.45;
+  min-height: 76rpx;
+  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+}
+.m4-file__actions {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+.m4-file__act {
+  flex: 1;
+  text-align: center;
+  font-size: 24rpx;
+  padding: 12rpx 0;
+  border-radius: 12rpx;
+  border: 2rpx solid rgba(139, 147, 184, 0.5);
+  color: #e8ecff;
+}
+.m4-file__act--main {
+  border-color: transparent;
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  color: #fff;
+  box-shadow: 0 0 16rpx rgba(123, 108, 255, 0.4);
+}
+
+// 重新生成与云端保存说明
+.m4-extra {
+  margin-top: 24rpx;
+}
+.m4-extra__text {
+  font-size: 24rpx;
+  display: block;
+  margin-top: 8rpx;
+}
+
+// 终值体验：温度文案 + 开业喜报
+.m4-end {
+  text-align: center;
+  padding: 48rpx 24rpx;
+  margin-top: 24rpx;
+}
+.m4-end__text {
+  font-size: 30rpx;
+  color: #e8ecff;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.m4-end__btn {
+  margin-top: 24rpx;
+  display: inline-block;
+  padding: 20rpx 48rpx;
+}
+
+// 弹窗（毛玻璃 + 中心放大）
+.m4-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+.m4-modal {
+  width: 640rpx;
+  max-width: 92vw;
+  background: rgba(20, 26, 58, 0.96);
+  border: 2rpx solid rgba(139, 147, 184, 0.3);
+  border-radius: 40rpx;
+  padding: 40rpx;
+  animation: m4-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes m4-pop {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.m4-modal__title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #fff;
+}
+.m4-modal__list {
+  margin: 24rpx 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.m4-modal__li {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+.m4-modal__btn {
+  margin-top: 20rpx;
+  text-align: center;
+  padding: 22rpx 0;
+}
+.m4-preview__img {
+  width: 100%;
+  border-radius: 16rpx;
+  margin-top: 24rpx;
+}
+
+// ================= 无订单：我的启动包列表 =================
+.m4-empty {
+  text-align: center;
+  padding: 96rpx 32rpx;
+}
+.m4-empty__title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  display: block;
+}
+.m4-empty__text {
+  font-size: 26rpx;
+  margin-top: 16rpx;
+  display: block;
+}
+.m4-empty__btn {
+  margin: 40rpx auto 0;
+  display: inline-block;
+  padding: 22rpx 56rpx;
+}
+.m4-hist {
+  margin-bottom: 16rpx;
+}
+.m4-hist__text {
+  font-size: 24rpx;
+  display: block;
+  margin-top: 8rpx;
+}
+.m4-hist__btn {
+  margin-top: 20rpx;
+  display: inline-block;
+  padding: 14rpx 40rpx;
+}

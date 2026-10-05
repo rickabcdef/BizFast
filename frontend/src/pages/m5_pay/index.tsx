@@ -144,13 +144,15 @@ export default function M5Pay() {
     setCouponErr('')
   }
 
-  const loadOrder = useCallback(async (id: string) => {
+  const loadOrder = useCallback(async (id: string): Promise<any | undefined> => {
     try {
       const o = await getOrder(id)
       setOrder(o)
       setOrderId(o.id)
+      return o
     } catch (e: any) {
       setError(e?.message || '服务开小差了，请重试')
+      return undefined
     }
   }, [setOrderId])
 
@@ -181,9 +183,17 @@ export default function M5Pay() {
     setLoading(true)
     try {
       await payCallback(paying.channel, paying.orderId)
-      await loadOrder(paying.orderId)
+      const fresh = await loadOrder(paying.orderId)
       setPaying(null)
       Taro.showToast({ title: '支付成功', icon: 'success' })
+      // M4-01 衔接（负责人 B）：支付成功后进入生成进度页，由 m4 页轮询真实进度
+      if (fresh && (fresh.status === 'generating' || fresh.status === 'delivered' || fresh.status === 'paid')) {
+        setTimeout(() => {
+          Taro.redirectTo({
+            url: `/pages/m4_delivery/index?orderId=${fresh.id}&matchId=${matchId || ''}`
+          })
+        }, 1500)
+      }
     } catch (e: any) {
       setError(e?.message || '支付未成功，请重新支付')
     } finally {

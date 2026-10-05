@@ -37,7 +37,13 @@ export default defineConfig(async (merge, { command, mode }) => {
       options: {}
     },
     framework: 'react',
-    compiler: 'webpack5',
+    compiler: {
+      type: 'webpack5',
+      // Taro 4.0 的 webpack5-prebundle 与 webpack 5.9x 存在
+      // `finalInputFileSystem._writeVirtualFile is not a function` 兼容问题，
+      // 关闭 prebundle（不影响产物正确性，仅牺牲一点 watch 首次编译速度）。
+      prebundle: { enable: false }
+    },
     cache: {
       enable: false
     },

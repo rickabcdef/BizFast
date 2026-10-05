@@ -181,18 +181,28 @@ export default function M10User() {
                   <Text>
                     {it.code} · {it.name}
                   </Text>
+                  {/* 单件下载/预览统一由 m4 交付页承接（负责人 B：M4-03/04/05） */}
                   <Text
                     className='bf-btn bf-btn--sm'
-                    onClick={() => Taro.showToast({ title: '开始下载 ' + it.name, icon: 'none' })}
+                    onClick={() =>
+                      Taro.navigateTo({
+                        url: `/pages/m4_delivery/index?orderId=${p.orderId}`
+                      })
+                    }
                   >
                     下载
                   </Text>
                 </View>
               ))}
             </View>
+            {/* 打包下载统一由 m4 交付页承接 */}
             <View
               className='bf-btn bf-btn--sm m10-zip'
-              onClick={() => Taro.showToast({ title: '打包下载（zip）', icon: 'none' })}
+              onClick={() =>
+                Taro.navigateTo({
+                  url: `/pages/m4_delivery/index?orderId=${p.orderId}`
+                })
+              }
             >
               打包下载
             </View>
