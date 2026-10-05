@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 会员中心</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .plan-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .plan-card.recommended {
+            border-color: var(--brand-blue);
+            background: linear-gradient(135deg, rgba(22,93,255,0.1), rgba(123,97,255,0.1));
+            transform: scale(1.02);
+        }
+        .plan-card .recommend-badge {
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            color: #1a1a1a;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .plan-card .plan-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .plan-card .plan-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .plan-card .price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .plan-card .price {
+            font-size: 36px;
+            font-weight: 700;
+            background: var(--brand-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .plan-card .unit {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .plan-card .original {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+        .plan-card.selected {
+            border-color: var(--brand-blue);
+            box-shadow: 0 0 20px rgba(22,93,255,0.3);
+        }
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        .benefit-item .check {
+            color: var(--success);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <a href="11-个人中心.html" class="back-btn">←</a>
+        
+        <div class="page-header fade-in" style="padding-top: 10px;">
+            <h1 style="font-size: 24px;">👑 会员中心</h1>
+            <p>解锁全部功能，让生意更顺利</p>
+        </div>
+        
+        <div class="fade-in stagger-1">
+            <div class="plan-card recommended" data-plan="year">
+                <div class="recommend-badge">🔥 最划算 · 83%用户选择</div>
+                <div class="plan-name">年度会员</div>
+                <div class="plan-desc">全年无限次生成启动包，持续更新商机库</div>
+                <div class="price-row">
+                    <span class="price">199</span>
+                    <span class="unit">元/年</span>
+                    <span class="original">¥588</span>
+                </div>
+                <div style="font-size: 12px; color: var(--success);">折合每月仅 16.6 元，一杯奶茶钱</div>
+            </div>
+            
+            <div class="plan-card" data-plan="month">
+                <div class="plan-name">月度会员</div>
+                <div class="plan-desc">一个月时间，把生意做起来</div>
+                <div class="price-row">
+                    <span class="price">39</span>
+                    <span class="unit">元/月</span>
+                    <span class="original">¥99</span>
+                </div>
+            </div>
+            
+            <div class="plan-card" data-plan="single">
+                <div class="plan-name">单次启动包</div>
+                <div class="plan-desc">一次生成，永久使用，适合先试试水</div>
+                <div class="price-row">
+                    <span class="price">9.9</span>
+                    <span class="unit">元/次</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-2" style="margin-top: 24px;">
+            <div style="font-size: 15px; font-weight: 600; margin-bottom: 12px;">✨ 会员专属权益</div>
+            
+            <div class="benefit-item">
+                <span class="check">✓</span>
+                <span><strong>无限次生成启动包</strong> - 想试几个方向就试几个</span>
+            </div>
+            <div class="benefit-item">
+                <span class="check">✓</span>
+                <span><strong>每周更新最新商机库</strong> - 第一时间发现赚钱机会</span>
+            </div>
+            <div class="benefit-item">
+                <span class="check">✓</span>
+                <span><strong>供应商库+获客渠道库全开放</strong> - 一手资源直接联系</span>
+            </div>
+            <div class="benefit-item">
+                <span class="check">✓</span>
+                <span><strong>启动包历史记录永久保存</strong> - 随时回来下载查看</span>
+            </div>
+            <div class="benefit-item">
+                <span class="check">✓</span>
+                <span><strong>专属客服一对一答疑</strong> - 做生意有问题随时问</span>
+            </div>
+            <div class="benefit-item">
+                <span class="check">✓</span>
+                <span><strong>全部工具箱永久免费使用</strong> - 无广告无次数限制</span>
+            </div>
+            <div class="benefit-item" id="yearOnly">
+                <span class="check">✓</span>
+                <span><strong>1次专属1v1商机诊断</strong> - 专家帮你把方向把好关</span>
+            </div>
+            <div class="benefit-item" id="yearOnly2">
+                <span class="check">✓</span>
+                <span><strong>老板交流社群</strong> - 和其他创业者一起进步</span>
+            </div>
+        </div>
+        
+        <div class="btn-area fade-in stagger-3">
+            <button class="btn btn-primary" id="payBtn">立即开通 ¥199/年</button>
+            <div style="display: flex; justify-content: center; gap: 24px; margin-top: 12px; font-size: 12px; color: var(--text-muted);">
+                <span>✓ 自动续费可随时取消</span>
+                <span>✓ 7天无理由退款</span>
+                <span>✓ 微信/支付宝支付</span>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script src="common.js"></script>
+    <script>
+        const plans = document.querySelectorAll('.plan-card');
+        const payBtn = document.getElementById('payBtn');
+        let currentPlan = 'year';
+        
+        const prices = {
+            year: '¥199/年',
+            month: '¥39/月',
+            single: '¥9.9'
+        };
+        
+        plans.forEach(plan => {
+            plan.addEventListener('click', function() {
+                plans.forEach(p => {
+                    p.classList.remove('selected');
+                    p.classList.remove('recommended');
+                    const badge = p.querySelector('.recommend-badge');
+                    if (badge) badge.remove();
+                });
+                this.classList.add('selected');
+                currentPlan = this.dataset.plan;
+                payBtn.textContent = '立即开通 ' + prices[currentPlan];
+                
+                // 年卡专属权益显示/隐藏
+                const yearOnly = document.getElementById('yearOnly');
+                const yearOnly2 = document.getElementById('yearOnly2');
+                if (currentPlan === 'year') {
+                    yearOnly.style.opacity = '1';
+                    yearOnly2.style.opacity = '1';
+                } else {
+                    yearOnly.style.opacity = '0.4';
+                    yearOnly2.style.opacity = '0.4';
+                }
+            });
+        });
+        
+        // 默认选中年卡
+        plans[0].classList.add('selected');
+    </script>
+</body>
+</html>

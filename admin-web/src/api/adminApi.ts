@@ -291,7 +291,7 @@ const mockPackagesData = [
   { orderId: 'ORD-2026-0006', name: '广州·周末市集手作 启动包', fileCount: 0, status: 'generating', createdAt: '2026-10-05 11:07' }
 ]
 
-export async function getAdminUsers(params: { page?: number; pageSize?: number; keyword?: string; memberStatus?: string }): Promise<PageBox<AdminUser>> {
+export async function getAdminUsers(params: { page?: number; pageSize?: number; keyword?: string; memberStatus?: string; source?: string }): Promise<PageBox<AdminUser>> {
   await delay(350)
   let items = [...mockUsersData]
   if (params.keyword) {
@@ -299,6 +299,7 @@ export async function getAdminUsers(params: { page?: number; pageSize?: number; 
     items = items.filter((u) => u.phone.includes(k) || u.nickname.includes(k) || u.city.includes(k))
   }
   if (params.memberStatus) items = items.filter((u) => u.memberStatus === params.memberStatus)
+  if (params.source) items = items.filter((u) => u.source === params.source)
   const page = params.page ?? 1
   const pageSize = params.pageSize ?? 20
   return { items: items.slice((page - 1) * pageSize, page * pageSize), total: items.length, page, pageSize }
@@ -314,11 +315,12 @@ export async function getAdminUserDetail(userId: string): Promise<{ user: AdminU
 
 // ---------------- M11-02 订单管理（异常标红告警 / 退款 / 对账导出） ----------------
 
-export async function getAdminOrders(params: { page?: number; pageSize?: number; status?: string; keyword?: string; abnormal?: boolean }): Promise<PageBox<AdminOrder>> {
+export async function getAdminOrders(params: { page?: number; pageSize?: number; status?: string; keyword?: string; abnormal?: boolean; channel?: string }): Promise<PageBox<AdminOrder>> {
   await delay(350)
   let items = [...mockOrdersData]
   if (params.status) items = items.filter((o) => o.status === params.status)
   if (params.abnormal) items = items.filter((o) => o.abnormal)
+  if (params.channel) items = items.filter((o) => o.channel === params.channel)
   if (params.keyword) {
     const k = params.keyword.trim()
     items = items.filter((o) => o.id.includes(k) || o.userPhone.includes(k))

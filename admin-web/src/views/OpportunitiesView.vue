@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getAdminOpportunities,
@@ -22,7 +22,7 @@ const status = ref('')
 const loading = ref(false)
 
 const STATUS_FILTERS = [
-  { value: '', label: '全部' },
+  { value: '', label: '全部状态' },
   { value: 'pending', label: '待审核' },
   { value: 'passed', label: '已通过' },
   { value: 'rejected', label: '已驳回' }
@@ -45,6 +45,28 @@ const doSearch = () => {
   page.value = 1
   void load()
 }
+
+// ---- 商机统计卡（对齐切图 16 页：总数 / 上架中 / 待审核 / 已驳回） ----
+const stats = computed(() => {
+  const passed = rows.value.filter((o) => o.status === 'passed').length
+  const onShelf = rows.value.filter((o) => o.onShelf).length
+  const pending = rows.value.filter((o) => o.status === 'pending').length
+  const rejected = rows.value.filter((o) => o.status === 'rejected').length
+  return [
+    { label: '商机总数', value: String(total.value) },
+    { label: '上架中', value: String(onShelf), color: 'var(--bf-ok)' },
+    { label: '待审核', value: String(pending), color: 'var(--bf-primary)' },
+    { label: '已驳回', value: String(rejected), color: 'var(--bf-text-3)' }
+  ]
+})
+
+// ---- 卡片辅助（对齐切图 biz-card） ----
+const statusDot = (o: AdminOpportunity) => (o.onShelf ? 'on' : o.status === 'passed' ? 'off' : 'off')
+const statusText = (o: AdminOpportunity) => (o.onShelf ? '上架中' : o.status === 'passed' ? '已下架' : o.statusLabel)
+const statusColor = (o: AdminOpportunity) =>
+  o.onShelf || o.status === 'passed' ? (o.onShelf ? 'var(--bf-ok)' : 'var(--bf-text-3)') : o.status === 'pending' ? 'var(--bf-warn)' : 'var(--bf-danger)'
+const capitalText = (o: AdminOpportunity) => `¥${o.capitalMin / 10000}–${o.capitalMax / 10000} 万`
+const stars = (o: AdminOpportunity) => '★'.repeat(Math.max(1, o.difficultyStars))
 
 // 新增 / 编辑
 const formOpen = ref(false)
@@ -84,6 +106,16 @@ const doToggleShelf = async (o: AdminOpportunity, onShelf: boolean) => {
   const r = await toggleOpportunityShelf(auth.session as AdminSession, o.id, onShelf)
   ElMessage.success(r.message)
   void load()
+}
+
+const doReview = async (o: AdminOpportunity, action: 'approve' | 'reject') => {
+  try {
+    const r = await reviewOpportunity(auth.session as AdminSession, o.id, action)
+    ElMessage.success(r.message)
+    void load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  }
 }
 
 // 批量导入
@@ -146,86 +178,85 @@ const doImport = async () => {
     importBusy.value = false
   }
 }
-
-const doReview = async (o: AdminOpportunity, action: 'approve' | 'reject') => {
-  try {
-    const r = await reviewOpportunity(auth.session as AdminSession, o.id, action)
-    ElMessage.success(r.message)
-    void load()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败')
-  }
-}
 </script>
 
 <template>
   <div>
-    <div class="bf-card">
-      <div class="bf-filter">
-        <el-input v-model="keyword" placeholder="搜索商机名称 / 分类 / 城市" style="width: 220px" clearable @keyup.enter="doSearch" />
-        <el-button type="primary" @click="doSearch">搜索</el-button>
-        <span
-          v-for="f in STATUS_FILTERS"
-          :key="f.value"
-          class="bf-filter__seg"
-          :class="{ 'is-active': status === f.value }"
-          @click="status = f.value; page = 1; void load()"
-        >
-          {{ f.label }}
-        </span>
-        <div style="flex: 1" />
-        <span class="bf-muted">共 {{ total }} 条商机</span>
-        <el-button size="small" type="primary" plain @click="openCreate">+ 新增商机</el-button>
-        <el-button size="small" @click="importOpen = true">批量导入</el-button>
+    <!-- 商机统计卡 -->
+    <div class="admin-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px">
+      <div v-for="s in stats" :key="s.label" class="admin-stat-card" style="padding: 14px 18px">
+        <div class="stat-label" style="font-size: 12px">{{ s.label }}</div>
+        <div class="stat-value" style="font-size: 22px" :style="s.color ? { color: s.color } : {}">{{ s.value }}</div>
       </div>
     </div>
 
-    <div class="bf-card">
-      <el-table v-loading="loading" :data="rows" style="width: 100%">
-        <el-table-column prop="title" label="商机名称" min-width="170" />
-        <el-table-column prop="category" label="分类" width="100" />
-        <el-table-column prop="city" label="城市" width="80" />
-        <el-table-column label="资金" width="130">
-          <template #default="{ row }">¥{{ row.capitalMin / 10000 }}–{{ row.capitalMax / 10000 }} 万</template>
-        </el-table-column>
-        <el-table-column label="回本 / 毛利" width="110">
-          <template #default="{ row }">{{ row.paybackMonths }} 月 · {{ row.marginPercent }}%</template>
-        </el-table-column>
-        <el-table-column label="难度" width="90">
-          <template #default="{ row }">{{ '★'.repeat(Math.max(1, row.difficultyStars)) }}</template>
-        </el-table-column>
-        <el-table-column label="审核状态" width="100">
-          <template #default="{ row }">
-            <span class="bf-tag" :class="{ 'bf-tag--ok': row.status === 'passed', 'bf-tag--warn': row.status === 'pending', 'bf-tag--danger': row.status === 'rejected' }">
-              {{ row.statusLabel }}
-            </span>
+    <!-- 筛选栏 -->
+    <div class="admin-filter">
+      <el-input v-model="keyword" placeholder="🔍 搜索商机名称 / 分类 / 城市" style="flex: 2; min-width: 220px" clearable @keyup.enter="doSearch" />
+      <el-select v-model="status" style="width: 150px" @change="page = 1; void load()">
+        <el-option v-for="f in STATUS_FILTERS" :key="f.value" :label="f.label" :value="f.value" />
+      </el-select>
+      <el-button type="primary" @click="doSearch">🔍 查询</el-button>
+      <div style="flex: 1" />
+      <span class="bf-muted">共 {{ total }} 条商机</span>
+      <el-button type="primary" @click="openCreate">➕ 新增商机</el-button>
+      <el-button class="admin-btn admin-btn-outline admin-btn-sm" @click="importOpen = true">📥 批量导入</el-button>
+    </div>
+
+    <!-- 商机卡片网格（对齐切图 16 页 biz-grid） -->
+    <div v-loading="loading" class="biz-grid">
+      <div v-for="o in rows" :key="o.id" class="biz-card">
+        <div class="biz-card-header">
+          <div>
+            <div class="biz-name">{{ o.title }}</div>
+            <div class="biz-cat">{{ o.category }} · {{ o.city }} · 来源 {{ o.source }}</div>
+          </div>
+          <div class="biz-status">
+            <span class="biz-dot" :class="statusDot(o)"></span>
+            <span style="font-size: 12px; margin-left: 4px" :style="{ color: statusColor(o) }">{{ statusText(o) }}</span>
+          </div>
+        </div>
+        <div class="biz-meta">
+          <div class="biz-meta-item">
+            <div class="k">启动资金</div>
+            <div class="v" :style="{ color: o.capitalMax <= 20000 ? 'var(--bf-ok)' : '' }">{{ capitalText(o) }}</div>
+          </div>
+          <div class="biz-meta-item">
+            <div class="k">回本周期</div>
+            <div class="v">{{ o.paybackMonths }} 月</div>
+          </div>
+          <div class="biz-meta-item">
+            <div class="k">毛利率</div>
+            <div class="v" :style="{ color: o.marginPercent >= 45 ? 'var(--bf-ok)' : '' }">{{ o.marginPercent }}%</div>
+          </div>
+          <div class="biz-meta-item">
+            <div class="k">难度</div>
+            <div class="v" style="color: var(--bf-warn)">{{ stars(o) }}</div>
+          </div>
+        </div>
+        <div class="biz-actions">
+          <button class="admin-btn admin-btn-sm" @click="openEdit(o)">编辑</button>
+          <template v-if="o.status === 'passed'">
+            <button v-if="!o.onShelf" class="admin-btn admin-btn-sm" style="background: var(--bf-ok)" @click="doToggleShelf(o, true)">上架</button>
+            <button v-else class="admin-btn admin-btn-outline admin-btn-sm" @click="doToggleShelf(o, false)">下架</button>
           </template>
-        </el-table-column>
-        <el-table-column label="上下架" width="90">
-          <template #default="{ row }">
-            <el-switch v-model="row.onShelf" :disabled="row.status !== 'passed'" @change="(v: boolean) => doToggleShelf(row, v)" />
+          <template v-else-if="o.status === 'pending'">
+            <button class="admin-btn admin-btn-sm" style="background: var(--bf-ok)" @click="doReview(o, 'approve')">通过</button>
+            <button class="admin-btn admin-btn-danger admin-btn-sm" @click="doReview(o, 'reject')">驳回</button>
           </template>
-        </el-table-column>
-        <el-table-column prop="source" label="来源" width="100" />
-        <el-table-column label="操作" width="210" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" text type="primary" @click="openEdit(row)">编辑</el-button>
-            <template v-if="row.status === 'pending'">
-              <el-button size="small" text type="success" @click="doReview(row, 'approve')">通过</el-button>
-              <el-button size="small" text type="danger" @click="doReview(row, 'reject')">驳回</el-button>
-            </template>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        v-if="total > pageSize"
-        v-model:current-page="page"
-        :page-size="pageSize"
-        :total="total"
-        layout="prev, pager, next"
-        style="margin-top: 14px; justify-content: flex-end"
-        @current-change="load"
-      />
+          <span v-else class="bf-muted" style="font-size: 12px; align-self: center">已驳回，可编辑后重新提交</span>
+        </div>
+      </div>
+
+      <!-- 添加新商机卡 -->
+      <div class="biz-add" @click="openCreate">
+        <div>＋</div>
+        <div style="font-size: 13px; margin-top: 8px">添加新商机</div>
+      </div>
+    </div>
+
+    <div v-if="total > pageSize" style="display: flex; justify-content: flex-end; margin-top: 8px">
+      <el-pagination v-model:current-page="page" :page-size="pageSize" :total="total" layout="prev, pager, next" background small @current-change="load" />
     </div>
 
     <!-- 新增 / 编辑 -->

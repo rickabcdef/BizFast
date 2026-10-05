@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 管理后台 · 商机库与提示词</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body.admin-page .particles { display: none; }
+        body.admin-page { background: var(--bg-primary); }
+        .biz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+        .biz-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 16px; transition: all 0.2s; }
+        .biz-card:hover { border-color: var(--brand-blue); transform: translateY(-2px); }
+        .biz-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .biz-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .biz-cat { font-size: 12px; color: var(--text-muted); }
+        .biz-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-glass); font-size: 12px; }
+        .biz-meta-item .k { color: var(--text-muted); margin-bottom: 2px; }
+        .biz-meta-item .v { font-weight: 600; font-size: 14px; }
+        .biz-actions { display: flex; gap: 6px; margin-top: 12px; }
+    </style>
+</head>
+<body class="admin-page">
+    <div class="particles" id="particles"></div>
+    
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="logo-text">🚀 生意快启</div>
+                <div class="logo-sub">管理后台 v1.0</div>
+            </div>
+            <ul class="admin-menu">
+                <div class="admin-menu-group">概览</div>
+                <li><a href="13-管理后台.html" class="admin-menu-item"><span class="menu-icon">📊</span>数据看板</a></li>
+                
+                <div class="admin-menu-group">业务管理</div>
+                <li><a href="14-用户管理.html" class="admin-menu-item"><span class="menu-icon">👥</span>用户管理</a></li>
+                <li><a href="15-订单管理.html" class="admin-menu-item"><span class="menu-icon">💳</span>订单管理</a></li>
+                <li><a href="16-商机与提示词.html" class="admin-menu-item active"><span class="menu-icon">💡</span>商机库/提示词</a></li>
+                
+                <div class="admin-menu-group">系统</div>
+                <li><a href="#" class="admin-menu-item"><span class="menu-icon">⚙️</span>系统设置</a></li>
+                <li><a href="index.html" class="admin-menu-item"><span class="menu-icon">↩️</span>返回前台原型</a></li>
+            </ul>
+        </aside>
+        
+        <main class="admin-main">
+            <div class="admin-topbar fade-in">
+                <div>
+                    <h1>💡 商机库与提示词配置</h1>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">管理商机数据、AI提示词、模型路由——修改后 5 分钟内对用户端生效</p>
+                </div>
+                <div class="topbar-right">
+                    <button class="btn-admin btn-admin-outline">📋 版本历史</button>
+                    <button class="btn-admin">💾 保存并发布</button>
+                    <div class="admin-user">
+                        <div class="admin-avatar">管</div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">管理员</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">超级管理员</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert-card alert-success fade-in">
+                <span style="font-size: 18px;">✅</span>
+                <div>
+                    <strong>当前生效版本：v1.2.3</strong> · 发布于 2026-10-04 18:32 · 商机库共 <strong>1,247</strong> 条 · AI 模型：GLM-5.2（主）/ Qwen-Plus（备）
+                    <span style="margin-left: 12px; color: var(--text-muted); font-size: 12px;">所有修改点击"保存并发布"后 5 分钟生效，支持一键回滚</span>
+                </div>
+            </div>
+            
+            <!-- 大Tab -->
+            <div class="config-tabs fade-in">
+                <button class="config-tab active" onclick="switchTab('biz')">📚 商机库管理</button>
+                <button class="config-tab" onclick="switchTab('prompt')">🤖 AI提示词</button>
+                <button class="config-tab" onclick="switchTab('model')">🔀 模型路由</button>
+                <button class="config-tab" onclick="switchTab('pack')">📦 启动包配置</button>
+            </div>
+            
+            <!-- Tab1: 商机库 -->
+            <div id="tab-biz" class="tab-panel">
+                <div class="filter-bar">
+                    <input class="filter-input" placeholder="🔍 搜索商机名称/标签">
+                    <select class="filter-select">
+                        <option>全部分类</option>
+                        <option>餐饮小吃</option>
+                        <option>社区服务</option>
+                        <option>电商新零售</option>
+                        <option>本地生活服务</option>
+                    </select>
+                    <select class="filter-select">
+                        <option>全部状态</option>
+                        <option>上架中</option>
+                        <option>已下架</option>
+                    </select>
+                    <select class="filter-select">
+                        <option>资金门槛</option>
+                        <option>1万以下</option>
+                        <option>1-5万</option>
+                        <option>5-20万</option>
+                        <option>20万以上</option>
+                    </select>
+                    <button class="btn-admin">➕ 新增商机</button>
+                    <button class="btn-admin btn-admin-outline">📥 批量导入</button>
+                </div>
+                
+                <div class="admin-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                    <div class="admin-stat-card" style="padding: 14px 18px;">
+                        <div class="stat-label" style="font-size: 12px;">商机总数</div>
+                        <div class="stat-value" style="font-size: 22px;">1,247</div>
+                    </div>
+                    <div class="admin-stat-card" style="padding: 14px 18px;">
+                        <div class="stat-label" style="font-size: 12px;">上架中</div>
+                        <div class="stat-value" style="font-size: 22px; color: var(--success);">1,186</div>
+                    </div>
+                    <div class="admin-stat-card" style="padding: 14px 18px;">
+                        <div class="stat-label" style="font-size: 12px;">本周新增</div>
+                        <div class="stat-value" style="font-size: 22px; color: var(--brand-blue);">38</div>
+                    </div>
+                    <div class="admin-stat-card" style="padding: 14px 18px;">
+                        <div class="stat-label" style="font-size: 12px;">本周下架</div>
+                        <div class="stat-value" style="font-size: 22px; color: var(--text-muted);">12</div>
+                    </div>
+                </div>
+                
+                <div class="biz-grid">
+                    <div class="biz-card">
+                        <div class="biz-card-header">
+                            <div>
+                                <div class="biz-name">🍜 社区团购团长</div>
+                                <div class="biz-cat">社区服务 · 轻资产</div>
+                            </div>
+                            <div class="biz-status"><span class="biz-dot on"></span><span style="font-size: 12px; color: var(--success); margin-left: 4px;">上架中</span></div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">依托社区微信群组织邻居拼团采购生鲜日用品，赚取平台佣金与差价，适合兼职起步。</p>
+                        <div class="biz-meta">
+                            <div class="biz-meta-item"><div class="k">启动资金</div><div class="v" style="color: var(--success);">¥0-3千</div></div>
+                            <div class="biz-meta-item"><div class="k">回本周期</div><div class="v">1-2月</div></div>
+                            <div class="biz-meta-item"><div class="k">毛利率</div><div class="v">15-25%</div></div>
+                            <div class="biz-meta-item"><div class="k">匹配次数</div><div class="v" style="color: var(--brand-purple);">328次</div></div>
+                        </div>
+                        <div class="biz-actions">
+                            <button class="btn-admin btn-sm">编辑</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">下架</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">复制</button>
+                        </div>
+                    </div>
+                    
+                    <div class="biz-card">
+                        <div class="biz-card-header">
+                            <div>
+                                <div class="biz-name">🥟 便民早餐车</div>
+                                <div class="biz-cat">餐饮小吃 · 小本经营</div>
+                            </div>
+                            <div class="biz-status"><span class="biz-dot on"></span><span style="font-size: 12px; color: var(--success); margin-left: 4px;">上架中</span></div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">在社区、写字楼、学校门口设流动早餐点，主打包子豆浆煎饼，现金流好、复购高。</p>
+                        <div class="biz-meta">
+                            <div class="biz-meta-item"><div class="k">启动资金</div><div class="v">¥1-3万</div></div>
+                            <div class="biz-meta-item"><div class="k">回本周期</div><div class="v">3-6月</div></div>
+                            <div class="biz-meta-item"><div class="k">毛利率</div><div class="v" style="color: var(--success);">50-65%</div></div>
+                            <div class="biz-meta-item"><div class="k">匹配次数</div><div class="v" style="color: var(--brand-purple);">276次</div></div>
+                        </div>
+                        <div class="biz-actions">
+                            <button class="btn-admin btn-sm">编辑</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">下架</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">复制</button>
+                        </div>
+                    </div>
+                    
+                    <div class="biz-card">
+                        <div class="biz-card-header">
+                            <div>
+                                <div class="biz-name">🧹 家政服务中介</div>
+                                <div class="biz-cat">社区服务 · 中介型</div>
+                            </div>
+                            <div class="biz-status"><span class="biz-dot on"></span><span style="font-size: 12px; color: var(--success); margin-left: 4px;">上架中</span></div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">对接家政阿姨与有需求的家庭，收取中介费与管理费，轻资产、可规模复制。</p>
+                        <div class="biz-meta">
+                            <div class="biz-meta-item"><div class="k">启动资金</div><div class="v">¥3-8万</div></div>
+                            <div class="biz-meta-item"><div class="k">回本周期</div><div class="v">4-8月</div></div>
+                            <div class="biz-meta-item"><div class="k">毛利率</div><div class="v">30-45%</div></div>
+                            <div class="biz-meta-item"><div class="k">匹配次数</div><div class="v" style="color: var(--brand-purple);">234次</div></div>
+                        </div>
+                        <div class="biz-actions">
+                            <button class="btn-admin btn-sm">编辑</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">下架</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">复制</button>
+                        </div>
+                    </div>
+                    
+                    <div class="biz-card">
+                        <div class="biz-card-header">
+                            <div>
+                                <div class="biz-name">📦 小区快递驿站</div>
+                                <div class="biz-cat">社区服务 · 稳定型</div>
+                            </div>
+                            <div class="biz-status"><span class="biz-dot off"></span><span style="font-size: 12px; color: var(--text-muted); margin-left: 4px;">已下架</span></div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">在小区内设代收代寄快递点，靠件量提成+社区团购变现，但需注意品牌方压价风险。</p>
+                        <div class="biz-meta">
+                            <div class="biz-meta-item"><div class="k">启动资金</div><div class="v">¥5-10万</div></div>
+                            <div class="biz-meta-item"><div class="k">回本周期</div><div class="v">6-12月</div></div>
+                            <div class="biz-meta-item"><div class="k">毛利率</div><div class="v">20-30%</div></div>
+                            <div class="biz-meta-item"><div class="k">匹配次数</div><div class="v">189次</div></div>
+                        </div>
+                        <div class="biz-actions">
+                            <button class="btn-admin btn-sm">编辑</button>
+                            <button class="btn-admin btn-sm" style="background: var(--success);">上架</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">复制</button>
+                        </div>
+                    </div>
+                    
+                    <div class="biz-card">
+                        <div class="biz-card-header">
+                            <div>
+                                <div class="biz-name">🎬 短视频探店</div>
+                                <div class="biz-cat">本地生活 · 新媒体</div>
+                            </div>
+                            <div class="biz-status"><span class="biz-dot on"></span><span style="font-size: 12px; color: var(--success); margin-left: 4px;">上架中</span></div>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">拍摄本地商家探店视频，通过团购分佣、商单广告变现，适合擅长拍摄的年轻人。</p>
+                        <div class="biz-meta">
+                            <div class="biz-meta-item"><div class="k">启动资金</div><div class="v" style="color: var(--success);">¥0-5千</div></div>
+                            <div class="biz-meta-item"><div class="k">回本周期</div><div class="v">2-4月</div></div>
+                            <div class="biz-meta-item"><div class="k">毛利率</div><div class="v" style="color: var(--success);">60-80%</div></div>
+                            <div class="biz-meta-item"><div class="k">匹配次数</div><div class="v" style="color: var(--brand-purple);">156次</div></div>
+                        </div>
+                        <div class="biz-actions">
+                            <button class="btn-admin btn-sm">编辑</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">下架</button>
+                            <button class="btn-admin btn-admin-outline btn-sm">复制</button>
+                        </div>
+                    </div>
+                    
+                    <div class="biz-card">
+                        <div class="biz-card-header">
+                            <div>
+                                <div class="biz-name">➕ 添加新商机</div>
+                                <div class="biz-cat" style="color: var(--brand-blue);">点击创建新的商机条目</div>
+                            </div>
+                        </div>
+                        <div style="height: 120px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border-glass); border-radius: var(--radius-sm); margin-top: 12px; color: var(--text-muted); font-size: 36px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand-blue)';this.style.color='var(--brand-blue)'" onmouseout="this.style.borderColor='var(--border-glass)';this.style.color='var(--text-muted)'">
+                            +
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab2: 提示词 -->
+            <div id="tab-prompt" class="tab-panel" style="display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="admin-chart-card" style="padding: 20px;">
+                        <div class="form-row">
+                            <label class="form-label">🤖 商机诊断主提示词（生成 3 个匹配商机时使用）</label>
+                            <textarea class="prompt-editor">你是一位资深的小微企业创业顾问，擅长为普通人分析适合的小生意方向。
+
+用户输入：
+- 所在城市：{city}
+- 启动资金：{budget}
+- 每日可投入时间：{hours}
+- 创业经验：{experience}
+
+请根据用户条件，从商机库中筛选出 3 个最匹配的商机方向，每个方向必须包含：
+1. 商机名称与一句话简介
+2. 准确的启动资金区间（具体到千元）
+3. 预估回本周期（具体到月）
+4. 毛利率区间（百分比）
+5. 第一个客户从哪里找（具体场景，不要空话）
+6. 上手难度评分（1-3星）
+7. 真实案例简述（200字以内，有具体场景）
+8. 3个最容易踩的坑（必须真实，不许敷衍）
+
+要求：
+- 说人话，不用"赋能""闭环""链路"这类互联网黑话
+- 数字要真实可信，不要为了吸引用户夸大收益
+- 风险点必须写清楚，不要只说好话
+- 语气像一位靠谱的朋友在给建议，不要像销售</textarea>
+                            <div class="form-hint">💡 变量说明：{city} {budget} {hours} {experience} 将被用户实际输入替换；修改后点击"保存并发布"5分钟内生效</div>
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">⚙️ 温度（Temperature）</label>
+                            <input type="range" min="0" max="100" value="30" style="width: 100%;">
+                            <div class="form-hint">当前值 0.3（偏低，输出更稳定可靠；建议 0.2-0.4）</div>
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">📏 最大输出 Token</label>
+                            <input class="form-input" type="number" value="2000">
+                        </div>
+                    </div>
+                    
+                    <div class="admin-chart-card" style="padding: 20px;">
+                        <div class="form-row">
+                            <label class="form-label">📦 启动包生成提示词（付费后生成 10 件交付物时使用）</label>
+                            <textarea class="prompt-editor" style="min-height: 200px;">请为用户生成一份完整的《生意启动包》，包含以下 10 件交付物：
+
+1. 可行性评分卡（总分100分，6项分项打分，给出明确的"推荐/谨慎/不推荐"结论）
+2. 回本测算表（Excel格式，预设公式：填入房租、进货成本、人工后自动计算日盈亏平衡点与回本周期）
+3. 精准客户画像与第一个月获客清单（具体到地点、人群、话术）
+4. 一手供应商线索（3-5个靠谱货源渠道，含首次询价话术模板）
+5. 定价建议（3档定价方案 + 开业促销方案3套）
+6. 开店/摆摊/线上店流程清单（按天列出第一步到最后一步）
+7. 朋友圈/抖音获客文案（10条，覆盖开业/日常/促销场景，可直接复制使用）
+8. 宣传物料（店名建议3个、海报设计说明、收款二维码文案）
+9. 30天行动日历（逐日列出每天该做什么，不要空话）
+10. 风险清单与止损线（亏到什么程度必须立刻停手，3条硬性红线）
+
+所有内容必须具体、可执行、说人话，不要空洞建议。
+文案部分要像真的帮朋友写的，不要像营销号。
+数据部分要保守估算，宁可低估收益，也不要画饼。</textarea>
+                        </div>
+                        
+                        <div class="alert-card alert-warning" style="margin-top: 16px;">
+                            <span>⚠️</span>
+                            <div style="font-size: 12px;">修改提示词会直接影响用户收到的启动包质量。建议先在测试环境验证，再发布到生产。每次发布会自动备份上一版本，可随时回滚。</div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button class="btn-admin">🧪 测试生成</button>
+                            <button class="btn-admin btn-admin-outline">📜 查看历史版本</button>
+                            <button class="btn-admin btn-admin-outline">↩️ 回滚到上一版</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab3: 模型路由 -->
+            <div id="tab-model" class="tab-panel" style="display: none;">
+                <div class="admin-chart-card" style="padding: 24px;">
+                    <h3 style="margin-bottom: 20px; font-size: 16px;">🔀 AI 模型路由配置</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">不同任务使用不同模型，兼顾效果与成本；主模型故障时自动切到备用模型。</p>
+                    
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>任务类型</th>
+                                <th>主模型</th>
+                                <th>备用模型</th>
+                                <th>单次成本估算</th>
+                                <th>开关</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>商机诊断（3个推荐）</td>
+                                <td><span class="tag tag-blue">GLM-5.2</span></td>
+                                <td><span class="tag tag-purple">Qwen-Plus</span></td>
+                                <td>≈ ¥0.02/次</td>
+                                <td><div class="switch-wrap"><div class="switch on"><div class="switch-dot"></div></div><span style="font-size: 12px; color: var(--success);">启用</span></div></td>
+                            </tr>
+                            <tr>
+                                <td>启动包生成（10件交付物）</td>
+                                <td><span class="tag tag-blue">GLM-5.2</span></td>
+                                <td><span class="tag tag-purple">DeepSeek-V3</span></td>
+                                <td>≈ ¥0.14/次</td>
+                                <td><div class="switch-wrap"><div class="switch on"><div class="switch-dot"></div></div><span style="font-size: 12px; color: var(--success);">启用</span></div></td>
+                            </tr>
+                            <tr>
+                                <td>文案润色（文案小助手）</td>
+                                <td><span class="tag tag-green">Doubao-lite</span></td>
+                                <td><span class="tag tag-blue">GLM-5.2</span></td>
+                                <td>≈ ¥0.005/次</td>
+                                <td><div class="switch-wrap"><div class="switch on"><div class="switch-dot"></div></div><span style="font-size: 12px; color: var(--success);">启用</span></div></td>
+                            </tr>
+                            <tr>
+                                <td>图片生成（海报物料）</td>
+                                <td><span class="tag tag-orange">通义万相</span></td>
+                                <td><span class="tag tag-orange">即梦AI</span></td>
+                                <td>≈ ¥0.10/张</td>
+                                <td><div class="switch-wrap"><div class="switch on"><div class="switch-dot"></div></div><span style="font-size: 12px; color: var(--success);">启用</span></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div style="margin-top: 24px; padding: 16px; background: rgba(0,180,42,0.08); border-radius: var(--radius-md); border: 1px solid rgba(0,180,42,0.2);">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--success); margin-bottom: 8px;">💰 本月AI成本估算</div>
+                        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+                            预计总消耗：<strong style="color: var(--success);">¥286.43</strong>（占营收 <strong style="color: var(--success);">0.78%</strong>）<br>
+                            单次启动包平均AI成本：¥0.16 · 付费¥9.9毛利率 98.4% · 付费¥199毛利率 99.9%<br>
+                            缓存命中率：34% · 备用模型切换次数：0次（主模型稳定）
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab4: 启动包配置 -->
+            <div id="tab-pack" class="tab-panel" style="display: none;">
+                <div class="admin-chart-card" style="padding: 24px;">
+                    <h3 style="margin-bottom: 20px; font-size: 16px;">📦 启动包交付物配置</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">用户付费后收到的 10 件交付物，可单独开关、调整顺序、修改模板。</p>
+                    
+                    <div id="pack-list">
+                        <!-- JS 渲染 -->
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn-admin">💾 保存配置</button>
+                        <button class="btn-admin btn-admin-outline">➕ 添加新交付物</button>
+                        <button class="btn-admin btn-admin-outline">👁️ 预览完整启动包</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        function switchTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.config-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).style.display = 'block';
+            event.target.classList.add('active');
+        }
+        
+        // 启动包列表渲染
+        const packs = [
+            { icon: '📊', name: '可行性评分卡', desc: '总分100分，6项分项打分，明确推荐/谨慎/不推荐结论', type: 'PDF', star: true, on: true },
+            { icon: '📈', name: '回本测算Excel表', desc: '预设公式，填入成本自动计算盈亏平衡点与回本周期', type: 'Excel', star: true, on: true },
+            { icon: '👥', name: '客户画像与获客清单', desc: '具体到地点、人群、话术，第一个月获客路径', type: 'PDF', star: false, on: true },
+            { icon: '🏭', name: '供应商线索与询价话术', desc: '3-5个靠谱货源渠道，含首次打电话的话术模板', type: 'PDF', star: false, on: true },
+            { icon: '💵', name: '定价与开业活动方案', desc: '3档定价建议 + 3套开业促销活动方案', type: 'PDF', star: false, on: true },
+            { icon: '📋', name: '开店流程清单', desc: '从准备到开业的完整步骤，按天排列', type: 'PDF', star: false, on: true },
+            { icon: '✍️', name: '朋友圈/抖音文案10条', desc: '覆盖开业、日常、促销场景，可直接复制使用', type: 'Word', star: true, on: true },
+            { icon: '🎨', name: '店名+海报+二维码物料', desc: '3个店名建议+海报设计+收款码，可直接下载', type: '图片', star: true, on: true },
+            { icon: '📅', name: '30天逐日行动日历', desc: '每天该做什么，逐日清单，不用自己规划', type: 'PDF', star: false, on: true },
+            { icon: '⚠️', name: '风险清单与止损线', desc: '3条硬性红线，亏到什么程度必须立刻停手', type: 'PDF', star: false, on: true },
+        ];
+        const container = document.getElementById('pack-list');
+        packs.forEach((p, i) => {
+            container.innerHTML += `
+                <div style="display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--border-glass); border-radius: var(--radius-md); margin-bottom: 10px; background: var(--bg-card);">
+                    <div style="width: 24px; color: var(--text-muted); font-size: 14px; cursor: grab;">☰</div>
+                    <div style="width: 40px; height: 40px; border-radius: var(--radius-sm); background: rgba(22,93,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">${p.icon}</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">${p.star?'⭐ ':''}${i+1}. ${p.name} <span class="tag tag-blue" style="margin-left: 8px;">${p.type}</span></div>
+                        <div style="font-size: 12px; color: var(--text-muted);">${p.desc}</div>
+                    </div>
+                    <div class="switch-wrap">
+                        <div class="switch ${p.on?'on':''}" onclick="this.classList.toggle('on')"><div class="switch-dot"></div></div>
+                    </div>
+                    <button class="btn-admin btn-admin-outline btn-sm">编辑模板</button>
+                </div>
+            `;
+        });
+    </script>
+    <script src="common.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   getAdminUsers,
@@ -15,16 +15,25 @@ const page = ref(1)
 const pageSize = 20
 const keyword = ref('')
 const member = ref('')
+const source = ref('')
 const loading = ref(false)
 const detail = ref<{ user: AdminUser; orders: AdminOrder[]; packages: any[] } | null>(null)
 const detailOpen = ref(false)
 
 const MEMBER_FILTERS = [
-  { value: '', label: '全部' },
-  { value: 'none', label: '游客' },
-  { value: 'single', label: '单次' },
-  { value: 'month', label: '月会员' },
-  { value: 'year', label: '年会员' }
+  { value: '', label: '全部会员等级' },
+  { value: 'none', label: '免费用户' },
+  { value: 'single', label: '单次购买' },
+  { value: 'month', label: '月度会员' },
+  { value: 'year', label: '年度会员' }
+]
+
+const SOURCE_FILTERS = [
+  { value: '', label: '来源渠道（全部）' },
+  { value: '自然流量', label: '自然流量' },
+  { value: '商机详情页', label: '商机详情页' },
+  { value: '分享卡片', label: '分享卡片' },
+  { value: '付费弹窗', label: '付费弹窗' }
 ]
 
 const load = async () => {
@@ -45,6 +54,28 @@ const doSearch = () => {
   void load()
 }
 
+const doReset = () => {
+  keyword.value = ''
+  member.value = ''
+  source.value = ''
+  page.value = 1
+  void load()
+}
+
+// ---- 用户统计小卡（对齐切图 14 页，数据来自 Mock 聚合） ----
+const stats = computed(() => {
+  const all = rows.value.length + (total.value > pageSize ? total.value - pageSize : 0)
+  const free = rows.value.filter((u) => u.memberStatus === 'none').length
+  const month = rows.value.filter((u) => u.memberStatus === 'month').length
+  const year = rows.value.filter((u) => u.memberStatus === 'year').length
+  return [
+    { label: '当前列表', value: String(all) },
+    { label: '免费用户', value: String(free) },
+    { label: '月度会员', value: String(month), color: 'var(--bf-primary)' },
+    { label: '年度会员', value: String(year), color: 'var(--bf-primary-2)' }
+  ]
+})
+
 const doExport = () => {
   const ok = exportCsv(
     `生意快启_用户列表_${Date.now()}.csv`,
@@ -58,67 +89,97 @@ const openDetail = async (u: AdminUser) => {
   detail.value = await getAdminUserDetail(u.id)
   detailOpen.value = true
 }
+
+// 会员等级 tag（对齐切图 tag-purple/blue/gray/orange）
+const memberTag = (u: AdminUser) => {
+  if (u.memberStatus === 'year') return 'tag-purple'
+  if (u.memberStatus === 'month') return 'tag-blue'
+  if (u.memberStatus === 'single') return 'tag-orange'
+  return 'tag-gray'
+}
+const memberLabel = (u: AdminUser) => {
+  const icon = u.memberStatus === 'year' ? '👑 ' : u.memberStatus === 'month' ? '📅 ' : u.memberStatus === 'single' ? '🎁 ' : ''
+  return icon + u.memberLabel
+}
+const statusTag = (u: AdminUser) => (u.riskFlag ? 'tag-orange' : 'tag-green')
+const statusLabel = (u: AdminUser) => (u.riskFlag ? '风控中' : '正常')
 </script>
 
 <template>
   <div>
-    <div class="bf-card">
-      <div class="bf-filter">
-        <el-input v-model="keyword" placeholder="搜索手机号 / 昵称 / 城市" style="width: 240px" clearable @keyup.enter="doSearch" />
-        <el-button type="primary" @click="doSearch">搜索</el-button>
-        <span
-          v-for="f in MEMBER_FILTERS"
-          :key="f.value"
-          class="bf-filter__seg"
-          :class="{ 'is-active': member === f.value }"
-          @click="member = f.value; page = 1; void load()"
-        >
-          {{ f.label }}
-        </span>
-        <div style="flex: 1" />
-        <span class="bf-muted">共 {{ total }} 个用户</span>
-        <el-button size="small" @click="doExport">导出 CSV</el-button>
+    <!-- 用户统计小卡 -->
+    <div class="admin-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px">
+      <div v-for="s in stats" :key="s.label" class="admin-stat-card" style="padding: 14px 18px">
+        <div class="stat-label" style="font-size: 12px; margin-bottom: 4px">{{ s.label }}</div>
+        <div class="stat-value" style="font-size: 22px" :style="s.color ? { color: s.color } : {}">{{ s.value }}</div>
       </div>
     </div>
 
-    <div class="bf-card">
+    <!-- 筛选栏 -->
+    <div class="admin-filter">
+      <el-input v-model="keyword" placeholder="🔍 搜索手机号 / 昵称 / 城市" style="flex: 2; min-width: 220px" clearable @keyup.enter="doSearch" />
+      <el-select v-model="member" style="width: 150px" @change="page = 1; void load()">
+        <el-option v-for="f in MEMBER_FILTERS" :key="f.value" :label="f.label" :value="f.value" />
+      </el-select>
+      <el-select v-model="source" style="width: 170px" @change="page = 1; void load()">
+        <el-option v-for="f in SOURCE_FILTERS" :key="f.value" :label="f.label" :value="f.value" />
+      </el-select>
+      <el-button type="primary" @click="doSearch">🔍 查询</el-button>
+      <el-button @click="doReset">重置</el-button>
+      <div style="flex: 1" />
+      <span class="bf-muted">共 {{ total }} 位注册用户</span>
+      <el-button class="admin-btn admin-btn-outline admin-btn-sm" @click="doExport">📥 导出用户数据</el-button>
+    </div>
+
+    <!-- 用户表格 -->
+    <div class="admin-table-wrap">
       <el-table v-loading="loading" :data="rows" style="width: 100%">
-        <el-table-column prop="nickname" label="昵称" min-width="120">
+        <el-table-column label="用户" min-width="180">
           <template #default="{ row }">
-            {{ row.nickname }}
-            <el-tag v-if="row.riskFlag" type="danger" size="small" style="margin-left: 6px">风控</el-tag>
+            <div class="user-cell">
+              <div class="user-avatar-sm">{{ row.nickname.slice(0, 1) }}</div>
+              <div>
+                <div class="user-name">{{ row.nickname }}</div>
+                <div class="user-sub">{{ row.id }} · {{ row.phone }}</div>
+              </div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column prop="city" label="城市" width="80" />
-        <el-table-column label="会员状态" width="100">
+        <el-table-column label="会员等级" width="120">
           <template #default="{ row }">
-            <span class="bf-tag" :class="{ 'bf-tag--ok': row.memberStatus !== 'none' }">{{ row.memberLabel }}</span>
+            <span class="tag" :class="memberTag(row)">{{ memberLabel(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="累计消费" width="110">
+          <template #default="{ row }">
+            <span style="color: var(--bf-ok); font-weight: 600">¥{{ row.totalSpendYuan.toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="orderCount" label="订单数" width="80" />
-        <el-table-column label="消费总额" width="100">
-          <template #default="{ row }">¥{{ row.totalSpendYuan }}</template>
+        <el-table-column prop="source" label="注册来源" width="120">
+          <template #default="{ row }">
+            <span class="tag" :class="row.source === '付费弹窗' ? 'tag-orange' : row.source === '商机详情页' || row.source === '分享卡片' ? 'tag-green' : 'tag-blue'">{{ row.source }}</span>
+          </template>
         </el-table-column>
-        <el-table-column prop="source" label="来源渠道" width="110" />
-        <el-table-column prop="createdAt" label="注册时间" width="130" />
+        <el-table-column prop="createdAt" label="注册时间" width="150" />
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <span class="tag" :class="statusTag(row)">{{ statusLabel(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="90" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" text type="primary" @click="openDetail(row)">详情</el-button>
+            <a class="action-link" @click="openDetail(row)">详情</a>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        v-if="total > pageSize"
-        v-model:current-page="page"
-        :page-size="pageSize"
-        :total="total"
-        layout="prev, pager, next"
-        style="margin-top: 14px; justify-content: flex-end"
-        @current-change="load"
-      />
+      <div class="pagination">
+        <div>共 <strong style="color: var(--bf-text)">{{ total }}</strong> 条记录 · 当前第 {{ page }} 页</div>
+        <el-pagination v-model:current-page="page" :page-size="pageSize" :total="total" layout="prev, pager, next" background small @current-change="load" />
+      </div>
     </div>
 
+    <!-- 用户详情 -->
     <el-dialog v-model="detailOpen" title="用户详情" width="640px" destroy-on-close>
       <template v-if="detail">
         <div class="bf-card" style="margin-bottom: 12px">

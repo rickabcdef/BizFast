@@ -1,20 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { getAdminDashboard, type DashboardKpis, type DashboardTrend, type TrendGranularity } from '@/api/adminApi'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import {
+  getAdminDashboard,
+  getAdminUsers,
+  getAdminOrders,
+  getAdminOpportunities,
+  ORDER_ABNORMAL_LABEL,
+  type DashboardKpis,
+  type DashboardTrend,
+  type TrendGranularity,
+  type AdminUser,
+  type AdminOrder,
+  type AdminOpportunity
+} from '@/api/adminApi'
+
+const router = useRouter()
 
 const granularity = ref<TrendGranularity>('day')
 const kpis = ref<DashboardKpis | null>(null)
 const trend = ref<DashboardTrend[]>([])
 const refreshAt = ref('')
+const users = ref<AdminUser[]>([])
+const orders = ref<AdminOrder[]>([])
+const opps = ref<AdminOpportunity[]>([])
 const loading = ref(true)
 
 const load = async (g: TrendGranularity) => {
   loading.value = true
   try {
-    const d = await getAdminDashboard(g)
+    const [d, u, o, p] = await Promise.all([
+      getAdminDashboard(g),
+      getAdminUsers({ page: 1, pageSize: 50 }),
+      getAdminOrders({ page: 1, pageSize: 50 }),
+      getAdminOpportunities({ page: 1, pageSize: 50 })
+    ])
     kpis.value = d.kpis
     trend.value = d.trend
     refreshAt.value = d.refreshAt
+    users.value = u.items
+    orders.value = o.items
+    opps.value = p.items
   } finally {
     loading.value = false
   }
@@ -22,63 +48,215 @@ const load = async (g: TrendGranularity) => {
 
 onMounted(() => load('day'))
 
-const cards = () =>
+// ---- 统计卡（对齐切图 13 页：4 核心 + 5 累计，数据来自 Mock 真实聚合） ----
+const payUsers = computed(() => users.value.filter((u) => u.memberStatus !== 'none').length)
+const totalRevenue = computed(() => Math.round(orders.value.reduce((s, o) => s + o.amountYuan, 0) * 10) / 10)
+const abnormalOrders = computed(() => orders.value.filter((o) => o.abnormal).length)
+const refundPending = computed(() => orders.value.filter((o) => o.refundRequested && o.status !== 'refunded').length)
+
+const coreCards = computed(() =>
   kpis.value
     ? [
-        { label: '诊断完成数', value: String(kpis.value.diagnoseCount), unit: '人' },
-        { label: '付费单数', value: String(kpis.value.payCount), unit: '单' },
-        { label: '总收入', value: `¥${kpis.value.revenueYuan}`, unit: '' },
-        { label: '付费转化率', value: kpis.value.conversionRate, unit: '' },
-        { label: '交付成功率', value: kpis.value.packageDoneRate, unit: '' },
-        { label: '退款率', value: kpis.value.refundRate, unit: '' },
-        { label: '客单价', value: `¥${kpis.value.avgOrderYuan}`, unit: '' }
+        { icon: '👤', label: '注册用户', value: String(users.value.length), trend: `付费 ${payUsers.value} 人` },
+        { icon: '💳', label: '今日订单数', value: String(kpis.value.payCount), trend: '↑ 较昨日' },
+        { icon: '💰', label: '今日营收（元）', value: `¥${kpis.value.revenueYuan}`, trend: '↑ 较昨日' },
+        { icon: '📈', label: '付费转化率', value: kpis.value.conversionRate, trend: '↑ 较上周' }
       ]
     : []
+)
 
-const maxOrders = () => Math.max(1, ...trend.value.map((t) => t.orders))
+const cumCards = computed(() =>
+  kpis.value
+    ? [
+        { label: '累计诊断', value: String(kpis.value.diagnoseCount) },
+        { label: '累计付费', value: String(payUsers.value) },
+        { label: '累计营收', value: `¥${totalRevenue.value}` },
+        { label: '退款率', value: kpis.value.refundRate, color: 'var(--bf-ok)' },
+        { label: '交付成功率', value: kpis.value.packageDoneRate, color: 'var(--bf-ok)' }
+      ]
+    : []
+)
+
+// ---- 营收趋势（柱状图，按日/周/月） ----
 const maxRevenue = () => Math.max(1, ...trend.value.map((t) => t.revenue))
+
+// ---- 商机分类占比（环形图） ----
+const CAT_COLORS = ['#165DFF', '#7B61FF', '#00B42A', '#FF7D00', '#38BDF8']
+const categoryShare = computed(() => {
+  const map = new Map<string, number>()
+  for (const o of opps.value) map.set(o.category, (map.get(o.category) || 0) + 1)
+  const entries = [...map.entries()].sort((a, b) => b[1] - a[1])
+  const total = opps.value.length || 1
+  let acc = 0
+  const segs = entries.map(([name, count], i) => {
+    const pct = Math.round((count / total) * 100)
+    const from = acc
+    acc += pct
+    return { name, count, pct, color: CAT_COLORS[i % CAT_COLORS.length], from, to: acc }
+  })
+  const gradient =
+    segs.length === 0
+      ? '#22304a'
+      : `conic-gradient(${segs
+          .map((s) => `${s.color} ${s.from}% ${s.to}%`)
+          .join(', ')})`
+  return { segs, gradient, total: opps.value.length }
+})
+
+// ---- 热门商机 TOP（派生：回本周期×40 + 毛利率×2 作为匹配热度，稳定可复现） ----
+const topOpps = computed(() =>
+  [...opps.value]
+    .map((o) => ({ name: o.title, heat: o.paybackMonths * 40 + o.marginPercent * 2 }))
+    .sort((a, b) => b.heat - a.heat)
+    .slice(0, 8)
+)
+const maxHeat = computed(() => Math.max(1, ...topOpps.value.map((t) => t.heat)))
+
+// ---- 最近订单（取前 5 笔） ----
+const recentOrders = computed(() => orders.value.slice(0, 5))
+const orderTag = (o: AdminOrder) => {
+  if (o.abnormal) return 'tag-red'
+  if (o.status === 'delivered' || o.status === 'refunded') return 'tag-green'
+  if (o.status === 'generating' || o.status === 'paid') return 'tag-orange'
+  return 'tag-gray'
+}
+const orderTagText = (o: AdminOrder) => (o.abnormal ? `⚠️ ${ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常'}` : o.statusLabel)
 </script>
 
 <template>
   <div>
-    <div class="bf-kpis">
-      <div v-for="c in cards()" :key="c.label" class="bf-kpi">
-        <div class="bf-kpi__label">{{ c.label }}</div>
-        <div class="bf-kpi__value">
-          {{ c.value }}<span class="bf-kpi__unit">{{ c.unit }}</span>
+    <!-- 异常告警（对齐切图 13 页 alert-card） -->
+    <div v-if="abnormalOrders > 0 || refundPending > 0" class="alert-card alert-warning">
+      <span style="font-size: 18px">⚠️</span>
+      <div>
+        <strong>待处理提醒：</strong>
+        当前有 <strong>{{ abnormalOrders }}</strong> 笔异常订单（已支付未交付 / 支付回调缺失），
+        有 <strong>{{ refundPending }}</strong> 名用户申请退款待审核。
+        <a style="color: var(--bf-warn); text-decoration: underline; margin-left: 8px; cursor: pointer" @click="router.push('/orders')">立即处理 →</a>
+      </div>
+    </div>
+
+    <!-- 4 个核心数据卡 -->
+    <div class="admin-stats">
+      <div v-for="c in coreCards" :key="c.label" class="admin-stat-card">
+        <div class="stat-icon" style="background: rgba(22, 93, 255, 0.15)">{{ c.icon }}</div>
+        <div class="stat-label">{{ c.label }}</div>
+        <div class="stat-value">{{ c.value }}</div>
+        <div class="stat-trend trend-up">{{ c.trend }}</div>
+      </div>
+    </div>
+
+    <!-- 累计指标卡 -->
+    <div class="admin-stats" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 24px">
+      <div v-for="c in cumCards" :key="c.label" class="admin-stat-card" style="padding: 16px">
+        <div class="stat-label" style="font-size: 12px">{{ c.label }}</div>
+        <div class="stat-value" style="font-size: 20px" :style="c.color ? { color: c.color } : {}">{{ c.value }}</div>
+      </div>
+    </div>
+
+    <!-- 图表区：营收趋势 + 商机分类占比 -->
+    <div class="admin-chart-row">
+      <div class="admin-chart-card">
+        <div class="chart-header">
+          <h3>📈 营收趋势</h3>
+          <div class="chart-tabs">
+            <button
+              v-for="g in (['day', 'week', 'month'] as TrendGranularity[])"
+              :key="g"
+              class="chart-tab"
+              :class="{ 'is-active': granularity === g }"
+              @click="granularity = g; load(g)"
+            >
+              {{ g === 'day' ? '按日' : g === 'week' ? '按周' : '按月' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="loading" style="padding: 60px; text-align: center; color: var(--bf-text-3)">加载中…</div>
+        <div v-else class="bar-chart">
+          <div v-for="t in trend" :key="t.label" class="bar-col">
+            <div class="bar-fill" :style="{ height: `${Math.max(6, Math.round((t.revenue / maxRevenue()) * 150))}px` }">
+              <span class="bar-value">¥{{ t.revenue }}</span>
+            </div>
+            <span class="bar-label">{{ t.label }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-chart-card">
+        <div class="chart-header">
+          <h3>🥧 商机分类占比</h3>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut" :style="{ background: categoryShare.gradient }">
+            <div class="donut-inner">
+              <div class="dn">{{ categoryShare.total }}</div>
+              <div class="dl">商机总数</div>
+            </div>
+          </div>
+          <div class="legend-list">
+            <div v-for="s in categoryShare.segs" :key="s.name" class="legend-row">
+              <div class="legend-dot" :style="{ background: s.color }"></div>
+              <div class="legend-name">{{ s.name }}</div>
+              <div class="legend-val">{{ s.pct }}%</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="bf-card">
-      <div class="bf-row" style="justify-content: space-between">
-        <div class="bf-card__title">经营趋势（订单数 / 收入）</div>
-        <div class="bf-filter">
-          <span
-            v-for="g in (['day', 'week', 'month'] as TrendGranularity[])"
-            :key="g"
-            class="bf-filter__seg"
-            :class="{ 'is-active': granularity === g }"
-            @click="granularity = g; load(g)"
-          >
-            {{ g === 'day' ? '按日' : g === 'week' ? '按周' : '按月' }}
-          </span>
+    <!-- 热门商机 + 最近订单 -->
+    <div class="admin-chart-row">
+      <div class="admin-chart-card">
+        <div class="chart-header">
+          <h3>🔥 热门商机 TOP {{ topOpps.length }}</h3>
+          <a style="font-size: 12px; color: var(--bf-primary); text-decoration: none; cursor: pointer" @click="router.push('/opportunities')">管理商机库 →</a>
         </div>
-      </div>
-      <div v-if="loading" style="padding: 40px; text-align: center; color: var(--bf-text-3)">加载中…</div>
-      <div v-else class="bf-trend">
-        <div v-for="t in trend" :key="t.label" class="bf-trend__col">
-          <div class="bf-trend__bars">
-            <div class="bf-trend__bar bf-trend__bar--rev" :style="{ height: `${Math.max(6, Math.round((t.revenue / maxRevenue()) * 110))}px` }" />
-            <div class="bf-trend__bar bf-trend__bar--ord" :style="{ height: `${Math.max(6, Math.round((t.orders / maxOrders()) * 110))}px` }" />
+        <div class="rank-list">
+          <div v-for="(t, i) in topOpps" :key="t.name" class="rank-item">
+            <div class="rank-num" :class="i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : ''">{{ i + 1 }}</div>
+            <div class="rank-name">{{ t.name }}</div>
+            <div class="rank-bar"><div class="rank-bar-fill" :style="{ width: `${Math.max(10, Math.round((t.heat / maxHeat) * 100))}%` }"></div></div>
+            <div class="rank-count">{{ t.heat }}分</div>
           </div>
-          <div class="bf-trend__date">{{ t.label }}</div>
-          <div class="bf-trend__num">{{ t.orders }} 单 / ¥{{ t.revenue }}</div>
         </div>
       </div>
-      <div class="bf-note bf-muted">
-        口径：付费转化率 = 支付成功人数 ÷ 诊断完成人数；交付成功率 = 成功生成 10 件订单数 ÷ 已支付订单数（与第 10 章一致）；数据延迟 ≤ 5 分钟；打开后台 3 秒内可见当日核心数据（M11-05）。
+
+      <div class="admin-chart-card">
+        <div class="chart-header">
+          <h3>📋 最近订单</h3>
+          <a style="font-size: 12px; color: var(--bf-primary); text-decoration: none; cursor: pointer" @click="router.push('/orders')">查看全部 →</a>
+        </div>
+        <table class="admin-table" style="margin-top: 8px">
+          <thead>
+            <tr>
+              <th>用户</th>
+              <th>商品</th>
+              <th>金额</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="o in recentOrders" :key="o.id">
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar-sm">{{ o.userPhone.slice(-4, -2) }}</div>
+                  <div>
+                    <div class="user-name">{{ o.userPhone }}</div>
+                    <div class="user-sub">{{ o.id }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{{ o.planName }}</td>
+              <td style="color: var(--bf-ok); font-weight: 600">¥{{ o.amountYuan }}</td>
+              <td><span class="tag" :class="orderTag(o)">{{ orderTagText(o) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </div>
+
+    <div class="bf-note bf-muted">
+      口径：付费转化率 = 支付成功人数 ÷ 诊断完成人数；交付成功率 = 成功生成 10 件订单数 ÷ 已支付订单数（与第 10 章一致）；数据延迟 ≤ 5 分钟；打开后台 3 秒内可见当日核心数据（M11-05）· {{ refreshAt }}
     </div>
   </div>
 </template>

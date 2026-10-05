@@ -2,23 +2,28 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
 const routes = [
-  { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { title: '登录' } },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { title: '登录', sub: '独立 Web · 强制二次验证 · 不共用用户端登录态' }
+  },
   {
     path: '/',
     component: () => import('@/components/Layout.vue'),
     meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/dashboard' },
-      { path: 'dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: '数据看板', perm: 'dashboard' } },
-      { path: 'users', name: 'users', component: () => import('@/views/UsersView.vue'), meta: { title: '用户管理', perm: 'users' } },
-      { path: 'orders', name: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { title: '订单管理', perm: 'orders' } },
-      { path: 'opportunities', name: 'opportunities', component: () => import('@/views/OpportunitiesView.vue'), meta: { title: '商机库', perm: 'opps' } },
-      { path: 'prompts', name: 'prompts', component: () => import('@/views/PromptsView.vue'), meta: { title: '提示词', perm: 'prompts' } },
-      { path: 'reviews', name: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { title: '内容审核', perm: 'reviews' } },
-      { path: 'roles', name: 'roles', component: () => import('@/views/RolesView.vue'), meta: { title: '权限管理', perm: 'roles' } },
-      { path: 'audit', name: 'audit', component: () => import('@/views/AuditView.vue'), meta: { title: '审计日志', perm: 'audit' } },
-      { path: 'ops', name: 'ops', component: () => import('@/views/OpsView.vue'), meta: { title: '运营位配置', perm: 'ops' } },
-      { path: 'export', name: 'export', component: () => import('@/views/ExportView.vue'), meta: { title: '数据导出', perm: 'export' } }
+      { path: 'dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: '数据看板', sub: '实时监控产品核心指标 · 数据延迟 ≤ 5 分钟', perm: 'dashboard' } },
+      { path: 'users', name: 'users', component: () => import('@/views/UsersView.vue'), meta: { title: '用户管理', sub: '用户查询、会员统计、风控标记与数据导出', perm: 'users' } },
+      { path: 'orders', name: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { title: '订单管理', sub: '全部订单查询、退款处理、对账导出、异常告警', perm: 'orders' } },
+      { path: 'opportunities', name: 'opportunities', component: () => import('@/views/OpportunitiesView.vue'), meta: { title: '商机库', sub: '管理商机数据与上下架——修改后 5 分钟内对用户端生效', perm: 'opps' } },
+      { path: 'prompts', name: 'prompts', component: () => import('@/views/PromptsView.vue'), meta: { title: '提示词配置', sub: 'AI 提示词与模型路由——保存即生效，支持版本历史与一键回滚', perm: 'prompts' } },
+      { path: 'reviews', name: 'reviews', component: () => import('@/views/ReviewsView.vue'), meta: { title: '内容审核', sub: '审核工作台：批量处理 / 申诉复核 / 一键下架', perm: 'reviews' } },
+      { path: 'roles', name: 'roles', component: () => import('@/views/RolesView.vue'), meta: { title: '权限管理', sub: '四角色权限：管理员 / 运营 / 客服 / 财务（最小权限 + 审计留痕）', perm: 'roles' } },
+      { path: 'audit', name: 'audit', component: () => import('@/views/AuditView.vue'), meta: { title: '审计日志', sub: '关键操作全程留痕 · 保留 ≥ 180 天 · 不可篡改', perm: 'audit' } },
+      { path: 'ops', name: 'ops', component: () => import('@/views/OpsView.vue'), meta: { title: '运营位配置', sub: '推荐位 / 弹窗 / 优惠券——配置后实时生效', perm: 'ops' } },
+      { path: 'export', name: 'export', component: () => import('@/views/ExportView.vue'), meta: { title: '数据导出', sub: '导出中心：单次 ≤ 10 万条（CSV / JSON）', perm: 'export' } }
     ]
   }
 ]

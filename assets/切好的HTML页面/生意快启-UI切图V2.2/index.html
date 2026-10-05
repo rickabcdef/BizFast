@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - UI页面导航</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .container { max-width: 800px; }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+        .nav-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-glass);
+            padding: 20px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        .nav-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--brand-blue);
+            box-shadow: 0 12px 40px rgba(22, 93, 255, 0.2);
+        }
+        .nav-card .num {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand-gradient);
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .nav-card .title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .nav-card .desc {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .flow-note {
+            background: rgba(255, 125, 0, 0.1);
+            border: 1px solid rgba(255, 125, 0, 0.3);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-top: 24px;
+        }
+        .flow-note h3 {
+            color: var(--warning);
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .flow-note p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>🚀 生意快启</h1>
+            <p>全平台高保真UI原型 - 共16个页面（前台12 + 后台4）</p>
+        </div>
+        
+        <div class="card fade-in">
+            <h2 style="font-size: 18px; margin-bottom: 12px;">📱 用户前台（12页） - 完整付费流程</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.8;">
+                欢迎启动 → 商机诊断 → 等待诊断 → 推荐结果 → 付费解锁 → 生成中 → 启动包交付 → 工具箱/小游戏
+                <br><br>
+                个人中心 → 会员购买
+            </p>
+        </div>
+        
+        <div class="nav-grid">
+            <a href="01-欢迎页.html" class="nav-card fade-in stagger-1">
+                <div class="num">1</div>
+                <div class="title">欢迎启动页</div>
+                <div class="desc">品牌介绍、首次打开加载</div>
+            </a>
+            <a href="02-首页.html" class="nav-card fade-in stagger-2">
+                <div class="num">2</div>
+                <div class="title">商机诊断首页</div>
+                <div class="desc">点选条件、开始诊断入口</div>
+            </a>
+            <a href="03-等待页.html" class="nav-card fade-in stagger-3">
+                <div class="num">3</div>
+                <div class="title">诊断等待页</div>
+                <div class="desc">进度展示、嵌入小游戏</div>
+            </a>
+            <a href="04-结果页.html" class="nav-card fade-in stagger-4">
+                <div class="num">4</div>
+                <div class="title">商机推荐结果</div>
+                <div class="desc">3个商机展示、付费引导</div>
+            </a>
+            <a href="05-付费弹窗.html" class="nav-card fade-in stagger-5">
+                <div class="num">5</div>
+                <div class="title">付费解锁弹窗</div>
+                <div class="desc">10件交付物清单、支付</div>
+            </a>
+            <a href="06-生成中.html" class="nav-card fade-in stagger-1">
+                <div class="num">6</div>
+                <div class="title">启动包生成中</div>
+                <div class="desc">实时进度、游戏入口</div>
+            </a>
+            <a href="07-交付页.html" class="nav-card fade-in stagger-2">
+                <div class="num">7</div>
+                <div class="title">启动包交付页</div>
+                <div class="desc">10个文件下载、工具嵌入</div>
+            </a>
+            <a href="08-工具箱.html" class="nav-card fade-in stagger-3">
+                <div class="num">8</div>
+                <div class="title">实用工具箱</div>
+                <div class="desc">4个零风险小工具</div>
+            </a>
+            <a href="09-指尖解压游戏.html" class="nav-card fade-in stagger-4">
+                <div class="num">9</div>
+                <div class="title">指尖解压游戏</div>
+                <div class="desc">捏泡泡解压小游戏</div>
+            </a>
+            <a href="10-数字合成游戏.html" class="nav-card fade-in stagger-5">
+                <div class="num">10</div>
+                <div class="title">数字合成游戏</div>
+                <div class="desc">2048风格合成游戏</div>
+            </a>
+            <a href="11-个人中心.html" class="nav-card fade-in stagger-1">
+                <div class="num">11</div>
+                <div class="title">个人中心</div>
+                <div class="desc">用户信息、订单、我的启动包</div>
+            </a>
+            <a href="12-会员购买页.html" class="nav-card fade-in stagger-2">
+                <div class="num">12</div>
+                <div class="title">会员购买页</div>
+                <div class="desc">3档定价、权益展示</div>
+            </a>
+        </div>
+        
+        <div class="card fade-in" style="margin-top: 32px;">
+            <h2 style="font-size: 18px; margin-bottom: 12px;">🖥️ 管理后台（4页） - 运营数据工作台</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.8;">
+                专业左右分栏后台布局 · 数据看板 · 用户管理 · 订单管理 · 商机库与AI提示词配置
+                <br><br>
+                <strong style="color: var(--warning);">提示：</strong>第4周上线时，最小可用后台（看板+用户+订单）必须同步上线，这是你每天看数据、做决策的工作台。
+            </p>
+        </div>
+        
+        <div class="nav-grid">
+            <a href="13-管理后台.html" class="nav-card fade-in stagger-3" style="border-color: rgba(123,97,255,0.3);">
+                <div class="num" style="background: linear-gradient(135deg,#7B61FF,#165DFF);">13</div>
+                <div class="title">📊 数据看板</div>
+                <div class="desc">核心数据、营收趋势、分类占比、热门商机、最近订单、异常告警</div>
+            </a>
+            <a href="14-用户管理.html" class="nav-card fade-in stagger-4" style="border-color: rgba(123,97,255,0.3);">
+                <div class="num" style="background: linear-gradient(135deg,#7B61FF,#165DFF);">14</div>
+                <div class="title">👥 用户管理</div>
+                <div class="desc">用户列表、筛选查询、会员等级、封禁/解封、数据导出</div>
+            </a>
+            <a href="15-订单管理.html" class="nav-card fade-in stagger-5" style="border-color: rgba(123,97,255,0.3);">
+                <div class="num" style="background: linear-gradient(135deg,#7B61FF,#165DFF);">15</div>
+                <div class="title">💳 订单管理</div>
+                <div class="desc">订单列表、状态筛选、异常告警、退款处理、对账单导出</div>
+            </a>
+            <a href="16-商机与提示词.html" class="nav-card fade-in stagger-1" style="border-color: rgba(123,97,255,0.3);">
+                <div class="num" style="background: linear-gradient(135deg,#7B61FF,#165DFF);">16</div>
+                <div class="title">💡 商机库/提示词</div>
+                <div class="desc">商机增删改、AI提示词编辑、模型路由、启动包配置、版本回滚</div>
+            </a>
+        </div>
+        
+        <div class="flow-note">
+            <h3>💡 体验建议</h3>
+            <p>
+                <strong>用户流程：</strong>按数字顺序从1到7点击，走一遍完整的核心付费流程，体验"即得感"和"超值感"的设计。8-10是赠送的工具箱和小游戏，11-12是前台辅助页面。
+                <br><br>
+                <strong>后台体验：</strong>建议先点13号"数据看板"，再依次查看14-16，体验从数据总览到用户、订单、内容配置的完整运营流程。所有页面之间通过侧边栏相互导航。
+                <br><br>
+                <strong>设计规范：</strong>深色科技风主题、蓝紫渐变主色、毛玻璃卡片、呼吸光效按钮、流畅交互动画，零版权风险元素（所有图标用emoji，美术全CSS绘制）。
+            </p>
+        </div>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>
+<!--25130528672395614730100510-->
