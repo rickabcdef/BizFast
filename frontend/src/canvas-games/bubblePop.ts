@@ -19,6 +19,15 @@ export interface BubblePopOptions {
   onComplete?: (elapsedSec: number) => void
 }
 
+/** 尊重系统「减少动态效果」设置（PRD 性能红线）：开启时降级为无粒子/无冲击波的轻反馈 */
+function prefersReducedMotion(): boolean {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return false
+  }
+}
+
 interface Bubble {
   x: number
   y: number
@@ -151,11 +160,13 @@ export class BubblePopGame {
 
   private pop(b: Bubble) {
     b.popped = true
-    b.popT = 0
+    b.popT = prefersReducedMotion() ? 1 : 0 // 减少动态效果：跳过缩放动画，立即移除
     this.popped++
     if (this.startTs == null) this.startTs = performance.now()
-    this.spawnParticles(b)
-    this.shocks.push({ x: b.x, y: b.y, r: b.r * 0.6, maxR: b.r * 2.4, life: 1 })
+    if (!prefersReducedMotion()) {
+      this.spawnParticles(b)
+      this.shocks.push({ x: b.x, y: b.y, r: b.r * 0.6, maxR: b.r * 2.4, life: 1 })
+    }
     this.beep()
     this.emitStats()
     this.dirty = true

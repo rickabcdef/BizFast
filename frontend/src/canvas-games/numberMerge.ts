@@ -13,6 +13,15 @@ export interface NumberMergeStats {
   won: boolean
 }
 
+/** 尊重系统「减少动态效果」设置（PRD 性能红线）：开启时方块位移即时归位，不做平滑动画 */
+function prefersReducedMotion(): boolean {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return false
+  }
+}
+
 export interface NumberMergeOptions {
   onStats?: (s: NumberMergeStats) => void
   onMove?: () => void
@@ -337,6 +346,18 @@ export class NumberMergeGame {
   }
 
   private update(dt: number) {
+    if (prefersReducedMotion()) {
+      // 减少动态效果：即时归位，不做插值动画
+      for (const t of this.tiles) {
+        const target = this.cellCenter(t.row, t.col)
+        t.x = target.x
+        t.y = target.y
+        t.scale = 1
+      }
+      this.tiles = this.tiles.filter((t) => !t.remove)
+      this.animating = false
+      return
+    }
     let stillAnim = false
     for (const t of this.tiles) {
       const target = this.cellCenter(t.row, t.col)

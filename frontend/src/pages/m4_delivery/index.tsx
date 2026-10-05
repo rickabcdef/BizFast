@@ -423,6 +423,29 @@ export default function M4Delivery() {
           ))}
         </View>
 
+        {/* M6 设计原则一：工具嵌入主流程，用户做事时顺手可用（C 提供，永久免费） */}
+        <View className='bf-card m4-tools'>
+          <Text className='bf-card__title'>🛠️ 顺手工具（永久免费）</Text>
+          <View className='m4-tools__grid'>
+            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=image' })}>
+              <Text className='m4-tools__ico'>🖼️</Text>
+              <Text className='m4-tools__t'>压缩海报发朋友圈</Text>
+            </View>
+            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=pdf' })}>
+              <Text className='m4-tools__ico'>📄</Text>
+              <Text className='m4-tools__t'>合并流程单打印</Text>
+            </View>
+            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=qrcode' })}>
+              <Text className='m4-tools__ico'>📱</Text>
+              <Text className='m4-tools__t'>生成收款/引流码</Text>
+            </View>
+            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=copy' })}>
+              <Text className='m4-tools__ico'>✍️</Text>
+              <Text className='m4-tools__t'>改成适合我的文案</Text>
+            </View>
+          </View>
+        </View>
+
         {/* 重新生成（M4-06）与云端保存说明 */}
         <View className='bf-card m4-extra'>
           <View className='bf-row'>

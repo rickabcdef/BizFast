@@ -426,6 +426,36 @@
   display: inline-block;
   padding: 22rpx 56rpx;
 }
+
+// M6 顺手工具入口（C 提供，嵌入主流程）
+.m4-tools {
+  margin-top: 24rpx;
+}
+.m4-tools__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+.m4-tools__item {
+  flex: 1 1 45%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 22rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(91, 108, 255, 0.10);
+  border: 1rpx solid rgba(155, 92, 255, 0.25);
+}
+.m4-tools__ico {
+  font-size: 40rpx;
+}
+.m4-tools__t {
+  font-size: 26rpx;
+  color: #e8ecff;
+  line-height: 1.35;
+}
 .m4-hist {
   margin-bottom: 16rpx;
 }

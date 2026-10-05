@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, Text, Input, Slider, Image } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useRouter } from '@tarojs/taro'
 import { compressImage, formatBytes, type ImageFormat } from '@/utils/tools/image'
 import { mergePdfs, splitPdf } from '@/utils/tools/pdf'
 import { generateQR } from '@/utils/tools/qrcode'
@@ -38,7 +38,10 @@ function downloadBlob(blob: Blob, fileName: string) {
 }
 
 export default function M6Tools() {
-  const [tool, setTool] = useState<ToolKey>('image')
+  const router = useRouter()
+  const paramTool = (router.params.tool as ToolKey) || ''
+  const validTool: ToolKey = ['image', 'pdf', 'qrcode', 'copy'].includes(paramTool) ? paramTool : 'image'
+  const [tool, setTool] = useState<ToolKey>(validTool)
 
   return (
     <View className='page m6-tools'>
