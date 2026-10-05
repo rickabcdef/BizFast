@@ -1,2 +1,132 @@
-.page.m7-games { min-height: 100vh; }
-.placeholder { color: #8b93b8; padding: 32px; display: block; }
+.page.m7-games {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 48rpx;
+  box-sizing: border-box;
+}
+
+.m7-head {
+  text-align: center;
+  margin: 12rpx 0 24rpx;
+}
+.m7-title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.m7-sub {
+  display: block;
+  font-size: 24rpx;
+  color: var(--bf-text-muted, #8b93b8);
+  margin-top: 8rpx;
+}
+
+.m7-switch {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+.m7-switch__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: 22rpx 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2rpx solid rgba(139, 147, 184, 0.25);
+  border-radius: 20rpx;
+  transition: all 0.2s ease;
+}
+.m7-switch__item.is-active {
+  background: linear-gradient(135deg, rgba(91, 108, 255, 0.25), rgba(155, 92, 255, 0.25));
+  border-color: rgba(155, 92, 255, 0.7);
+  transform: scale(1.02);
+}
+.m7-switch__icon {
+  font-size: 40rpx;
+}
+.m7-switch__label {
+  font-size: 26rpx;
+  color: var(--bf-text, #e8ecff);
+}
+
+.m7-stats {
+  display: flex;
+  background: var(--bf-bg-elevated, #141a3a);
+  border-radius: 20rpx;
+  padding: 20rpx 0;
+  margin-bottom: 24rpx;
+}
+.m7-stat {
+  flex: 1;
+  text-align: center;
+}
+.m7-stat__num {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.m7-stat__label {
+  display: block;
+  font-size: 22rpx;
+  color: var(--bf-text-muted, #8b93b8);
+  margin-top: 4rpx;
+}
+
+.m7-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-height: 420rpx;
+  margin-bottom: 24rpx;
+}
+
+.m7-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(11, 16, 38, 0.92);
+  border: 2rpx solid rgba(155, 92, 255, 0.6);
+  color: #e8ecff;
+  padding: 20rpx 32rpx;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  text-align: center;
+  max-width: 80%;
+  z-index: 5;
+  animation: bf-breathe 2s ease-in-out infinite;
+}
+
+.m7-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+.m7-btn {
+  flex: 1;
+}
+.m7-btn--sound-on {
+  background: linear-gradient(135deg, rgba(57, 217, 138, 0.3), rgba(57, 217, 138, 0.15));
+  border-color: rgba(57, 217, 138, 0.6);
+}
+
+.m7-tip {
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.m7-back {
+  display: flex;
+  justify-content: center;
+  margin-top: 8rpx;
+}
