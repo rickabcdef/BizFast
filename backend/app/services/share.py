@@ -39,6 +39,17 @@ def _base_url() -> str:
     return (getattr(settings, "share_base_url", "") or "https://bizfast.app").rstrip("/")
 
 
+async def _gen_invite_code(db) -> str:
+    """生成唯一邀请码（BF- + 5 位 base36）。用户域字段；D 分享模块在此兜底生成。"""
+    while True:
+        code = "BF-" + uuid.uuid4().hex[:5].upper()
+        exists = (
+            await db.execute(select(func.count()).select_from(User).where(User.invite_code == code))
+        ).scalar_one()
+        if not exists:
+            return code
+
+
 async def create_card(db, owner, product_name: str, subtitle: str | None, lines: list[str],
                       qr_text: str | None, inviter_code: str | None) -> dict:
     """M8-01 生成成果分享卡片，返回卡片 id 与带邀请码的分享链接。"""
@@ -168,8 +179,6 @@ async def invite_info(db, owner) -> dict:
     """当前用户的邀请信息（M8-03 实时可见）。"""
     user = await ensure_owner_user(db, owner)
     if not user.invite_code:
-        from app.services.auth import _gen_invite_code
-
         user.invite_code = await _gen_invite_code(db)
         await db.commit()
     code = user.invite_code

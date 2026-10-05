@@ -1,38 +1,73 @@
+"""D 端冒烟测试（M1 首屏配置 + M8 分享与增长 + M11-D 分享转化概览）。
+
+注意：登录/账号后端（M10 auth、/api/user/*）归研发 A；运营后台登录（M11）归研发 B。
+本脚本只验证 D 认领的端点：
+- GET  /api/home/config            (M1)
+- POST /api/share/card             (M8-01)
+- GET  /api/share/{id}             (M8-01)
+- POST /api/share/track            (M8-02)
+- GET  /api/share/invite/info      (M8-03)
+- POST /api/share/invite/bind      (M8-03 双方得券)
+- GET  /api/admin/share/stats      (M11-D，需 admin/operator/support 角色 token)
+运行前请先启动后端：uvicorn app.main:app --port 8016
+"""
+import asyncio
 import json
-import time
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
+import uuid
 
-BASE = "http://127.0.0.1:8014"
+BASE = "http://127.0.0.1:8077"
+
+# 让本脚本能 import app（用于签发管理员 token，验证 M11-D 成功路径）
+sys.path.insert(0, r"D:\XiangMu\SoftwareDevelopmentEngineerD\BizFast\backend")
 
 
-def req(method, path, body=None, token=None, retries=40):
-    last = None
-    for _ in range(retries):
+def req(method, path, body=None, token=None, guest=None):
+    data = json.dumps(body).encode() if body is not None else None
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if guest:
+        headers["X-Guest-Token"] = guest
+    r = urllib.request.Request(BASE + path, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(r, timeout=5) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as e:
         try:
-            data = json.dumps(body).encode() if body is not None else None
-            headers = {"Content-Type": "application/json"}
-            if token:
-                headers["Authorization"] = f"Bearer {token}"
-            r = urllib.request.Request(BASE + path, data=data, method=method, headers=headers)
-            with urllib.request.urlopen(r, timeout=5) as resp:
-                return resp.status, json.loads(resp.read())
-        except urllib.error.HTTPError as e:
-            try:
-                return e.code, json.loads(e.read())
-            except Exception:
-                return e.code, {}
-        except Exception as e:
-            last = e
-            time.sleep(0.5)
-    raise last
+            return e.code, json.loads(e.read())
+        except Exception:
+            return e.code, {}
 
 
 def check(name, cond, detail=""):
     print(("PASS " if cond else "FAIL"), name, "" if cond else str(detail)[:160])
 
 
-# 0 后台启动健康（/docs 返回 HTML，故用 JSON 端点探活）
+async def _mint_admin_token():
+    from app.core.database import AsyncSessionLocal
+    from app.core.security import create_access_token
+    from app.models import User
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as db:
+        u = (await db.execute(select(User).where(User.role == "admin"))).scalar_one_or_none()
+        if u is None:
+            u = User(
+                id="smoke-admin-" + uuid.uuid4().hex,
+                unionid="admin:smoke",
+                role="admin",
+                plan="none",
+                invite_code="ADMIN",
+            )
+            db.add(u)
+            await db.commit()
+        return create_access_token(u.id)
+
+
+# 0 探活
 s, b = req("GET", "/api/home/config")
 check("server-up", s == 200, b)
 
@@ -40,60 +75,36 @@ check("server-up", s == 200, b)
 s, b = req("GET", "/api/home/config")
 check("M1 home/config", s == 200 and "capitals" in (b.get("data") or {}), b)
 
-# 2 游客态 user/me
-s, b = req("GET", "/api/user/me")
-check("M10 guest user/me", s == 200 and (b.get("data") or {}).get("isGuest") is True, b)
+GUEST_A = "smoke-a-" + uuid.uuid4().hex
+GUEST_B = "smoke-b-" + uuid.uuid4().hex
 
-# 3 手机号登录
-s, b = req("POST", "/api/auth/login", {"phone": "13800001111", "code": "123456"})
-check("M10 auth/login", s == 200 and (b.get("data") or {}).get("token"), b)
-token = b["data"]["token"]
-user = b["data"]["user"]
+# 2 邀请信息（确保 GUEST_A 有邀请码）
+s, b = req("GET", "/api/share/invite/info", guest=GUEST_A)
+ok = s == 200 and "inviter=" in (b.get("data") or {}).get("link", "")
+code = (b.get("data") or {}).get("link", "").split("inviter=")[-1] if ok else ""
+check("M8-03 invite/info", ok, b)
 
-# 4 个人中心（脱敏）
-s, b = req("GET", "/api/user/me", token=token)
-check("M10 user/me 脱敏", s == 200 and b["data"]["phone"] == "138****01111", b)
+# 3 生成分享卡片（带邀请码）
+s, b = req("POST", "/api/share/card", {"productName": "社区团购", "lines": ["A", "B"]}, guest=GUEST_A)
+ok = s == 200 and code and code in (b.get("data") or {}).get("shareUrl", "")
+card_id = (b.get("data") or {}).get("id")
+check("M8 share/card 带邀请码", ok, b)
 
-# 5 订单
-s, b = req("GET", "/api/user/orders", token=token)
-check("M10 user/orders", s == 200 and isinstance(b.get("data"), list), b)
-
-# 6 生成分享卡片
-s, b = req("POST", "/api/share/card", {"productName": "社区团购", "lines": ["A", "B"]}, token=token)
-check("M8 share/card 带邀请码", s == 200 and "inviter=" in (b.get("data") or {}).get("shareUrl", ""), b)
-card_id = b["data"]["id"]
-
-# 7 分享埋点
-s, b = req("POST", "/api/share/track", {"cardId": card_id, "channel": "微信好友"}, token=token)
+# 4 分享埋点
+s, b = req("POST", "/api/share/track", {"cardId": card_id, "channel": "微信好友"}, guest=GUEST_A)
 check("M8 share/track", s == 200 and (b.get("data") or {}).get("ok") is True, b)
 
-# 8 邀请信息
-s, b = req("GET", "/api/share/invite/info", token=token)
-check("M8-03 invite/info", s == 200 and "inviter=" in (b.get("data") or {}).get("link", ""), b)
-
-# 9 邀请绑定（老邀新，双方得券）
-# 用第二个手机号登录，绑定第一个用户的邀请码
-inviter = user.get("inviteCode")
-s, b = req("POST", "/api/auth/login", {"phone": "13900002222", "code": "654321"})
-invitee_token = b["data"]["token"]
-s, b = req("POST", "/api/share/invite/bind", {"inviterCode": inviter}, token=invitee_token)
+# 5 邀请绑定（老邀新，双方得券）
+s, b = req("POST", "/api/share/invite/bind", {"inviterCode": code}, guest=GUEST_B)
 check("M8-03 bind 双方得券", s == 200 and (b.get("data") or {}).get("status") == "issued", b)
 
-# 10 后台登录
-s, b = req("POST", "/api/admin/login", {"username": "admin", "password": "admin123"})
-check("M11 admin/login", s == 200 and (b.get("data") or {}).get("token"), b)
-admin_token = b["data"]["token"]
-
-# 11 分享转化概览（M11-D）
-s, b = req("GET", "/api/admin/share/stats", token=admin_token)
-check("M11-D admin/share/stats", s == 200 and "summary" in (b.get("data") or {}), b)
-
-# 12 未授权访问后台 -> 中文 40101
+# 6 M11-D 分享转化概览（未授权 -> 中文 40101）
 s, b = req("GET", "/api/admin/share/stats")
 check("M11-D 未授权拦截", s == 200 and b.get("code") == 40101, b)
 
-# 13 注销账号
-s, b = req("DELETE", "/api/user/account", token=token)
-check("M10 注销账号", s == 200 and (b.get("data") or {}).get("purgeAt"), b)
+# 7 M11-D 分享转化概览（管理员 token，成功）
+admin_token = asyncio.run(_mint_admin_token())
+s, b = req("GET", "/api/admin/share/stats", token=admin_token)
+check("M11-D admin/share/stats", s == 200 and "summary" in (b.get("data") or {}), b)
 
 print("DONE")

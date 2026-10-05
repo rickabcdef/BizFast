@@ -18,11 +18,10 @@ from app.core.config import settings
 from app.core.errors import BizError, biz_exception_handler, validation_exception_handler
 from app.core.logging import configure_logging
 from app.routers import (
-    admin,
-    auth,
     diagnose,
     files,
     games,
+    home,
     match,
     notify,
     package,
@@ -97,7 +96,7 @@ async def identity_middleware(request: Request, call_next):
     return response
 
 
-for r in (auth, diagnose, match, package, payment, tools, games, share, notify, admin, files):
+for r in (diagnose, match, package, payment, tools, games, share, notify, files, home):
     app.include_router(r.router)
 
 

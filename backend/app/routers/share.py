@@ -15,8 +15,7 @@ from app.core.errors import BizError
 from app.core.security import ACCESS_TOKEN_TYPE, decode_token
 from app.models import User
 from app.schemas.common import ok
-from app.schemas.auth import BindInviteIn
-from app.schemas.share import ShareCardIn, ShareTrackIn
+from app.schemas.share import BindInviteIn, ShareCardIn, ShareTrackIn
 from app.services import share as share_service
 
 router = APIRouter(prefix="/api", tags=["share"])

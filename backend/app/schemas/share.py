@@ -19,3 +19,9 @@ class ShareTrackIn(CamelModel):
 
     cardId: str | None = None
     channel: str
+
+
+class BindInviteIn(CamelModel):
+    """绑定邀请人（M8-03）。可在注册后单独绑定一次。"""
+
+    inviterCode: str
