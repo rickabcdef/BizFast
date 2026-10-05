@@ -1,0 +1,26 @@
+{
+  "name": "bizfast-admin-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BizFast 生意快启 运营管理后台（独立 Web，Vue3 + Element Plus，独立登录/二次验证/独立登录态）",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "element-plus": "^2.8.8",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.11",
+    "vue-tsc": "^2.1.10"
+  }
+}
