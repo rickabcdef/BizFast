@@ -238,7 +238,7 @@ export class NumberMergeGame {
         if (!tile) continue
         const { farthest, next } = this.findFarthest(r, c, vec)
         const nextTile = next ? this.grid[next.row][next.col] : null
-        if (nextTile && nextTile.value === tile.value && !mergedThisMove.includes(nextTile)) {
+        if (next && nextTile && nextTile.value === tile.value && !mergedThisMove.includes(nextTile)) {
           // 合并
           const merged: Tile = {
             id: this.nextId++,

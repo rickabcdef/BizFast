@@ -116,6 +116,10 @@ export default function M4Delivery() {
   // M4-04 预览
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null)
   const pollRef = useRef<{ stop: () => void } | null>(null)
+  // 同步闸门：createPackage 是异步的（await 期间 pollRef 还没赋值），
+  // 开发模式 StrictMode 双挂载 / 重复点击时两次请求都会穿过 pollRef 的幂等判断，
+  // 这里用同步 ref 立刻占位，保证同一订单只会向后台发一次生成请求。
+  const creatingRef = useRef<string | null>(null)
 
   const stopPoll = useCallback(() => {
     if (pollRef.current) {
@@ -182,6 +186,8 @@ export default function M4Delivery() {
   const startGenerate = useCallback(
     async (id: string) => {
       if (pollRef.current) return
+      if (creatingRef.current === id) return // 已发起过（含 StrictMode 双挂载）
+      creatingRef.current = id
       setError('')
       setLoading(true)
       ensureNotifyPermission() // M4-07：进入生成流程时申请通知权限（用户拒绝则静默降级）
@@ -198,6 +204,7 @@ export default function M4Delivery() {
           return
         }
         setLoading(false)
+        creatingRef.current = null // 真正的失败才允许用户重试
         setError(e?.message || '启动生成失败，请重试')
       }
     },

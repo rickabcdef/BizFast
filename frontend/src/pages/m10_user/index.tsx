@@ -12,6 +12,7 @@ import {
   wechatLogin,
   deleteAccount
 } from '@/services/repo'
+import { cancelSubscription } from '@/services/aApi'
 import { useAppStore } from '@/store'
 import type { PackageResult, OrderView, Membership, InviteInfo } from '@/types'
 import './index.scss'
@@ -112,6 +113,17 @@ export default function M10User() {
   const onLogout = () => {
     logout()
     Taro.showToast({ title: '已退出（15日内清除隐私数据）', icon: 'none' })
+  }
+
+  /** M5-08：一键取消自动续费（PRD 要求取消入口不超过 3 步）。 */
+  const onCancelRenew = async () => {
+    try {
+      const res = await cancelSubscription()
+      setMember((m) => (m ? { ...m, autoRenew: !!res.autoRenew } : m))
+      Taro.showToast({ title: '已取消自动续费', icon: 'none' })
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '取消失败，请重试', icon: 'none' })
+    }
   }
 
   const onDeleteAccount = async () => {
@@ -250,7 +262,7 @@ export default function M10User() {
           </View>
           <View
             className='bf-btn bf-btn--ghost bf-btn--sm m10-cancel'
-            onClick={() => Taro.showToast({ title: '已取消自动续费', icon: 'none' })}
+            onClick={onCancelRenew}
           >
             取消自动续费
           </View>

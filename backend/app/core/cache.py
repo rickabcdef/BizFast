@@ -44,6 +44,17 @@ class MemoryCache:
     async def set_bytes(self, key: str, value: bytes, ttl: int | None = None) -> None:
         self._data[key] = (time.time() + ttl if ttl else 0.0, value)
 
+    async def get(self, key: str) -> str | None:
+        """读取字符串值（短信验证码等短文本用）。"""
+        raw = self._get(key)
+        if raw is None:
+            return None
+        return raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+
+    async def set(self, key: str, value: str, ttl: int | None = None) -> None:
+        """写入字符串值（短信验证码等短文本用）。"""
+        self._data[key] = (time.time() + ttl if ttl else 0.0, str(value))
+
     async def delete(self, key: str) -> None:
         self._data.pop(key, None)
 
@@ -85,6 +96,21 @@ class RedisCache:
             await self._redis.set(key, value, ex=ttl)
         except Exception:
             await self._fallback.set_bytes(key, value, ttl)
+
+    async def get(self, key: str) -> str | None:
+        try:
+            raw = await self._redis.get(key)
+        except Exception:
+            return await self._fallback.get(key)
+        if raw is None:
+            return None
+        return raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+
+    async def set(self, key: str, value: str, ttl: int | None = None) -> None:
+        try:
+            await self._redis.set(key, value, ex=ttl)
+        except Exception:
+            await self._fallback.set(key, value, ttl)
 
     async def delete(self, key: str) -> None:
         try:

@@ -104,9 +104,16 @@ const categoryShare = computed(() => {
 })
 
 // ---- 热门商机 TOP（派生：回本周期×40 + 毛利率×2 作为匹配热度，稳定可复现） ----
+// 数值兜底：批量导入的商机可能缺 paybackMonths / marginPercent（None / 字符串），
+// 直接相乘会得到 NaN，页面上显示「NaN分」——这里统一转数字，缺省按 0 计。
+const heatOf = (o: AdminOpportunity): number => {
+  const payback = Number(o.paybackMonths) || 0
+  const margin = Number(o.marginPercent) || 0
+  return payback * 40 + margin * 2
+}
 const topOpps = computed(() =>
   [...opps.value]
-    .map((o) => ({ name: o.title, heat: o.paybackMonths * 40 + o.marginPercent * 2 }))
+    .map((o) => ({ name: o.title, heat: heatOf(o) }))
     .sort((a, b) => b.heat - a.heat)
     .slice(0, 8)
 )

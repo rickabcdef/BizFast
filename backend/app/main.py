@@ -18,6 +18,8 @@ from app.core.config import settings
 from app.core.errors import BizError, biz_exception_handler, validation_exception_handler
 from app.core.logging import configure_logging
 from app.routers import (
+    admin,
+    auth,
     diagnose,
     files,
     games,
@@ -96,8 +98,13 @@ async def identity_middleware(request: Request, call_next):
     return response
 
 
-for r in (diagnose, match, package, payment, tools, games, share, notify, files, home):
+for r in (auth, diagnose, match, package, payment, tools, games, share, notify, files, home, admin):
     app.include_router(r.router)
+
+# M4 的「我的启动包」列表走 /api/packages（无 /package 前缀），单独挂载
+app.include_router(package.list_router)
+# M10 个人中心走 /api/user/*（契约路径），与 /api/auth/* 共用同一套 service
+app.include_router(auth.user_router)
 
 
 @app.get("/health", tags=["system"])

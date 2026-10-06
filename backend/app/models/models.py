@@ -128,6 +128,9 @@ class PaymentRecord(Base):
 
 class Package(Base):
     __tablename__ = "packages"
+    # 一个订单只允许一个启动包：并发/重复触发时由数据库兜底拒绝第二条记录
+    # （M4-01 幂等，避免 Package 重复行导致 scalar_one_or_none 抛 MultipleResultsFound）
+    __table_args__ = (UniqueConstraint("order_id", name="uq_packages_order_id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     order_id: Mapped[str] = mapped_column(ForeignKey("orders.id"))
@@ -143,6 +146,10 @@ class Package(Base):
 
 class DeliverableFile(Base):
     __tablename__ = "deliverable_files"
+    # 同一交付物的同一格式只允许一行（重复生成/并发写入时兜底去重）
+    __table_args__ = (
+        UniqueConstraint("package_id", "code", "file_type", name="uq_deliverable_pkg_code_fmt"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     package_id: Mapped[str] = mapped_column(ForeignKey("packages.id"))
@@ -339,4 +346,27 @@ class RiskEvent(Base):
     # normal / review（需人工审核）/ blocked
     level: Mapped[str] = mapped_column(String(16), default="normal")
     detail: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class GameScore(Base):
+    """M7 小游戏分数记录。
+
+    游戏类型：match3（消消乐）、2048（数字合并）。
+    支持游客和登录用户，游客分数通过 owner_key 关联。
+    """
+
+    __tablename__ = "game_scores"
+    __table_args__ = (
+        Index("ix_game_score_user_type", "user_id", "game_type"),
+        Index("ix_game_score_type_score", "game_type", "score"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    game_type: Mapped[str] = mapped_column(String(16))  # match3/2048
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer)
+    extra_data: Mapped[str | None] = mapped_column(Text)  # JSON：关卡数等
+    is_personal_best: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

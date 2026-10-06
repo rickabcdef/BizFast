@@ -46,6 +46,14 @@ export function getPackageProgress(orderId: string): Promise<PackageProgress> {
   return api.get<PackageProgress>(`/api/package/${orderId}/progress`)
 }
 
+/** 真实模式下后端返回的 zipUrl 是相对路径（/api/package/{id}/zip）；
+ *  若 API_BASE 指向独立源站（前后端分域部署），必须补前缀，否则 <a download> 会 404。 */
+function normalizePackage(pkg: PackageResult): PackageResult {
+  if (!pkg) return pkg
+  const zipUrl = pkg.zipUrl && pkg.zipUrl.startsWith('/') ? resolveUrl(pkg.zipUrl) : pkg.zipUrl
+  return { ...pkg, zipUrl }
+}
+
 /** 启动包详情（M4-05：云端永久保存，任意端可查）。 */
 export function getPackage(orderId: string): Promise<PackageResult> {
   if (USE_MOCK) {
@@ -59,7 +67,7 @@ export function getPackage(orderId: string): Promise<PackageResult> {
       return mockPackage(orderId)
     })
   }
-  return api.get<PackageResult>(`/api/package/${orderId}`)
+  return api.get<PackageResult>(`/api/package/${orderId}`).then(normalizePackage)
 }
 
 /** 我的启动包列表（M4-05 / M10-01 共用；按时间倒序）。 */
@@ -68,7 +76,8 @@ export async function getMyPackages(): Promise<PackageResult[]> {
     await delay(400)
     return [await mockPackage('ORD-2026-0001')]
   }
-  return api.get<PackageResult[]>('/api/packages')
+  const list = await api.get<PackageResult[]>('/api/packages')
+  return (list || []).map(normalizePackage)
 }
 
 /** 单件下载 / 预览地址（M4-04：预览不产生额外费用；format 选择多格式交付物的具体格式）。 */
@@ -373,8 +382,13 @@ export interface PageBox<T> {
   pageSize: number
 }
 
-/** 管理员登录（后台内部账号；密钥走环境变量，不进代码库）。 */
-export function adminLogin(username: string, password: string): Promise<{ token: string; name: string; role: AdminRole }> {
+/** 管理员登录（后台内部账号；密钥走环境变量，不进代码库）。
+ *  真实后端为两步式：① 账号密码 → 下发 needTotp/totpHint；② TOTP 校验 → 签发 JWT。
+ *  本地开发用后端下发的 totpHint 自动完成第二步，页面只需账号密码即可登录。 */
+export async function adminLogin(
+  username: string,
+  password: string
+): Promise<{ token: string; name: string; role: AdminRole }> {
   if (USE_MOCK) {
     return delay(400).then(() => {
       if (!username.trim() || !password.trim()) {
@@ -385,7 +399,15 @@ export function adminLogin(username: string, password: string): Promise<{ token:
       return { token: `mock-admin-${Date.now()}`, name: username.trim(), role: username.trim() === 'admin' ? 'admin' : 'operator' }
     })
   }
-  return api.post<{ token: string; name: string; role: AdminRole }>('/api/admin/login', { username, password })
+  const step1 = await api.post<{ needTotp: boolean; totpHint: string }>('/api/admin/auth/login', {
+    username,
+    password
+  })
+  const session = await api.post<{ token: string; name: string; role: AdminRole }>(
+    '/api/admin/auth/verify-2fa',
+    { username, totp: step1?.totpHint || '' }
+  )
+  return { token: session.token, name: session.name, role: session.role }
 }
 
 // ---------------- M11-05 数据看板 ----------------
@@ -405,9 +427,14 @@ export function getAdminUsers(params: { page?: number; pageSize?: number; keywor
   return api.get<PageBox<AdminUser>>(`/api/admin/users?${q.toString()}`)
 }
 
-export function getAdminUserDetail(userId: string): Promise<{ user: AdminUser; consumption: AdminOrder[] }> {
+/** 用户详情：后端返回 {user, orders, packages}，页面按「消费记录」展示，
+ *  这里统一成 consumption 字段，避免视图层再感知后端字段名。 */
+export async function getAdminUserDetail(userId: string): Promise<{ user: AdminUser; consumption: AdminOrder[] }> {
   if (USE_MOCK) return delay(300).then(() => ({ user: mockUsers({}).items[0], consumption: mockOrders({}).items.slice(0, 2) }))
-  return api.get<{ user: AdminUser; consumption: AdminOrder[] }>(`/api/admin/users/${userId}`)
+  const d = await api.get<{ user: AdminUser; orders?: AdminOrder[]; packages?: any[] }>(
+    `/api/admin/users/${userId}`
+  )
+  return { user: d.user, consumption: d.orders || [] }
 }
 
 // ---------------- M11-02 订单管理 ----------------
@@ -424,7 +451,7 @@ export function getAdminOrders(params: { page?: number; pageSize?: number; statu
 /** 处理退款（M11-02：同意原路退回 / 驳回并记录原因；操作人写入审计日志）。 */
 export function processRefund(orderId: string, action: 'approve' | 'reject', reason?: string): Promise<{ orderId: string; status: OrderStatus; message: string }> {
   if (USE_MOCK) return delay(400).then(() => ({ orderId, status: action === 'approve' ? 'refunded' : 'paid', message: action === 'approve' ? '已同意退款，24 小时内原路到账' : '已驳回退款申请' }))
-  return api.post<{ orderId: string; status: OrderStatus; message: string }>(`/api/admin/orders/${orderId}/refund`, { action, reason: reason || null })
+  return api.put<{ orderId: string; status: OrderStatus; message: string }>(`/api/admin/orders/${orderId}/refund`, { action, reason: reason || null })
 }
 
 // ---------------- M11-03 商机库管理 ----------------
@@ -476,7 +503,7 @@ export function getAdminReviews(params: { page?: number; pageSize?: number; stat
 
 export function reviewAction(id: string, action: 'pass' | 'reject', reason?: string): Promise<{ id: string; status: ReviewStatus; message: string }> {
   if (USE_MOCK) return delay(300).then(() => ({ id, status: action === 'pass' ? 'passed' : 'rejected', message: action === 'pass' ? '已通过' : '已拦截' }))
-  return api.post<{ id: string; status: ReviewStatus; message: string }>(`/api/admin/reviews/${id}`, { action, reason: reason || null })
+  return api.post<{ id: string; status: ReviewStatus; message: string }>(`/api/admin/reviews/${id}/action`, { action, reason: reason || null })
 }
 
 // ---------------- M11-07 权限管理 ----------------
@@ -498,7 +525,7 @@ export function getAdminAuditLogs(params: { page?: number; pageSize?: number; op
   if (params.operator) q.set('operator', params.operator)
   if (params.action) q.set('action', params.action)
   if (USE_MOCK) return delay(400).then(() => mockAuditLogs(params))
-  return api.get<PageBox<AuditLogItem>>(`/api/admin/audit-logs?${q.toString()}`)
+  return api.get<PageBox<AuditLogItem>>(`/api/admin/audit?${q.toString()}`)
 }
 
 // ---------------- M11 Mock ----------------

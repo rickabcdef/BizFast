@@ -33,8 +33,8 @@ const STATUS_TABS = [
 
 const CHANNEL_FILTERS = [
   { value: '', label: '全部支付方式' },
-  { value: '微信支付', label: '微信支付' },
-  { value: '支付宝', label: '支付宝' }
+  { value: 'wechat', label: '微信支付' },
+  { value: 'alipay', label: '支付宝' }
 ]
 
 const load = async () => {

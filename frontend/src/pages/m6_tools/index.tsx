@@ -236,8 +236,8 @@ function PdfTool() {
     setBusy(true)
     setError('')
     try {
-      const res = await splitPdfs(files[0], ranges)
-      setSplits(res.map((r) => ({ name: r.name, url: URL.createObjectURL(r.blob) })))
+      const res = await splitPdf(files[0], ranges)
+      setSplits(res.map((r: { name: string; blob: Blob }) => ({ name: r.name, url: URL.createObjectURL(r.blob) })))
     } catch (e: any) {
       setError(e?.message || '拆分失败，请重试')
     } finally {

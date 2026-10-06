@@ -111,6 +111,21 @@ def get_storage():
     return _storage
 
 
+def url_to_key(url: str) -> str | None:
+    """把 public_url 反解回存储 key（M4 单件下载 / ZIP 直出用）。
+
+    交付物表里存的是 URL，但下载要按 key 读取，这里统一做反解；
+    兼容 local（/api/files/...）与 s3（storage_public_base/...）两种前缀。
+    """
+    if not url:
+        return None
+    for prefix in (settings.local_storage_base_url, settings.storage_public_base):
+        base = (prefix or "").rstrip("/")
+        if base and url.startswith(base + "/"):
+            return url[len(base) + 1:]
+    return None
+
+
 # 兼容脚手架旧用法：`from app.storage import storage`
 class _LazyStorage:
     def __getattr__(self, item):

@@ -39,7 +39,7 @@ const SOURCE_FILTERS = [
 const load = async () => {
   loading.value = true
   try {
-    const d = await getAdminUsers({ page: page.value, pageSize, keyword: keyword.value, memberStatus: member.value })
+    const d = await getAdminUsers({ page: page.value, pageSize, keyword: keyword.value, memberStatus: member.value, source: source.value })
     rows.value = d.items
     total.value = d.total
   } finally {

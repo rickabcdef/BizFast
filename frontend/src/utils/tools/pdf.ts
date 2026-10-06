@@ -7,6 +7,17 @@ import { PDFDocument } from 'pdf-lib'
 const MAX_FILE = 50 * 1024 * 1024
 const MAX_PAGES = 100
 
+/**
+ * pdf-lib 的 save() 返回 Uint8Array；新版 TS 的 BlobPart 只接受
+ * ArrayBuffer 后端的视图（SharedArrayBuffer 会被判为不兼容），
+ * 这里显式拷贝一份 ArrayBuffer 再交给 Blob，类型与运行期都稳妥。
+ */
+function pdfBlob(data: Uint8Array): Blob {
+  const buffer = new ArrayBuffer(data.byteLength)
+  new Uint8Array(buffer).set(data)
+  return new Blob([buffer], { type: 'application/pdf' })
+}
+
 export async function mergePdfs(files: File[]): Promise<Blob> {
   if (!files.length) throw new Error('请先选择至少一个 PDF 文件')
   const merged = await PDFDocument.create()
@@ -24,7 +35,7 @@ export async function mergePdfs(files: File[]): Promise<Blob> {
     pages.forEach((p) => merged.addPage(p))
   }
   const out = await merged.save()
-  return new Blob([out], { type: 'application/pdf' })
+  return pdfBlob(out)
 }
 
 /**
@@ -58,7 +69,7 @@ export async function splitPdf(file: File, rangesText: string): Promise<{ name: 
     const data = await out.save()
     results.push({
       name: `生意快启_拆分_第${range.start}-${range.end}页.pdf`,
-      blob: new Blob([data], { type: 'application/pdf' })
+      blob: pdfBlob(data)
     })
   }
   if (!results.length) throw new Error('页码范围超出文档页数，请检查')
