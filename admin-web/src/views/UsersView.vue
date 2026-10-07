@@ -28,8 +28,10 @@ const MEMBER_FILTERS = [
   { value: 'year', label: '创业陪跑年卡' }
 ]
 
+// M0-04（V5.0）：来源渠道 = 邀请注册 > 埋点渠道 > 自然流量，必须与后端产出的标签逐字一致
 const SOURCE_FILTERS = [
   { value: '', label: '来源渠道（全部）' },
+  { value: '邀请注册', label: '邀请注册' },
   { value: '自然流量', label: '自然流量' },
   { value: '商机详情页', label: '商机详情页' },
   { value: '分享卡片', label: '分享卡片' },
@@ -156,9 +158,10 @@ const statusLabel = (u: AdminUser) => (u.riskFlag ? '风控中' : '正常')
           </template>
         </el-table-column>
         <el-table-column prop="orderCount" label="订单数" width="80" />
-        <el-table-column prop="source" label="注册来源" width="120">
+        <el-table-column prop="source" label="注册来源" width="150">
           <template #default="{ row }">
-            <span class="tag" :class="row.source === '付费弹窗' ? 'tag-orange' : row.source === '商机详情页' || row.source === '分享卡片' ? 'tag-green' : 'tag-blue'">{{ row.source }}</span>
+            <span class="tag" :class="row.source === '邀请注册' ? 'tag-purple' : row.source === '付费弹窗' ? 'tag-orange' : row.source === '商机详情页' || row.source === '分享卡片' ? 'tag-green' : 'tag-blue'">{{ row.source }}</span>
+            <div v-if="row.inviterPhone" class="user-sub" style="margin-top: 2px">邀请人 {{ row.inviterPhone }}</div>
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="150" />
@@ -187,6 +190,7 @@ const statusLabel = (u: AdminUser) => (u.riskFlag ? '风控中' : '正常')
           <div class="bf-muted" style="margin-top: 4px">
             {{ detail.user.phone }} · {{ detail.user.city }} · {{ detail.user.memberLabel }} · 来源 {{ detail.user.source }}
           </div>
+          <div v-if="detail.user.inviterPhone" class="bf-muted">邀请人（已脱敏）：{{ detail.user.inviterPhone }}</div>
           <div class="bf-muted">订单 {{ detail.user.orderCount }} 单 · 累计消费 ¥{{ detail.user.totalSpendYuan }} · 注册 {{ detail.user.createdAt }}</div>
           <el-tag v-if="detail.user.riskFlag" type="danger" size="small" style="margin-top: 6px">命中风控标记，已转人工审核</el-tag>
         </div>

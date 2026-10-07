@@ -44,8 +44,13 @@ class PhoneLoginBody(BaseModel):
 
 
 class WechatLoginBody(BaseModel):
-    """契约路径 POST /api/auth/wechat 的请求体（unionid 登录）。"""
+    """契约路径 POST /api/auth/wechat 的请求体（unionid 登录 + 可选邀请码）。
+
+    M0-04：分享卡片 → 微信一键登录是裂变主路径，必须支持携带邀请码绑定邀请关系。
+    """
+
     unionid: str | None = None
+    inviterCode: str | None = None
 
 
 class RefreshBody(BaseModel):
@@ -170,11 +175,14 @@ async def login_with_sms(db: AsyncSession, phone: str, code: str) -> dict:
     }
 
 
-async def login_with_wechat(db: AsyncSession, unionid: str, inviter_code: str | None = None) -> dict:
+async def login_with_wechat(db: AsyncSession, unionid: str) -> dict:
     """微信 unionid 登录（M10 3.1）。
 
     网页端没有真实微信 SDK，用占位 unionid 走同一套「查找或创建用户」逻辑，
     保证登录后订单 / 消息归属与手机号登录完全一致（多端权益互通）。
+
+    邀请关系绑定由路由层统一处理（`routers/auth.py::_bind_inviter`），
+    与手机号登录共用同一入口，避免两条登录路径行为不一致。
     """
     unionid = (unionid or "").strip()
     if not unionid:

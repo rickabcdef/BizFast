@@ -20,7 +20,8 @@ export interface AdminUser {
   totalSpendYuan: number
   createdAt: string
   riskFlag: boolean
-  source: string // 来源渠道
+  source: string // 来源渠道（邀请注册 / 埋点渠道 / 自然流量）
+  inviterPhone: string // M0-04：邀请人手机号（已脱敏），非邀请注册为空
 }
 
 export interface AdminOrder {
@@ -40,6 +41,7 @@ export interface AdminOrder {
   downloaded: boolean // V5.0 M2-05：交付物是否已被下载（决定退款走自助还是人工审核）
   abnormal: boolean // 异常订单（已支付未交付 / 支付回调缺失 / 退款待审核）
   abnormalType: string | null // paid_no_delivery | callback_missing | refund_review
+  abnormalHandled: boolean // M2-03：人工已标记处理（处理后不再红色高亮）
 }
 
 export interface AdminOpportunity {
@@ -302,6 +304,14 @@ export async function processRefund(_session: AdminSession, orderId: string, act
   return request(`/api/admin/orders/${encodeURIComponent(orderId)}/refund`, {
     method: 'PUT',
     body: JSON.stringify({ action, reason })
+  })
+}
+
+// M2-03（V5.0）：人工标记异常订单已处理（写事件 + 关闭关联告警）
+export async function resolveAdminOrder(orderId: string, note?: string): Promise<{ orderId: string; handled: boolean; message: string }> {
+  return request(`/api/admin/orders/${encodeURIComponent(orderId)}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ note })
   })
 }
 

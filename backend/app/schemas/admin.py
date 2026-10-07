@@ -66,6 +66,8 @@ class AdminUserOut(CamelModel):
     created_at: str = ""
     risk_flag: bool = False
     source: str = ""
+    # M0-04（V5.0）：后台可查任意用户的邀请来源（邀请人手机号，已脱敏）
+    inviter_phone: str = ""
 
 class AdminUserDetailOut(CamelModel):
     user: AdminUserOut
@@ -93,15 +95,37 @@ class AdminOrderOut(CamelModel):
     downloaded: bool = False
     abnormal: bool = False
     abnormal_type: Optional[str] = None
+    # M2-03（V5.0）：异常订单是否已被人工标记处理（处理后不再红色高亮）
+    abnormal_handled: bool = False
 
 class RefundActionIn(BaseModel):
     action: str  # approve / reject
     reason: Optional[str] = None
 
+
+class OrderResolveIn(BaseModel):
+    """M2-03（V5.0）：人工标记异常订单已处理。"""
+
+    note: Optional[str] = None
+
+
+class OrderResolveOut(CamelModel):
+    order_id: str
+    handled: bool = True
+    message: str = ""
+
 class RefundActionOut(CamelModel):
     order_id: str
     status: str
     message: str
+
+class OrderResolveIn(BaseModel):
+    note: Optional[str] = None
+
+class OrderResolveOut(CamelModel):
+    order_id: str
+    handled: bool = True
+    message: str = ""
 
 
 # ─── 商机库管理 ───

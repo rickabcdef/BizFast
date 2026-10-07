@@ -205,7 +205,10 @@ async def wechat_login(
     except ValueError as e:
         raise BizError(code=40001, message=str(e))
     user = (await db.execute(select(User).where(User.id == login_info["user_id"]))).scalar_one_or_none()
-    await _capture_profile(db, request, user)
+    if user is not None:
+        # M0-04：分享卡片 → 微信登录同样要绑定邀请关系（裂变主路径）
+        await _bind_inviter(db, user, body.inviterCode)
+        await _capture_profile(db, request, user)
     return ok(await _auth_result(db, login_info), _rid(request))
 
 

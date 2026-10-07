@@ -8,16 +8,17 @@ import json
 import os
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.errors import BizError
 from app.core.security import create_access_token
-from app.models import DiagnosisTask, Order, Package, User
+from app.models import DiagnosisTask, Order, Package, PaymentRecord, User
 from app.schemas import admin as admin_schemas
 
 # ─── 配置与常量 ───
@@ -63,7 +64,13 @@ PLAN_NAMES = {
 ORDER_ABNORMAL_LABELS = {
     "paid_no_delivery": "已支付未交付（超2小时）",
     "callback_missing": "支付回调缺失",
+    "refund_review": "退款待人工审核",
+    "duplicate_payment": "疑似重复支付",
 }
+
+# M0-04（V5.0）：用户来源渠道（后台可查任意用户的邀请来源）
+SOURCE_INVITE = "邀请注册"
+SOURCE_ORGANIC = "自然流量"
 
 # 订单状态 → 中文标签（后台列表直接展示，避免露出英文状态码）
 ORDER_STATUS_LABELS = {
@@ -94,6 +101,56 @@ def _save_json(filename: str, data: any):
     path = CONFIG_DIR / filename
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+async def resolve_user_source_index(db: AsyncSession) -> dict:
+    """M0-04（V5.0）：解析「用户 → 来源渠道 / 邀请人」。
+
+    优先级：**邀请注册**（有邀请关系）> 埋点渠道（FunnelEvent.source）> 自然流量。
+    返回 {"invited": {user_id: inviter_id}, "channel": {user_id: source_label}}。
+    """
+    from app.models import FunnelEvent, InviteRelation
+
+    invited: dict[str, str] = {}
+    rows = (await db.execute(select(InviteRelation.invitee_user_id, InviteRelation.inviter_user_id))).all()
+    for invitee_id, inviter_id in rows:
+        invited[invitee_id] = inviter_id
+
+    # 每个 owner_key 最早一条埋点事件的来源渠道（`user:<id>` / `guest:<token>`）
+    events = (
+        await db.execute(
+            select(FunnelEvent.owner_key, FunnelEvent.source, func.min(FunnelEvent.created_at))
+            .where(FunnelEvent.source.is_not(None))
+            .group_by(FunnelEvent.owner_key, FunnelEvent.source)
+        )
+    ).all()
+    channel: dict[str, str] = {}
+    for owner_key, source, _ts in events:
+        if not owner_key or not owner_key.startswith("user:"):
+            continue
+        uid = owner_key.split(":", 1)[1]
+        channel.setdefault(uid, source)
+    return {"invited": invited, "channel": channel}
+
+
+def _source_of(user_id: str, index: dict) -> str:
+    if user_id in index["invited"]:
+        return SOURCE_INVITE
+    return index["channel"].get(user_id) or SOURCE_ORGANIC
+
+
+def _iter_known_user_ids(index: dict) -> set[str]:
+    """已知有「非自然流量」来源的用户 id 集合（用于来源筛选）。"""
+    return set(index["invited"]) | set(index["channel"])
+
+
+async def _inviter_phones(db: AsyncSession, inviter_ids: list[str]) -> dict[str, str]:
+    if not inviter_ids:
+        return {}
+    rows = (
+        await db.execute(select(User.id, User.phone).where(User.id.in_(inviter_ids)))
+    ).all()
+    return {uid: _mask_phone(phone) for uid, phone in rows}
 
 
 def write_audit_log(session: dict, action: str, target: str, detail: str = ""):
@@ -243,7 +300,7 @@ async def get_users(
 ) -> dict:
     """获取用户列表（M11-01）。"""
     query = select(User)
-    
+
     if keyword:
         query = query.where(
             User.phone.ilike(f"%{keyword}%") | 
@@ -251,14 +308,29 @@ async def get_users(
         )
     if member_status:
         query = query.where(User.plan == member_status)
-    
+
+    # M0-04（V5.0）：来源渠道筛选（此前参数被接收却从未生效）
+    index = await resolve_user_source_index(db)
+    if source:
+        known = _iter_known_user_ids(index)
+        if source == SOURCE_ORGANIC:
+            # 自然流量 = 既非邀请注册、也没有任何埋点渠道的用户
+            if known:
+                query = query.where(User.id.not_in(known))
+        else:
+            matched = [uid for uid in known if _source_of(uid, index) == source]
+            # 未命中任何用户时用不可能匹配的条件，避免退化为「查全部」
+            query = query.where(User.id.in_(matched) if matched else User.id.is_(None))
+
     # 总数
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     
     # 分页
     query = query.offset((page - 1) * page_size).limit(page_size)
     users = (await db.execute(query)).scalars().all()
-    
+
+    inviter_phones = await _inviter_phones(db, [index["invited"][u.id] for u in users if u.id in index["invited"]])
+
     items = []
     for u in users:
         # 查询订单数和消费总额
@@ -271,7 +343,8 @@ async def get_users(
         order_count, total_spend = order_stats.one()
         order_count = order_count or 0
         total_spend = (total_spend or 0) / 100.0
-        
+
+        inviter_id = index["invited"].get(u.id)
         items.append(admin_schemas.AdminUserOut(
             id=u.id,
             phone=_mask_phone(u.phone),
@@ -283,7 +356,8 @@ async def get_users(
             total_spend_yuan=total_spend,
             created_at=u.created_at.strftime("%Y-%m-%d %H:%M") if u.created_at else "",
             risk_flag=False,
-            source="自然流量",
+            source=_source_of(u.id, index),
+            inviter_phone=inviter_phones.get(inviter_id, "") if inviter_id else "",
         ))
     
     return {
@@ -318,16 +392,25 @@ async def get_user_detail(db: AsyncSession, user_id: str) -> dict:
         ).where(Order.user_id == user_id, Order.status.in_(["paid", "delivered"]))
     )
     order_count, total_spend = order_stats.one()
-    
+
+    # M0-04（V5.0）：邀请来源（含邀请人手机号，已脱敏）
+    index = await resolve_user_source_index(db)
+    inviter_id = index["invited"].get(user_id)
+    inviter_phones = await _inviter_phones(db, [inviter_id] if inviter_id else [])
+    inviter_phone = inviter_phones.get(inviter_id, "") if inviter_id else ""
+
     user_out = admin_schemas.AdminUserOut(
         id=user.id,
         phone=_mask_phone(user.phone),
         nickname=f"用户{user.id[:6]}",
+        city=user.city or "",
         member_status=user.plan,
         member_label=PLAN_NAMES.get(user.plan, "游客"),
         order_count=order_count or 0,
         total_spend_yuan=(total_spend or 0) / 100.0,
         created_at=user.created_at.strftime("%Y-%m-%d %H:%M") if user.created_at else "",
+        source=_source_of(user_id, index),
+        inviter_phone=inviter_phone,
     )
     
     # 构建订单列表
@@ -371,6 +454,48 @@ async def get_user_detail(db: AsyncSession, user_id: str) -> dict:
 
 # ─── 订单管理 ───
 
+async def _handled_order_ids(db: AsyncSession, order_ids: list[str]) -> set[str]:
+    """M2-03（V5.0）：已被人工标记「已处理」的订单 id（订单事件里 action=resolve）。"""
+    if not order_ids:
+        return set()
+    rows = (
+        await db.execute(
+            select(PaymentRecord.order_id).where(
+                PaymentRecord.order_id.in_(order_ids),
+                PaymentRecord.action == "resolve",
+            )
+        )
+    ).all()
+    return {r[0] for r in rows}
+
+
+def _abnormal_flag(order: Order, handled_ids: set[str]) -> tuple[bool, str | None]:
+    """统一的异常判定（列表展示与「仅看异常」筛选共用同一条口径）。"""
+    atype: str | None = None
+    # M2-05（V5.0）：交付物已下载的退款申请需人工审核 → 红色高亮提醒处理
+    if order.refund_review == "pending":
+        atype = "refund_review"
+    if order.status == "paid" and order.paid_at:
+        paid_at = order.paid_at
+        if paid_at.tzinfo is None:
+            paid_at = paid_at.replace(tzinfo=timezone.utc)
+        if (datetime.now(timezone.utc) - paid_at).total_seconds() > 7200:  # 2 小时
+            atype = "paid_no_delivery"
+    # M2-04（V5.0）：待支付订单长时间收不到渠道回调 → 回调缺失
+    if order.status == "pending" and order.created_at:
+        created_at = order.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        miss_minutes = int(getattr(settings, "order_callback_missing_minutes", 15) or 15)
+        age_minutes = (datetime.now(timezone.utc) - created_at).total_seconds() / 60
+        if miss_minutes <= age_minutes < 30:  # 超过阈值但尚未超时关单
+            atype = "callback_missing"
+    # M2-03（V5.0）：人工标记已处理后不再红色高亮
+    if atype and order.id in handled_ids:
+        return False, None
+    return (atype is not None), atype
+
+
 async def get_orders(
     db: AsyncSession,
     page: int = 1,
@@ -380,48 +505,40 @@ async def get_orders(
     abnormal: Optional[bool] = None,
     channel: Optional[str] = None,
 ) -> dict:
-    """获取订单列表（M11-02）。"""
+    """获取订单列表（M11-02）。
+
+    异常筛选在**分页之前**完成 —— 否则「仅看异常」只会过滤当前页，
+    导致总数与翻页结果都不对（后台「一键处理异常」会看到错误的清单）。
+    """
     query = select(Order)
-    
+
     if status:
         query = query.where(Order.status == status)
     if keyword:
         query = query.where(Order.id.ilike(f"%{keyword}%"))
     if channel:
         query = query.where(Order.channel == channel)
-    
-    # 总数
-    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
-    
-    # 分页
-    query = query.order_by(Order.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
-    orders = (await db.execute(query)).scalars().all()
-    
-    items = []
+
+    query = query.order_by(Order.created_at.desc())
+    orders = list((await db.execute(query)).scalars().all())
+
+    handled_ids = await _handled_order_ids(db, [o.id for o in orders])
+
+    filtered: list[tuple[Order, bool, str | None]] = []
     for o in orders:
-        # 获取用户手机
+        flag, atype = _abnormal_flag(o, handled_ids)
+        if abnormal is not None and flag != abnormal:
+            continue
+        filtered.append((o, flag, atype))
+
+    total = len(filtered)
+    start = (page - 1) * page_size
+    page_rows = filtered[start : start + page_size]
+
+    items = []
+    for o, is_abnormal, abnormal_type in page_rows:
         user = await db.get(User, o.user_id)
         user_phone = _mask_phone(user.phone if user else None)
-
-        # 异常检测（简化版）
-        is_abnormal = False
-        abnormal_type = None
-        # M2-05（V5.0）：交付物已下载的退款申请需人工审核 → 红色高亮提醒处理
-        if o.refund_review == "pending":
-            is_abnormal = True
-            abnormal_type = "refund_review"
-        if o.status == "paid" and o.paid_at:
-            # 检查是否超过2小时未交付（paid_at 可能是 naive datetime）
-            paid_at = o.paid_at
-            if paid_at.tzinfo is None:
-                paid_at = paid_at.replace(tzinfo=timezone.utc)
-            time_diff = (datetime.now(timezone.utc) - paid_at).total_seconds()
-            if time_diff > 7200:  # 2小时
-                is_abnormal = True
-                abnormal_type = "paid_no_delivery"
-
-        if abnormal is not None and is_abnormal != abnormal:
-            continue
 
         items.append(admin_schemas.AdminOrderOut(
             id=o.id,
@@ -440,6 +557,7 @@ async def get_orders(
             downloaded=o.downloaded_at is not None,
             abnormal=is_abnormal,
             abnormal_type=abnormal_type,
+            abnormal_handled=o.id in handled_ids,
         ))
     
     return {
@@ -485,6 +603,65 @@ async def process_refund(
         "order_id": order_id,
         "status": status_before,
         "message": "已驳回退款申请",
+    }
+
+
+async def resolve_order(
+    db: AsyncSession,
+    session: dict,
+    order_id: str,
+    note: Optional[str] = None,
+) -> dict:
+    """M2-03（V5.0）：人工「标记已处理」异常订单，并关闭该订单的相关告警。
+
+    标记后订单不再红色高亮（后台一眼就能看到还有哪些异常没处理完）。
+    处理动作写入订单事件表（action=resolve），可追溯处理人与时间。
+    """
+    order = await db.get(Order, order_id)
+    if not order:
+        raise BizError(40401, "订单不存在")
+
+    from app.models import AdminAlert
+    from app.services import payment as payment_service
+
+    # 1) 写订单事件（幂等：重复标记不重复写入）
+    already = (
+        await db.execute(
+            select(PaymentRecord.id).where(
+                PaymentRecord.order_id == order_id,
+                PaymentRecord.action == "resolve",
+            )
+        )
+    ).scalar_one_or_none()
+    if already is None:
+        payment_service._record(
+            db,
+            order_id,
+            order.channel,
+            "resolve",
+            "handled",
+            {"by": session.get("name", "后台"), "note": note or ""},
+        )
+
+    # 2) 关闭该订单的相关告警（异常订单 / 回调缺失）
+    alerts = (
+        await db.execute(
+            select(AdminAlert).where(
+                AdminAlert.related_type == "order",
+                AdminAlert.related_id == order_id,
+                AdminAlert.is_read.is_(False),
+            )
+        )
+    ).scalars().all()
+    for alert in alerts:
+        alert.is_read = True
+
+    await db.commit()
+    write_audit_log(session, "标记已处理", order_id, note or "")
+    return {
+        "order_id": order_id,
+        "handled": True,
+        "message": f"已标记处理完成，同时关闭 {len(alerts)} 条相关告警",
     }
 
 

@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getAdminOrders,
   processRefund,
+  resolveAdminOrder,
   exportCsv,
   ORDER_ABNORMAL_LABEL,
   type AdminOrder,
@@ -78,8 +79,8 @@ const rowClass = ({ row }: { row: AdminOrder }) => (row.abnormal ? 'bf-abnormal'
 const doExport = () => {
   exportCsv(
     `生意快启_订单对账表_${Date.now()}.csv`,
-    ['订单号', '用户', '套餐', '金额', '状态', '渠道', '下单时间', '支付时间', '已下载', '异常标记', '退款申请'],
-    rows.value.map((o) => [o.id, o.userPhone, o.planName, o.amountYuan, o.statusLabel, o.channel, o.createdAt, o.paidAt || '', o.downloaded ? '是' : '否', o.abnormal ? ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常' : '否', o.refundRequested ? o.refundReason || '是' : '否'])
+    ['订单号', '用户', '套餐', '金额', '状态', '渠道', '下单时间', '支付时间', '已下载', '异常标记', '处理状态', '退款申请'],
+    rows.value.map((o) => [o.id, o.userPhone, o.planName, o.amountYuan, o.statusLabel, o.channel, o.createdAt, o.paidAt || '', o.downloaded ? '是' : '否', o.abnormal ? ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常' : '否', o.abnormalHandled ? '已处理' : o.abnormal ? '待处理' : '—', o.refundRequested ? o.refundReason || '是' : '否'])
   )
   ElMessage.success('对账表已导出')
 }
@@ -101,6 +102,22 @@ const doRefund = async (o: AdminOrder, action: 'approve' | 'reject') => {
     void load()
   } catch (e: any) {
     if (e?.message) ElMessage.error(e.message)
+  }
+}
+
+// M2-03（V5.0）：人工标记异常订单已处理（写订单事件 + 关闭关联告警）
+const doResolve = async (o: AdminOrder) => {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '可填写处理说明（如「已补单」「已联系用户」），留空也可',
+      '标记已处理',
+      { confirmButtonText: '确认标记', cancelButtonText: '取消', inputPlaceholder: '处理说明（选填）' }
+    )
+    const r = await resolveAdminOrder(o.id, value || undefined)
+    ElMessage.success(r.message)
+    void load()
+  } catch (e: any) {
+    if (e?.message && e !== 'cancel') ElMessage.error(e.message)
   }
 }
 
@@ -216,18 +233,21 @@ const deliveryText = (o: AdminOrder) => {
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <span class="tag" :class="row.abnormal ? 'tag-red' : row.status === 'delivered' || row.status === 'refunded' ? 'tag-green' : row.status === 'generating' || row.status === 'paid' ? 'tag-orange' : 'tag-gray'">
+            <!-- M2-03：人工已标记处理的异常订单不再红色高亮，改为灰色「已处理」 -->
+            <span v-if="row.abnormalHandled" class="tag tag-gray">已处理</span>
+            <span v-else class="tag" :class="row.abnormal ? 'tag-red' : row.status === 'delivered' || row.status === 'refunded' ? 'tag-green' : row.status === 'generating' || row.status === 'paid' ? 'tag-orange' : 'tag-gray'">
               {{ row.abnormal ? '异常' : row.statusLabel }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <template v-if="row.refundRequested && ['paid', 'generating', 'delivered'].includes(row.status)">
               <a class="action-link" style="color: var(--bf-ok)" @click="doRefund(row, 'approve')">同意退款</a>
               <a class="action-link danger" @click="doRefund(row, 'reject')">驳回</a>
             </template>
-            <span v-else class="bf-muted">—</span>
+            <a v-if="row.abnormal && !row.abnormalHandled" class="action-link" style="color: var(--bf-warn)" @click="doResolve(row)">标记已处理</a>
+            <span v-if="!row.refundRequested && !(row.abnormal && !row.abnormalHandled)" class="bf-muted">—</span>
           </template>
         </el-table-column>
       </el-table>

@@ -63,6 +63,12 @@
 - `GET /api/user/orders` · `POST /api/user/logout` · `DELETE /api/user/account`（注销，15 日清隐私）。
 - M0-02 采集时机：注册 / 登录时自动把**首屏已选过的**条件回写画像，不重复问用户（只填空字段，不覆盖手动修改）。
 - M0-03 到期提醒：到期前 **3 天 / 1 天各提醒一次**，不要求用户已开启自动续费（`user.renew_stage` 去重）。
+- **M0-04 邀请关系绑定（V5.0）**：分享链接形如 `https://<host>/?inviter=BF-7Q2X9`。
+  - 落地即暂存：前端冷启动读取 `inviter` 参数落本地存储（被邀请人可能逛很久才登录，不落地就会丢单）；
+  - 登录自动携带：`POST /api/auth/login` 与 `POST /api/auth/wechat` 的 `inviterCode` 字段由请求层自动补齐，
+    两条登录路径都会调用 `share_service.bind_invite`，**关系首次绑定后不可修改**（幂等，已绑定直接返回）；
+  - 绑定成功后前端清除暂存码，避免污染其它账号登录；
+  - 后台可查任意用户的邀请来源（见 M4 用户管理 `source` / `inviterPhone`）。
 
 ### M1 商机诊断（A）
 - `POST /api/diagnose` body:{capital, dailyHours, city, extra?} → {taskId}
@@ -78,8 +84,12 @@
 - `GET /api/payment/addons` 增值加购包（按项计价，不并入标准套餐）。
 - `POST /api/payment/create` body:{plan:'single|month|year', platform, matchId} → {orderId, payParams}
 - `POST /api/payment/callback/{channel}` 渠道回调（微信/支付宝/Apple/华为），幂等。
-- `GET /api/payment/order/{orderId}` 主动查单兜底（M5-06）+ 退款可走路径提示：
+- `POST /api/payment/mock/channel-paid` **仅本地模拟**（`PAYMENT_MOCK=true` 时存在，生产 404）：
+  把渠道侧标记为「已扣款」但不回写本地订单，用于验收「回调丢失 → 主动查单补单」。
+- `GET /api/payment/order/{orderId}` 主动查单兜底（M2-01）+ 退款可走路径提示：
   `downloaded` / `refundPath('self'|'review')` / `refundNotice` / `refundReviewing`。
+  - 绝不只靠回调判状态：待支付订单会**主动向渠道查单**，渠道已扣款则立即补单（防漏单，用户不会付了钱拿不到货）；
+    查单失败一律 fail-safe（返回 `unknown`，交人工核对），绝不擅自发货。
 - `POST /api/payment/refund` **M2-05 退款机制（V5.0）**：
   - 交付物**未下载** → 自助全额退款即时生效（`review=auto_approved`），同步回收会员权益；
   - 交付物**已下载** → 不即时退款，转人工审核（`review=pending`、`reviewRequired=true`），
@@ -127,17 +137,26 @@
 ### M4 运营后台（B+D，内部）
 - 登录：`POST /api/admin/auth/login` body:{username, password} → 第一步；`POST /api/admin/auth/verify-2fa`（TOTP 第二步验证）（密钥走环境变量，不进代码库）
 - 数据看板：`GET /api/admin/dashboard` → {kpis:{diagnoseCount, payCount, revenueYuan, refundRate, conversionRate, packageDoneRate, avgOrderYuan}, trend:[{date, orders, revenue}], refreshAt}（数据延迟 ≤ 5 分钟）
-- 用户管理：`GET /api/admin/users?page=&pageSize=&keyword=&memberStatus=` → {items, total, page, pageSize}；`GET /api/admin/users/{id}` → {user, consumption}
+- 用户管理：`GET /api/admin/users?page=&pageSize=&keyword=&memberStatus=&source=` → {items, total, page, pageSize}；`GET /api/admin/users/{id}` → {user, orders, packages}
   - V5.0 §10.2：列表与详情里的手机号**一律脱敏**（`138****5678`），不得明文直出。
-- 订单管理：`GET /api/admin/orders?page=&pageSize=&status=&keyword=`；`PUT /api/admin/orders/{orderId}/refund` body:{action:'approve|reject', reason}
-  - 异常订单包含 `refund_review`（退款待审核）类型，红色高亮；出参带 `downloaded` / `refundRequested` / `refundReason`。
+  - **M0-04 来源渠道**：出参 `source` ∈ `邀请注册`｜埋点渠道值｜`自然流量`；邀请注册时附 `inviterPhone`（同样脱敏）。
+    `source` 筛选参数**真实生效**（此前被接收却从不生效，属已修复的契约断裂）。
+- 订单管理：`GET /api/admin/orders?page=&pageSize=&status=&keyword=&abnormal=&channel=`；`PUT /api/admin/orders/{orderId}/refund` body:{action:'approve|reject', reason}
+  - 异常订单包含 `refund_review`（退款待审核）、`paid_no_delivery`（已支付未交付超 2 小时）、`callback_missing`（渠道回调缺失）三类，红色高亮；
+    出参带 `downloaded` / `refundRequested` / `refundReason` / `abnormal` / `abnormalType` / `abnormalHandled`。
+  - **M2-03 手动标记已处理**：`POST /api/admin/orders/{orderId}/resolve` body:{note?}
+    写订单事件（可追溯处理人与时间）+ 关闭该订单的未读告警；标记后 `abnormal=false`、`abnormalHandled=true`，不再红色高亮。
 - 商机库管理（P0）：`GET /api/admin/opportunities?page=&pageSize=&status=&keyword=`；`POST /api/admin/opportunities/import` body:{items[]}；`POST /api/admin/opportunities/{id}/review` body:{action:'approve|reject', reason}
 - 提示词配置：`GET /api/admin/prompts`；`PUT /api/admin/prompts/{promptKey}` body:{content, model}（改后无需发版生效）
 - 内容审核：`GET /api/admin/reviews?page=&pageSize=&status=&keyword=`；`POST /api/admin/reviews/{id}/action` body:{action:'pass|reject', reason}
 - 权限管理：`GET /api/admin/roles`；`PUT /api/admin/roles/{role}` body:{perms[]}（操作记录操作人）
 - 审计日志：`GET /api/admin/audit`（保留 ≥ 180 天）
 - V5.0 后台三块看板：`GET /api/admin/cost-monitor`（AI 成本，超 25% 告警）、`GET /api/admin/funnel`（转化漏斗）、`GET /api/admin/growth`（裂变含 K 因子）。
-- 运营自动化：`GET /api/admin/daily-reports` · `GET /api/admin/alerts` · `POST /api/admin/alerts/scan`。
+- 运营自动化：`GET /api/admin/daily-reports` · `GET /api/admin/alerts` · `POST /api/admin/alerts/scan`（一键巡检）。
+  - 告警类型：`paid_no_delivery`（已支付未交付超 2 小时）、`callback_missing`（渠道回调缺失，
+    超过 `order_callback_missing_minutes` 默认 15 分钟；渠道已扣款则**自动补单**并降级为 warning 告警，
+    查不到则 danger 交人工核对）、`duplicate_payment`（同用户窗口内 ≥2 笔已支付，疑似重复扣款需退款）、
+    `cost_overrun`（AI 成本占收入比超 25%）。按 `fingerprint` 去重，不重复刷屏。
 - 导出：`GET /api/admin/export/{exportType}`（users/orders/deliveries/events）。
 
 ## 3. 订单状态机（M2-03）
@@ -149,7 +168,9 @@
 已支付/生成中/已交付 → 已退款
 ```
 
-每态带 `timestamp`。支付回调 + 定时主动查单双保险防漏单。
+每态带 `timestamp`。**防漏单双保险**：渠道回调（`POST /api/payment/callback/{channel}`）
++ 主动查单（`GET /api/payment/order/{orderId}`，以及后台定时巡检 `POST /api/admin/alerts/scan`）。
+回调丢失时，主动查单若发现渠道已扣款会**自动补单**（用户无感）；查不到则挂 `callback_missing` 告警交人工核对。
 
 **退款分两条路（V5.0 M2-05）**：
 

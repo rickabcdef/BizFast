@@ -3,7 +3,8 @@
 三件事必须由系统自动完成，创始人只负责看：
 1. **每日数据日报**（8.2）：每天 9 点生成昨日营收/订单/新增/退款/AI 成本/净现金流，
    落库 + 推送（推送失败不丢数据）。
-2. **异常订单告警**（M2-04）：每 5 分钟扫描，已支付却迟迟未交付的订单立刻告警，
+2. **异常订单告警**（M2-04）：每 5 分钟扫描，已支付却迟迟未交付的订单立刻告警；
+   同时做**主动查单兜底**（M2-01 / 第 10.2 节），回调缺失自动补单，绝不漏单；
    按 fingerprint 去重，不重复刷屏。
 3. **会员到期提醒**（M0-03）：每天扫描，到期前 3 天内提醒一次续费。
 
@@ -334,6 +335,142 @@ async def detect_abnormal_orders(db: AsyncSession) -> list[dict]:
     ]
 
 
+async def detect_payment_anomalies(db: AsyncSession) -> list[dict]:
+    """M2-01 / M2-04（V5.0）：主动查单兜底 + 回调缺失 / 重复支付告警。
+
+    1. **回调缺失**：待支付订单创建超过 order_callback_missing_minutes 仍未收到回调 →
+       主动向渠道查单。渠道已扣款 → **自动补单**并告警（防漏单，用户不会付了钱拿不到货）；
+       渠道查不到 → 告警交人工核对。
+    2. **重复支付**：同一用户在窗口内出现 ≥2 笔已支付订单 → 告警（可能重复扣款，需退款）。
+    """
+    from app.services import payment as payment_service
+
+    created: list[dict] = []
+    now = _utcnow()
+    miss_minutes = int(getattr(settings, "order_callback_missing_minutes", 15) or 15)
+
+    # ---- 1) 回调缺失 → 主动查单补单 ----
+    pendings = (
+        await db.execute(select(Order).where(Order.status == "pending"))
+    ).scalars().all()
+    for order in pendings:
+        created_at = _naive(order.created_at)
+        if created_at is None:
+            continue
+        age_minutes = (now - created_at).total_seconds() / 60
+        if age_minutes < miss_minutes:
+            continue
+        if payment_service._is_expired(order):
+            continue  # 超时未支付的订单由主动查单关单，不算异常
+
+        recovered = False
+        try:
+            recovered = await payment_service.recover_pending_order(db, order)
+        except Exception as exc:  # 查单失败不阻断扫描
+            logger.warning("主动查单补单失败：%s", exc)
+
+        fingerprint = f"callback_missing:{order.id}"
+        exists = (
+            await db.execute(select(AdminAlert).where(AdminAlert.fingerprint == fingerprint))
+        ).scalar_one_or_none()
+        if exists is not None:
+            continue
+
+        if recovered:
+            level = "warning"
+            title = f"回调缺失（已自动补单）：{order.id[:8]}"
+            content = (
+                f"订单 {order.id}（{order.plan}，金额 ¥{_yuan(order.amount)}）创建 "
+                f"{age_minutes:.0f} 分钟未收到渠道回调，主动查单确认渠道**已扣款**，"
+                f"系统已自动补单并发放权益（用户无感知，无需人工介入）。"
+            )
+        else:
+            level = "danger"
+            title = f"回调缺失待核对：{order.id[:8]}"
+            content = (
+                f"订单 {order.id}（{order.plan}，金额 ¥{_yuan(order.amount)}）创建 "
+                f"{age_minutes:.0f} 分钟仍未支付且渠道查不到已付记录。若用户反馈已扣款，"
+                f"请到「订单管理」人工核对后手动补单。"
+            )
+        alert = AdminAlert(
+            id=str(uuid.uuid4()),
+            alert_type="callback_missing",
+            level=level,
+            title=title,
+            content=content,
+            related_type="order",
+            related_id=order.id,
+            fingerprint=fingerprint,
+        )
+        db.add(alert)
+        created.append(alert)
+
+    # ---- 2) 重复支付 ----
+    window = int(getattr(settings, "duplicate_payment_window_minutes", 10) or 10)
+    since = now - timedelta(minutes=window)
+    paid_rows = (
+        await db.execute(
+            select(Order).where(
+                Order.status.in_(["paid", "generating", "delivered"]),
+                Order.paid_at.is_not(None),
+            )
+        )
+    ).scalars().all()
+    by_user: dict[str, list[Order]] = {}
+    for order in paid_rows:
+        paid_at = _naive(order.paid_at)
+        if paid_at is None or paid_at < since:
+            continue
+        by_user.setdefault(order.user_id, []).append(order)
+
+    for user_id, orders in by_user.items():
+        if len(orders) < 2:
+            continue
+        anchor = sorted(o.id for o in orders)[0]
+        fingerprint = f"duplicate_payment:{user_id}:{anchor}"
+        exists = (
+            await db.execute(select(AdminAlert).where(AdminAlert.fingerprint == fingerprint))
+        ).scalar_one_or_none()
+        if exists is not None:
+            continue
+        ids = "、".join(o.id[:8] for o in orders)
+        total = sum(o.amount or 0 for o in orders)
+        alert = AdminAlert(
+            id=str(uuid.uuid4()),
+            alert_type="duplicate_payment",
+            level="danger",
+            title=f"疑似重复支付：用户 {user_id[:8]} 连续 {len(orders)} 笔",
+            content=(
+                f"用户 {user_id} 在 {window} 分钟内产生 {len(orders)} 笔已支付订单"
+                f"（{ids}），合计 ¥{_yuan(total)}。请核对是否为重复扣款，如是请及时退款。"
+            ),
+            related_type="user",
+            related_id=user_id,
+            fingerprint=fingerprint,
+        )
+        db.add(alert)
+        created.append(alert)
+
+    if created:
+        await db.commit()
+        for a in created:
+            await _push_text(a.content, title=a.title)
+            logger.warning("支付异常告警：%s", a.title)
+    return [
+        {
+            "id": a.id,
+            "alert_type": a.alert_type,
+            "level": a.level,
+            "title": a.title,
+            "content": a.content,
+            "related_type": a.related_type,
+            "related_id": a.related_id,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+        }
+        for a in created
+    ]
+
+
 async def detect_cost_overrun(db: AsyncSession) -> list[dict]:
     """成本占收入比超阈值（第 7.1：> 25%）时写一条告警（按天去重）。"""
     from app.services import ai_cost
@@ -413,10 +550,11 @@ async def mark_alert_read(db: AsyncSession, alert_id: str | None = None) -> int:
 
 
 async def run_alert_scan_job(db: AsyncSession) -> dict:
-    """定时任务入口：扫描异常订单 + 成本超限。"""
+    """定时任务入口：扫描异常订单 + 支付异常（回调缺失 / 重复支付）+ 成本超限。"""
     orders = await detect_abnormal_orders(db)
+    payments = await detect_payment_anomalies(db)
     costs = await detect_cost_overrun(db)
-    return {"orders": len(orders), "costs": len(costs)}
+    return {"orders": len(orders), "payments": len(payments), "costs": len(costs)}
 
 
 # ---------------------------------------------------------------- 3. 会员到期提醒

@@ -661,6 +661,66 @@ def _verify_signature(channel: str, body: dict) -> bool:
     return bool(body.get("sign"))
 
 
+# ---------------------------------------------------------------- 主动查单兜底（M2-01 / 第 10.2 节）
+# PRD：所有支付回调必须主动查单，绝不只靠回调判断支付状态，防止漏单。
+# 渠道侧「已扣款」与本地「已支付」是两件事：回调丢失时本地会停在待支付，
+# 必须由主动查单向渠道确认后补单，否则用户付了钱却拿不到货 —— 这是致命事故。
+_MOCK_CHANNEL_PAID = "paymock:channel_paid:{order_id}"
+
+
+async def mark_mock_channel_paid(order_id: str) -> None:
+    """本地模拟渠道侧已扣款（**不回写本地订单**）。
+
+    用于验收「回调丢失 → 主动查单补单」这一条防漏单链路：调用后本地订单仍为待支付，
+    只有主动查单才应该把它补成已支付。真实环境由渠道网关承担这个角色。
+    """
+    from app.core.cache import get_cache
+
+    await get_cache().set(_MOCK_CHANNEL_PAID.format(order_id=order_id), "1", ttl=6 * 3600)
+
+
+async def channel_query(channel: str, order_id: str) -> str:
+    """主动向支付渠道查询订单真实支付状态，返回 paid / pending / unknown。
+
+    - 未配置真实渠道（PAYMENT_MOCK=true）：读渠道侧模拟标记。默认 unknown，
+      只有显式模拟「渠道已扣款」后才返回 paid（避免把用户没付的钱误判成已付）。
+    - 真实渠道：需补齐商户密钥后调用网关查单接口；密钥缺失时返回 unknown
+      （fail-safe：宁可交给人工核对，也不擅自发货）。
+    """
+    if settings.payment_mock:
+        from app.core.cache import get_cache
+
+        marker = await get_cache().get(_MOCK_CHANNEL_PAID.format(order_id=order_id))
+        return "paid" if marker else "unknown"
+
+    import os
+
+    secret = {
+        "wechat": os.getenv("WECHAT_API_KEY"),
+        "alipay": os.getenv("ALIPAY_APP_ID"),
+        "apple": os.getenv("APPLE_SHARED_SECRET"),
+        "huawei": os.getenv("HUAWEI_APP_ID"),
+    }.get(channel)
+    if not secret:
+        return "unknown"
+    # 真实网关查单接口待接入：拿到结果后按 paid / pending / unknown 返回
+    return "unknown"
+
+
+async def recover_pending_order(db, order: Order) -> bool:
+    """主动查单补单：渠道已扣款而本地仍待支付 → 补成已支付（幂等）。"""
+    if order.status != "pending":
+        return False
+    if await channel_query(order.channel, order.id) != "paid":
+        return False
+    first = await mark_paid(db, order, "query", {"recovered": True, "reason": "callback_missing"})
+    _record(db, order.id, order.channel, "query", "recovered" if first else order.status,
+            {"reason": "主动查单发现渠道已扣款"})
+    await db.commit()
+    await db.refresh(order)
+    return first
+
+
 async def package_brief(db, order_id: str) -> tuple[str | None, str | None]:
     """查询订单关联的《生意启动包》（由 M4 / B 模块落库）。
 
@@ -678,13 +738,25 @@ async def package_brief(db, order_id: str) -> tuple[str | None, str | None]:
 
 
 async def query_order(db, order_id: str, owner: OwnerContext | None = None) -> Order:
-    """主动查单兜底（M5-06）：查询时顺带关闭超时未支付订单。"""
+    """主动查单兜底（M5-06 / 第 10.2 节）。
+
+    绝不只靠回调判断支付状态：待支付订单会主动向渠道查单，
+    渠道已扣款则立即补单（防漏单）；同时顺带关闭超时未支付订单。
+    """
     order = (await db.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
     if order is None:
         raise BizError(40401, "未找到该订单")
     if owner is not None and owner.user_id and order.user_id != owner.user_id:
         raise BizError(40401, "未找到该订单")
 
+    # 1) 主动查单：渠道已扣款而本地还是待支付 → 补单（回调丢失兜底）
+    if order.status == "pending" and not _is_expired(order):
+        try:
+            await recover_pending_order(db, order)
+        except Exception as exc:  # 查单失败不影响接口可用性
+            logger.warning("主动查单失败：%s", exc)
+
+    # 2) 超时未支付 → 关单
     if _is_expired(order):
         await _close_order(db, order)
         _record(db, order.id, order.channel, "query", "closed", {"reason": "主动查单发现超时"})

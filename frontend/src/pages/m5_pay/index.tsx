@@ -193,14 +193,15 @@ export default function M5Pay() {
       await payCallback(paying.channel, paying.orderId)
       const fresh = await loadOrder(paying.orderId)
       setPaying(null)
-      Taro.showToast({ title: '支付成功', icon: 'success' })
-      // M4-01 衔接（负责人 B）：支付成功后进入生成进度页，由 m4 页轮询真实进度
+      Taro.showToast({ title: '支付成功', icon: 'success', duration: 800 })
+      // V5.0 第 2.3 节：支付成功后 1 秒内必须进入生成页（用户立刻看到「东西在做」才有安全感）；
+      // 这里只留 600ms 让「支付成功」提示可见，随即跳转。
       if (fresh && (fresh.status === 'generating' || fresh.status === 'delivered' || fresh.status === 'paid')) {
         setTimeout(() => {
           Taro.redirectTo({
             url: `/pages/m4_delivery/index?orderId=${fresh.id}&matchId=${matchId || ''}`
           })
-        }, 1500)
+        }, 600)
       }
     } catch (e: any) {
       setError(e?.message || '支付未成功，请重新支付')

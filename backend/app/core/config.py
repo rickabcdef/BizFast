@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     order_expire_minutes: int = 30  # 待支付超时关闭
     # V5.0 M2-05 退款窗口：窗口内未下载可自助全额退，已下载转人工审核；超窗口联系客服
     refund_window_days: int = 7
+    # V5.0 M2-01 / 第 10.2 节：支付回调 + 主动查单双保险防漏单。
+    # 订单创建后超过该分钟数仍为「待支付」→ 主动向渠道查单；渠道已扣款则自动补单并告警「回调缺失」。
+    order_callback_missing_minutes: int = 15
+    # V5.0 M2-04：同一用户在该分钟数内出现 ≥2 笔已支付订单 → 判定「重复支付」并告警
+    duplicate_payment_window_minutes: int = 10
     payment_mock: bool = True  # 未接真实渠道时走本地模拟支付（回调可自行触发）
     city_list_version: str = "2026.10"
     # M2-05 分享：二维码指向的正式落地页域名（留空则用当前请求的 host，方便本地联调）

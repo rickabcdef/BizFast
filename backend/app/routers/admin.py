@@ -135,6 +135,18 @@ async def process_refund(
     return ok(result, _rid(request))
 
 
+@router.post("/orders/{order_id}/resolve", summary="标记异常订单已处理（M2-03）")
+async def resolve_order(
+    order_id: str,
+    body: schemas.OrderResolveIn,
+    request: Request,
+    session: dict = Depends(require_perm("orders")),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await admin_service.resolve_order(db, session, order_id, body.note)
+    return ok(result, _rid(request))
+
+
 # ─── M11-03 商机库管理 ───
 
 @router.get("/opportunities", summary="商机列表")

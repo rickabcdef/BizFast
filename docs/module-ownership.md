@@ -67,4 +67,7 @@
 | 额度剩余 | 单次礼包 = 已购 − 已用；月/年卡 = 不限次 | `membership_quota()` |
 | 今日限制 | 该商机**当日真实支付成功**的订单数 vs `opportunity_daily_limit`（默认 50） | `Order` |
 | 手机号展示 | 后台一律脱敏为 `138****5678` | `_mask_phone()` |
+| 来源渠道 | `邀请注册` > 埋点渠道（`FunnelEvent.source`）> `自然流量`；后台按此标签筛选 | `resolve_user_source_index()` |
+| 邀请绑定 | 分享链接 `?inviter=CODE` → 落地即暂存 → 登录（手机号/微信**同一条路径**）自动绑定；**首次绑定后不可修改** | `share_service.bind_invite()` + `frontend/src/services/api.ts` |
+| 支付兜底 | 回调 + 主动查单双保险；渠道已扣款而本地待支付 → **自动补单**，查不到则告警交人工 | `payment_service.query_order()` |
 | 城市口径 | 前后端同一套城市库；中文标准名，不带「市」后缀入库 | `app/data/cities.py` ↔ `constants/cities.ts` |

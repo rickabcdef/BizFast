@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.context import current_owner
 from app.core.database import get_db
 from app.schemas.common import ok
@@ -60,6 +61,34 @@ async def payment_callback(
     db: AsyncSession = Depends(get_db),
 ):
     return ok(await payment_service.handle_callback(db, channel, body), _rid(request))
+
+
+@router.post(
+    "/mock/channel-paid",
+    summary="（仅本地模拟）标记渠道侧已扣款但回调丢失，用于验收主动查单补单",
+)
+async def mock_channel_paid(
+    request: Request,
+    body: dict = Body(default_factory=dict),
+    db: AsyncSession = Depends(get_db),
+):
+    """M2-01 / 第 10.2 节验收入口。
+
+    只把**渠道侧**标记为已扣款，本地订单仍保持「待支付」，模拟真实世界的回调丢失。
+    随后任意一次主动查单（GET /api/payment/order/{id} 或后台巡检）都应把它补成已支付。
+    仅在 PAYMENT_MOCK=true 时可用，生产环境直接 404。
+    """
+    if not settings.payment_mock:
+        from app.core.errors import BizError
+
+        raise BizError(40401, "接口不存在")
+    order_id = body.get("order_id") or body.get("orderId")
+    if not order_id:
+        from app.core.errors import BizError
+
+        raise BizError(40001, "缺少订单号")
+    await payment_service.mark_mock_channel_paid(str(order_id))
+    return ok({"orderId": order_id, "channelPaid": True}, _rid(request))
 
 
 @router.get("/order/{order_id}", summary="主动查单兜底（M5-06，顺带关闭超时未支付订单）")
