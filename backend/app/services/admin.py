@@ -39,6 +39,20 @@ ROLE_NAMES = {
     "finance": "财务",
 }
 
+
+def _mask_phone(phone: Optional[str]) -> str:
+    """V5.0 第 10.2 节：敏感信息（手机号）脱敏展示。
+
+    后台列表 / 详情 / 导出对账单都只展示 `138****2211` 这种形态，
+    既不泄露完整号码，也足够客服核对用户身份。
+    """
+    if not phone:
+        return "未绑定"
+    digits = phone.strip()
+    if len(digits) < 7:
+        return "***"
+    return f"{digits[:3]}****{digits[-4:]}"
+
 PLAN_NAMES = {
     "none": "游客",
     "single": "单次购买",
@@ -260,9 +274,9 @@ async def get_users(
         
         items.append(admin_schemas.AdminUserOut(
             id=u.id,
-            phone=u.phone or "未绑定",
+            phone=_mask_phone(u.phone),
             nickname=f"用户{u.id[:6]}",
-            city="",  # User 表无 city 字段，暂留空
+            city=u.city or "",  # M0-02（V5.0）：用户画像里的所在城市
             member_status=u.plan,
             member_label=PLAN_NAMES.get(u.plan, "游客"),
             order_count=order_count,
@@ -307,7 +321,7 @@ async def get_user_detail(db: AsyncSession, user_id: str) -> dict:
     
     user_out = admin_schemas.AdminUserOut(
         id=user.id,
-        phone=user.phone or "未绑定",
+        phone=_mask_phone(user.phone),
         nickname=f"用户{user.id[:6]}",
         member_status=user.plan,
         member_label=PLAN_NAMES.get(user.plan, "游客"),
@@ -322,7 +336,7 @@ async def get_user_detail(db: AsyncSession, user_id: str) -> dict:
         orders_out.append({
             "id": o.id,
             "userId": o.user_id,
-            "userPhone": user.phone or "未绑定",
+            "userPhone": _mask_phone(user.phone),
             "plan": o.plan,
             "planName": PLAN_NAMES.get(o.plan, o.plan),
             "amountYuan": o.amount / 100.0,
@@ -387,11 +401,15 @@ async def get_orders(
     for o in orders:
         # 获取用户手机
         user = await db.get(User, o.user_id)
-        user_phone = (user.phone if user and user.phone else "") or "未绑定"
+        user_phone = _mask_phone(user.phone if user else None)
 
         # 异常检测（简化版）
         is_abnormal = False
         abnormal_type = None
+        # M2-05（V5.0）：交付物已下载的退款申请需人工审核 → 红色高亮提醒处理
+        if o.refund_review == "pending":
+            is_abnormal = True
+            abnormal_type = "refund_review"
         if o.status == "paid" and o.paid_at:
             # 检查是否超过2小时未交付（paid_at 可能是 naive datetime）
             paid_at = o.paid_at
@@ -417,8 +435,9 @@ async def get_orders(
             channel=o.channel or "",
             created_at=o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
             paid_at=o.paid_at.strftime("%Y-%m-%d %H:%M") if o.paid_at else None,
-            refund_requested=False,
-            refund_reason=None,
+            refund_requested=o.refund_review == "pending",
+            refund_reason=o.refund_reason,
+            downloaded=o.downloaded_at is not None,
             abnormal=is_abnormal,
             abnormal_type=abnormal_type,
         ))
@@ -438,28 +457,35 @@ async def process_refund(
     action: str,
     reason: Optional[str] = None,
 ) -> dict:
-    """处理退款（M11-02）。"""
+    """处理退款（M2-05 / M4-03 一键处理）。
+
+    刻意走 payment 服务，而不是直接改 status —— 保证「退款 = 状态流转 + 回收会员权益
+    + 释放优惠券额度 + 通知用户」整条链路完整执行（V5.0 要求退款后权益自动回收）。
+    """
     order = await db.get(Order, order_id)
     if not order:
         raise BizError(40401, "订单不存在")
-    
+    status_before = order.status
+
+    from app.services import payment as payment_service
+
     if action == "approve":
-        order.status = "refunded"
-        order.refunded_at = datetime.now(timezone.utc)
-        await db.commit()
+        result = await payment_service.approve_refund_review(db, order_id)
         write_audit_log(session, "同意退款", order_id, reason or "")
         return {
             "order_id": order_id,
             "status": "refunded",
-            "message": "已同意退款，24小时内原路到账",
+            "revoked": bool(result.get("revoked")),
+            "message": "已同意退款，24小时内原路到账，会员权益已回收",
         }
-    else:
-        write_audit_log(session, "驳回退款", order_id, reason or "")
-        return {
-            "order_id": order_id,
-            "status": order.status,
-            "message": "已驳回退款申请",
-        }
+
+    await payment_service.reject_refund_review(db, order_id, reason)
+    write_audit_log(session, "驳回退款", order_id, reason or "")
+    return {
+        "order_id": order_id,
+        "status": status_before,
+        "message": "已驳回退款申请",
+    }
 
 
 # ─── 商机库管理 ───
@@ -1339,7 +1365,7 @@ async def collect_export_rows(db: AsyncSession | None, export_type: str) -> list
         for u in users:
             rows.append({
                 "用户ID": u.id,
-                "手机号": u.phone or "未绑定",
+                "手机号": _mask_phone(u.phone),
                 "角色": u.role,
                 "会员状态": PLAN_NAMES.get(u.plan, u.plan),
                 "注册时间": u.created_at.strftime("%Y-%m-%d %H:%M") if u.created_at else "",
@@ -1355,7 +1381,7 @@ async def collect_export_rows(db: AsyncSession | None, export_type: str) -> list
             user = await db.get(User, o.user_id)
             rows.append({
                 "订单号": o.id,
-                "用户": (user.phone if user and user.phone else o.user_id),
+                "用户": (_mask_phone(user.phone) if user and user.phone else o.user_id),
                 "套餐": PLAN_NAMES.get(o.plan, o.plan),
                 "金额(元)": round(o.amount / 100.0, 2),
                 "状态": o.status,

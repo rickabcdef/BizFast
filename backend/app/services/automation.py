@@ -204,6 +204,68 @@ async def run_daily_report_job(db: AsyncSession) -> dict:
 
 
 # ---------------------------------------------------------------- 2. 异常订单告警
+def _alert_brief(alert: AdminAlert) -> dict:
+    return {
+        "id": alert.id,
+        "alert_type": alert.alert_type,
+        "level": alert.level,
+        "title": alert.title,
+        "content": alert.content,
+        "related_type": alert.related_type,
+        "related_id": alert.related_id,
+        "created_at": alert.created_at.isoformat() if alert.created_at else None,
+    }
+
+
+async def raise_alert(
+    db: AsyncSession,
+    *,
+    alert_type: str,
+    title: str,
+    content: str = "",
+    level: str = "warning",
+    related_type: str | None = None,
+    related_id: str | None = None,
+    fingerprint: str | None = None,
+    push: bool = True,
+) -> dict | None:
+    """通用告警写入（M2-04）。
+
+    供「即时类」事件使用：事件当下就写告警并推送，不必等 5 分钟轮询任务，
+    从而满足「异常 5 分钟内后台可见」的验收要求（例如已下载订单的退款申请）。
+    `fingerprint` 相同视为同一条告警，不重复生成、不重复推送。
+    """
+    fp = fingerprint or f"{alert_type}:{related_id or uuid.uuid4().hex[:8]}"
+    exists = (
+        await db.execute(select(AdminAlert).where(AdminAlert.fingerprint == fp))
+    ).scalar_one_or_none()
+    if exists is not None:
+        return None
+
+    alert = AdminAlert(
+        id=str(uuid.uuid4()),
+        alert_type=alert_type,
+        level=level,
+        title=title,
+        content=content,
+        related_type=related_type,
+        related_id=related_id,
+        fingerprint=fp,
+    )
+    db.add(alert)
+    await db.flush()
+    brief = _alert_brief(alert)
+    await db.commit()
+
+    if push:
+        try:
+            await _push_text(content or title, title=title)
+        except Exception as exc:  # 推送失败不影响业务主流程
+            logger.warning("告警推送失败：%s", exc)
+    logger.info("后台告警：%s", title)
+    return brief
+
+
 async def detect_abnormal_orders(db: AsyncSession) -> list[dict]:
     """扫描异常订单（M2-04）。已支付超过阈值仍未交付 → 异常。
 
@@ -359,7 +421,11 @@ async def run_alert_scan_job(db: AsyncSession) -> dict:
 
 # ---------------------------------------------------------------- 3. 会员到期提醒
 async def notify_expiring_members(db: AsyncSession) -> int:
-    """M0-03：到期前 3 天 / 1 天自动提醒续费。返回本次提醒人数。"""
+    """M0-03（V5.0）：到期前 3 天 / 1 天自动提醒续费。返回本次提醒人数。
+
+    注意：提醒对象是**所有月/年会员**，不限于已开启自动续费的用户 ——
+    未开启自动续费的人同样会到期，不提醒就等于静默流失。
+    """
     from app.services import payment as payment_service
 
     users = (
@@ -367,7 +433,6 @@ async def notify_expiring_members(db: AsyncSession) -> int:
             select(User).where(
                 User.plan.in_(["month", "year"]),
                 User.plan_expire_at.is_not(None),
-                User.auto_renew.is_(True),
             )
         )
     ).scalars().all()

@@ -290,3 +290,118 @@
 .m10-fav {
   align-items: flex-start;
 }
+
+/* M0-02 / M0-03（V5.0）：生意画像与会员额度 */
+.m10-kv {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 2rpx solid rgba(255, 255, 255, 0.06);
+}
+.m10-kv:last-of-type {
+  border-bottom: none;
+}
+.m10-kv__k {
+  font-size: 24rpx;
+}
+.m10-kv__v {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #e8ecff;
+}
+.m10-quota__note {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+/* 画像卡片标题行（标题 + 编辑入口） */
+.m10-kvhead {
+  align-items: center;
+}
+.m10-kvhead .bf-card__title {
+  margin-bottom: 0;
+}
+
+/* M0-02 画像编辑弹层 */
+.m10-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(6, 8, 20, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  z-index: 99;
+}
+.m10-modal {
+  width: 100%;
+  max-width: 640rpx;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: #141a3a;
+  border: 2rpx solid rgba(123, 97, 255, 0.45);
+  border-radius: 28rpx;
+  padding: 36rpx 32rpx;
+  box-shadow: 0 0 60rpx rgba(123, 108, 255, 0.35);
+}
+.m10-modal__title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12rpx;
+}
+.m10-modal__sub {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.7;
+  margin-bottom: 8rpx;
+}
+.m10-field__label {
+  display: block;
+  margin: 24rpx 0 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #c9cfe8;
+}
+.m10-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+.m10-chip {
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  border-radius: 24rpx;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.06);
+  border: 2rpx solid rgba(255, 255, 255, 0.14);
+}
+.m10-chip.is-on {
+  color: #fff;
+  border-color: rgba(123, 97, 255, 0.85);
+  background: linear-gradient(135deg, rgba(22, 93, 255, 0.55), rgba(123, 97, 255, 0.55));
+}
+.m10-more {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: #93b4ff;
+}
+.m10-modal__acts {
+  gap: 20rpx;
+  margin-top: 34rpx;
+}
+.m10-modal__btn {
+  flex: 1;
+  margin-top: 0;
+}
+.m10-modal__btn.is-disabled {
+  opacity: 0.6;
+}

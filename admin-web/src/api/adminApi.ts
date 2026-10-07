@@ -37,8 +37,9 @@ export interface AdminOrder {
   paidAt: string | null
   refundRequested: boolean
   refundReason: string | null
-  abnormal: boolean // 异常订单（已支付未交付 / 支付回调缺失）
-  abnormalType: string | null // paid_no_delivery | callback_missing
+  downloaded: boolean // V5.0 M2-05：交付物是否已被下载（决定退款走自助还是人工审核）
+  abnormal: boolean // 异常订单（已支付未交付 / 支付回调缺失 / 退款待审核）
+  abnormalType: string | null // paid_no_delivery | callback_missing | refund_review
 }
 
 export interface AdminOpportunity {
@@ -306,7 +307,9 @@ export async function processRefund(_session: AdminSession, orderId: string, act
 
 export const ORDER_ABNORMAL_LABEL: Record<string, string> = {
   paid_no_delivery: '已支付未交付（超 2 小时）',
-  callback_missing: '支付回调缺失'
+  callback_missing: '支付回调缺失',
+  // V5.0 M2-05：交付物已下载的退款申请必须人工审核
+  refund_review: '退款待审核（交付物已下载）'
 }
 
 // 支付渠道：后端存英文标识，后台列表展示中文

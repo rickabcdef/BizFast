@@ -5,7 +5,8 @@
 - M5-04 支付渠道适配：按端选择渠道（Web 走支付宝/微信，小程序走微信 JSAPI，iOS 走 IAP…）
 - M5-05 订单状态机：待支付 → 已支付 → 生成中 → 已交付；→ 已关闭；已支付/生成中/已交付 → 已退款
 - M5-06 支付回调 + 主动查单双保险，不存在漏单
-- M5-07 7 天无理由退款，24 小时内到账
+- M2-05 退款机制（V5.0）：交付物**未下载**可自助全额退款并即时回收权益；
+  已下载的退款申请转人工审核（后台一键同意 / 驳回），审核通过后同样回收权益
 - 幂等：同一 Idempotency-Key / 同一用户同一商机的重复创建返回既有订单
 
 未接真实渠道时（PAYMENT_MOCK=true）走本地模拟支付，用于本地联调与验收；
@@ -20,7 +21,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
@@ -431,6 +432,37 @@ def _renew_notice_days() -> int:
     return int(getattr(settings, "renew_notice_days", 3))
 
 
+async def membership_quota(db, user) -> dict:
+    """M0-03（V5.0）：会员额度 —— 已购次数 / 已用启动包数 / 额度剩余。
+
+    月/年会员不限量（`quota_unlimited=true`，`quota_remaining=-1`）；
+    单次购买按「一单一次生成」计额度，已用 = 已生成的启动包数，
+    方便用户与后台对齐「还剩几次」，也方便后台做额度巡检。
+    """
+    from app.models import Package
+
+    purchased = (
+        await db.execute(
+            select(func.count(Order.id)).where(
+                Order.user_id == user.id,
+                Order.status.in_(["paid", "generating", "delivered", "refunded"]),
+            )
+        )
+    ).scalar_one()
+    used = (
+        await db.execute(select(func.count(Package.id)).where(Package.user_id == user.id))
+    ).scalar_one()
+    limited = user.plan not in ("month", "year")
+    total = int(purchased or 0) if limited else 0
+    return {
+        "purchased_count": int(purchased or 0),
+        "used_package_count": int(used or 0),
+        "quota_total": total,
+        "quota_remaining": max(0, total - int(used or 0)) if limited else -1,
+        "quota_unlimited": not limited,
+    }
+
+
 def subscription_payload(user) -> dict:
     """订阅状态（M5-08）。取消入口在 UI 上只需 1 步，且可随时关闭。"""
     expire = user.plan_expire_at
@@ -473,7 +505,10 @@ async def get_subscription(db, owner: OwnerContext) -> dict:
     user = await _resolve_user(db, owner)
     await maybe_notify_renewal(db, user)
     await db.commit()
-    return subscription_payload(user)
+    payload = subscription_payload(user)
+    # M0-03（V5.0）：同屏带上额度信息（已购次数 / 已用启动包数 / 额度剩余）
+    payload.update(await membership_quota(db, user))
+    return payload
 
 
 async def update_subscription(db, owner: OwnerContext, auto_renew: bool) -> dict:
@@ -497,8 +532,14 @@ async def cancel_subscription(db, owner: OwnerContext) -> dict:
 
 
 async def maybe_notify_renewal(db, user) -> bool:
-    """到期前 3 天提醒一次（M5-08），避免用户「被静默续费」。"""
-    if not user or not user.auto_renew or user.plan not in ("month", "year"):
+    """M0-03（V5.0）：会员到期前 3 天 / 1 天各自动提醒一次续费。
+
+    与 M5-08 相比有两处变化：
+    1. 不再以「已开启自动续费」为前提 —— 未开启的用户同样要提前知道会员即将到期，
+       否则会静默失去权益而流失；
+    2. 从「只提醒一次」改为「3 天、1 天两档各提醒一次」，用 `renew_stage` 档位去重。
+    """
+    if not user or user.plan not in ("month", "year"):
         return False
     expire = user.plan_expire_at
     if expire is None:
@@ -506,27 +547,47 @@ async def maybe_notify_renewal(db, user) -> bool:
     if expire.tzinfo is None:
         expire = expire.replace(tzinfo=timezone.utc)
     remaining = (expire - _now()).days
-    if remaining > _renew_notice_days():
+
+    # 两个提醒档位：到期前 3 天 / 1 天，各自只发一次
+    if remaining <= 1:
+        stage = 1
+    elif remaining <= _renew_notice_days():
+        stage = _renew_notice_days()
+    else:
         return False
+
     notified = user.renew_notified_at
     if notified is not None and notified.tzinfo is None:
         notified = notified.replace(tzinfo=timezone.utc)
-    if notified is not None and (expire - notified).days <= _renew_notice_days():
-        return False  # 本轮已提醒过，不重复打扰
+    # 同一档位已提醒过就不再打扰（避免每次拉取会员页都重复推送）
+    if user.renew_stage == stage and notified is not None:
+        return False
+
+    plan_name = PLAN_NAMES.get(user.plan, user.plan)
+    if user.auto_renew:
+        title = f"会员将在 {max(0, remaining)} 天后自动续费"
+        content = (
+            f"你的{plan_name}将于 {expire.date().isoformat()} 到期，"
+            f"届时将自动续费 ¥{amount_label(plan_price(user.plan))}。"
+            "如需取消，可在会员页一键关闭自动续费。"
+        )
+    else:
+        title = f"会员将在 {max(0, remaining)} 天后到期"
+        content = (
+            f"你的{plan_name}将于 {expire.date().isoformat()} 到期，"
+            "到期后会员权益将停止。续费后可继续无限次生成启动包并保留工具箱权益。"
+        )
 
     await notify_service.create_notification_for_user(
         db,
         user.id,
         category="order",
-        title=f"会员将在 {max(0, remaining)} 天后自动续费",
-        content=(
-            f"你的{PLAN_NAMES.get(user.plan, user.plan)}将于 {expire.date().isoformat()} 到期，"
-            f"届时将自动续费 ¥{amount_label(plan_price(user.plan))}。"
-            "如需取消，可在会员页一键关闭自动续费。"
-        ),
+        title=title,
+        content=content,
         link="/pages/m5_pay/index",
     )
     user.renew_notified_at = _now()
+    user.renew_stage = stage
     return True
 
 
@@ -635,7 +696,64 @@ async def query_order(db, order_id: str, owner: OwnerContext | None = None) -> O
     return order
 
 
-# ---------------------------------------------------------------- 退款（M5-07）
+# ---------------------------------------------------------------- 交付物下载标记（M2-05 / V5.0）
+async def record_download(db, order_id: str) -> bool:
+    """M2-05（V5.0）：记录交付物**首次**下载时间。
+
+    这个标记直接决定退款路径：
+    - 未下载 → 用户可自助发起并**立即全额退款**；
+    - 已下载 → 退款必须转人工审核（后台一键处理）。
+    幂等：只写第一次时间，重复下载不覆盖。
+    """
+    order = (await db.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
+    if order is None:
+        return False
+    if order.downloaded_at is not None:
+        return False
+    order.downloaded_at = _now()
+    await db.commit()
+    return True
+
+
+async def _revoke_plan(db, order: Order) -> bool:
+    """M2-05（V5.0）：退款后自动回收会员权益。
+
+    - 月卡 / 年卡：把 plan 收回 none，清掉到期日与自动续费；
+    - 单次礼包：仅当用户没有其它「仍在生效」的单次订单时才回收，
+      避免退款一单把其它已购单次的权益也误伤。
+    """
+    from app.models import User
+
+    user = (await db.execute(select(User).where(User.id == order.user_id))).scalar_one_or_none()
+    if user is None or user.plan != order.plan:
+        return False
+
+    if order.plan in ("month", "year"):
+        user.plan = "none"
+        user.plan_expire_at = None
+        user.auto_renew = False
+        user.renew_notified_at = None
+        user.renew_stage = None
+        return True
+
+    if order.plan == "single":
+        others = (
+            await db.execute(
+                select(func.count(Order.id)).where(
+                    Order.user_id == order.user_id,
+                    Order.plan == "single",
+                    Order.id != order.id,
+                    Order.status.in_(["paid", "generating", "delivered"]),
+                )
+            )
+        ).scalar_one()
+        if int(others or 0) == 0:
+            user.plan = "none"
+            return True
+    return False
+
+
+# ---------------------------------------------------------------- 退款（M2-05 / V5.0）
 async def refund_order(db, owner: OwnerContext, order_id: str, reason: str | None) -> dict:
     order = await query_order(db, order_id, owner)
 
@@ -647,20 +765,79 @@ async def refund_order(db, owner: OwnerContext, order_id: str, reason: str | Non
         raise BizError(40301, "该订单已退款，请勿重复申请")
     if order.status == "generating":
         raise BizError(40901, "订单正在生成中，请稍候再试")
+    if order.refund_review == "pending":
+        raise BizError(40901, "退款申请已提交，正在人工审核，请耐心等待")
 
     base = order.delivered_at or order.paid_at
     if base is not None and base.tzinfo is None:
         base = base.replace(tzinfo=timezone.utc)
     if base is None or _now() - base > timedelta(days=settings.refund_window_days):
-        raise BizError(40301, f"已超过 {settings.refund_window_days} 天无理由退款期限，请联系客服处理")
+        raise BizError(
+            40301, f"已超过 {settings.refund_window_days} 天无理由退款期限，请联系客服处理"
+        )
 
-    # M5-10：疑似恶意退款（频繁退款）标记人工审核；仍按 7 天无理由正常受理，不设置取消障碍
+    # M5-10：疑似恶意退款（频繁退款）标记人工审核；不设置取消障碍
     already = await risk_service.evaluate_refund_risk(db, owner.owner_key)
+
+    # —— V5.0 M2-05：交付物已下载 → 不走自助退款，转人工审核 ——
+    if order.downloaded_at is not None:
+        order.refund_review = "pending"
+        order.refund_reason = (reason or "用户申请（交付物已下载）")[:255]
+        if already:
+            order.risk_flag = order.risk_flag or already
+        await notify_service.create_notification_for_user(
+            db,
+            order.user_id,
+            category="refund",
+            title="退款申请已提交，正在人工审核",
+            content=(
+                f"订单 {order.id[:8]} 的交付物已下载，退款需人工审核，"
+                "我们会在 24 小时内处理完毕并通知你。"
+            ),
+            link=f"/pages/m5_pay/index?orderId={order.id}",
+        )
+        # M2-04：让后台「订单管理」立刻可见（不必等 5 分钟轮询）+ 推送告警
+        try:
+            from app.services import automation as automation_service
+
+            await automation_service.raise_alert(
+                db,
+                alert_type="refund_review",
+                level="warning",
+                title=f"退款待审核：{order.id[:8]}（交付物已下载）",
+                content=(
+                    f"订单 {order.id}（{order.plan}，金额 ¥{amount_label(order.amount)}）"
+                    f"的交付物已下载，用户申请退款：{order.refund_reason}。"
+                    "请到「订单管理」一键处理（同意退款 / 驳回）。"
+                ),
+                related_type="order",
+                related_id=order.id,
+                fingerprint=f"refund_review:{order.id}",
+            )
+        except Exception as exc:  # 告警失败不能影响退款申请本身
+            logger.warning("退款审核告警写入失败：order=%s err=%s", order.id, exc)
+
+        await db.commit()
+        await db.refresh(order)
+        return {
+            "order_id": order.id,
+            "status": order.status,
+            "status_label": STATUS_LABELS.get(order.status, order.status),
+            "review": "pending",
+            "review_required": True,
+            "refunded_at": None,
+            "message": "交付物已下载，退款申请已提交人工审核，24 小时内处理完毕",
+        }
+
+    # —— 未下载：自助全额退款，即时生效 ——
     await risk_service.record_event(db, owner.owner_key, "refund_done", risk_service.LEVEL_NORMAL)
     if already:
         order.risk_flag = order.risk_flag or already
 
     await _transition(db, order, "refunded")
+    order.refund_review = "auto_approved"
+    # V5.0 M2-05：退款后会员权益自动回收
+    revoked = await _revoke_plan(db, order)
     # 券已核销但订单退款：释放用户额度，允许再次使用（避免用户因退款而永久失去优惠）
     await coupon_service.release_on_refund(db, order.id)
     _record(db, order.id, order.channel, "refund", "refunded", {"reason": reason or "用户申请"})
@@ -678,9 +855,59 @@ async def refund_order(db, owner: OwnerContext, order_id: str, reason: str | Non
         "order_id": order.id,
         "status": order.status,
         "status_label": STATUS_LABELS.get(order.status, order.status),
+        "review": "auto_approved",
+        "review_required": False,
+        "rights_revoked": revoked,
         "refunded_at": _iso(order.refunded_at),
         "message": f"退款已受理，将在 24 小时内原路退还 ¥{amount_label(order.amount)}",
     }
+
+
+async def approve_refund_review(db, order_id: str) -> dict:
+    """后台审核通过已下载订单的退款（M2-05 + M4-03 一键处理）。"""
+    order = (await db.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
+    if order is None:
+        raise BizError(40401, "订单不存在")
+    if order.status == "refunded":
+        return {"order_id": order.id, "status": "refunded", "revoked": False}
+
+    await _transition(db, order, "refunded")
+    order.refund_review = "approved"
+    revoked = await _revoke_plan(db, order)
+    await coupon_service.release_on_refund(db, order.id)
+    _record(db, order.id, order.channel, "refund", "refunded", {"reason": "后台审核通过"})
+    await notify_service.create_notification_for_user(
+        db,
+        order.user_id,
+        category="refund",
+        title="退款已受理",
+        content=f"订单 {order.id[:8]} 的退款审核已通过，退款将在 24 小时内原路到账。",
+        link=f"/pages/m5_pay/index?orderId={order.id}",
+    )
+    await db.commit()
+    return {"order_id": order.id, "status": "refunded", "revoked": revoked}
+
+
+async def reject_refund_review(db, order_id: str, reason: str | None = None) -> dict:
+    """后台驳回已下载订单的退款申请（M2-05）。"""
+    order = (await db.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
+    if order is None:
+        raise BizError(40401, "订单不存在")
+    order.refund_review = "rejected"
+    order.refund_reason = (reason or order.refund_reason or "")[:255]
+    await notify_service.create_notification_for_user(
+        db,
+        order.user_id,
+        category="refund",
+        title="退款申请未通过",
+        content=(
+            f"订单 {order.id[:8]} 的退款申请未通过：{reason or '交付物已下载使用'}。"
+            "如有疑问可在交付页提交反馈，我们会尽快联系你。"
+        ),
+        link=f"/pages/m5_pay/index?orderId={order.id}",
+    )
+    await db.commit()
+    return {"order_id": order.id, "status": order.status, "review": "rejected"}
 
 
 # ---------------------------------------------------------------- 供 B 模块驱动状态机
@@ -744,10 +971,18 @@ def order_payload(db_order: Order, package_id: str | None = None, package_status
     base = db_order.delivered_at or db_order.paid_at
     if base is not None and base.tzinfo is None:
         base = base.replace(tzinfo=timezone.utc)
-    can_refund = db_order.status in ("paid", "delivered") and (
-        base is not None and _now() - base <= timedelta(days=settings.refund_window_days)
-    )
+    window_ok = base is not None and _now() - base <= timedelta(days=settings.refund_window_days)
+    # M2-05（V5.0）：未下载 → 自助全额退款即时生效；已下载 → 仍可发起，但要转人工审核
+    downloaded = db_order.downloaded_at is not None
+    reviewing = db_order.refund_review == "pending"
+    can_refund = db_order.status in ("paid", "delivered") and window_ok and not reviewing
     deadline = (base + timedelta(days=settings.refund_window_days)) if base else None
+    if reviewing:
+        refund_notice = "退款申请已提交人工审核，24 小时内处理完毕。"
+    elif downloaded:
+        refund_notice = "交付物已下载，退款需人工审核；提交后 24 小时内处理完毕。"
+    else:
+        refund_notice = "交付物尚未下载，可自助全额退款，24 小时内原路到账。"
 
     return {
         "id": db_order.id,
@@ -775,6 +1010,12 @@ def order_payload(db_order: Order, package_id: str | None = None, package_status
         "closed_at": _iso(db_order.closed_at),
         "timeline": timeline,
         "can_refund": bool(can_refund),
+        # ---- M2-05（V5.0）退款路径：self=自助全额退 / review=人工审核 ----
+        "downloaded": downloaded,
+        "refund_review": db_order.refund_review,
+        "refund_reviewing": reviewing,
+        "refund_path": "review" if downloaded else "self",
+        "refund_notice": refund_notice,
         "refund_deadline": _iso(deadline),
         "risk": risk_service.risk_payload(db_order.risk_flag),
     }

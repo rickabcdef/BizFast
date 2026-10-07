@@ -32,7 +32,7 @@ import './index.scss'
 
 // m5_pay 付费与订单 | 负责人: A | 优先级: P0
 // 需求点：M5-03 三档价格同屏 / M5-04 按端适配支付渠道 / M5-05 订单状态机（每态带时间戳）
-//        M5-06 回调 + 主动查单双保险 / M5-07 7 天无理由退款，24h 到账
+//        M5-06 回调 + 主动查单双保险 / M2-05 退款机制（V5.0：未下载自助全额退，已下载转人工审核）
 //        M5-08 自动续费（续费前 3 天提醒 / 取消不超过 3 步）/ M5-09 优惠券与邀请码（不可叠加、规则明示）
 //        M5-10 风控命中转人工审核（如实告知，不偷偷拦截）
 const CHANNEL_LABELS: Record<string, string> = {
@@ -223,9 +223,13 @@ export default function M5Pay() {
 
   const doRefund = async () => {
     if (!order) return
+    // M2-05（V5.0）：未下载 → 自助全额退；已下载 → 提交后走人工审核（如实告知，不隐瞒）
+    const needsReview = order.refundPath === 'review'
     const res = await Taro.showModal({
-      title: '申请退款',
-      content: `将原路退还 ¥${order.amountLabel}，24 小时内到账。确认申请吗？`
+      title: needsReview ? '申请退款（人工审核）' : '申请退款',
+      content: needsReview
+        ? '你的交付物已经下载，退款需人工审核，提交后 24 小时内处理完毕。确认提交吗？'
+        : `将原路退还 ¥${order.amountLabel}，退款即时生效并回收对应权益。确认申请吗？`
     })
     if (!res.confirm) return
     setLoading(true)
@@ -385,13 +389,18 @@ export default function M5Pay() {
           {/* M5-10：命中风控时如实告知「已转人工审核」，不静默拦截、不假装成功 */}
           {order.risk?.flagged && <View className='m5-tip m5-tip--warn'>{order.risk.notice}</View>}
 
+          {/* M2-05（V5.0）：未下载可自助全额退，已下载需人工审核 —— 提前说清路径 */}
+          {order.refundNotice && order.status === 'delivered' && (
+            <View className='m5-tip m5-tip--muted'>{order.refundNotice}</View>
+          )}
+
           <View className='bf-row m5-actions'>
             <View className='bf-btn bf-btn--ghost m5-actions__btn' onClick={refreshOrder}>
               刷新订单状态
             </View>
             {order.canRefund && (
               <View className='bf-btn bf-btn--ghost m5-actions__btn' onClick={doRefund}>
-                7 天无理由退款
+                {order.refundPath === 'review' ? '申请退款（需审核）' : '7 天无理由退款'}
               </View>
             )}
           </View>
@@ -403,7 +412,8 @@ export default function M5Pay() {
           )}
 
           <Text className='bf-muted m5-foot'>
-            支付回调与主动查单双保险（M5-06），不会漏单。退款 24 小时内到账（M5-07）。
+            支付回调与主动查单双保险（M5-06），不会漏单。交付物未下载可自助全额退款，已下载的退款
+            需人工审核（V5.0 M2-05）。
           </Text>
         </>
       ) : (
@@ -636,7 +646,7 @@ export default function M5Pay() {
           </View>
 
           <Text className='bf-muted m5-foot'>
-            支持 7 天无理由退款，24 小时内原路到账。支付成功后立即开始生成 10 件交付物。
+            交付物未下载前可全额退款，24 小时内原路到账；已下载的退款需人工审核。支付成功后立即开始生成 10 件交付物。
           </Text>
 
           {/* V5.0 定价说明（UI 切图第 12 页）：长期定价，不做限时折扣 */}

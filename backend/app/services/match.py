@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.config import settings
 from app.core.context import OwnerContext
@@ -184,6 +185,58 @@ async def locked_id_for_task(db, task_id: str | None) -> str | None:
     return ids[0] if ids else None
 
 
+# ---------------------------------------------------------------- 今日限制（V5.0 第 2.3 节）
+def _day_start(days_ago: int = 0) -> datetime:
+    """当日 0 点（UTC，与 ai_cost / funnel 的统计口径保持一致）。"""
+    now = datetime.now(timezone.utc)
+    return now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_ago)
+
+
+async def today_quota(db, opportunity_id: str) -> dict:
+    """V5.0 第 2.3 节「今日限制」：真实计数的稀缺提示。
+
+    统计口径 = 当天**真实支付成功**（含生成中 / 已交付）的该商机订单数，
+    再给出真实的当日剩余份数（总量见配置 `opportunity_daily_limit`）。
+    数字全部来自订单表 —— PRD 明确要求「数字必须真实，绝不虚假宣传」。
+    """
+    limit = int(getattr(settings, "opportunity_daily_limit", 0) or 0)
+    start = _day_start(0)
+    end = start + timedelta(days=1)
+    taken = (
+        await db.execute(
+            select(func.count(Order.id)).where(
+                Order.match_id == opportunity_id,
+                Order.status.in_(PAID_STATUSES),
+                Order.created_at >= start,
+                Order.created_at < end,
+            )
+        )
+    ).scalar_one()
+    taken = int(taken or 0)
+
+    if limit > 0:
+        remaining = max(0, limit - taken)
+        sold_out = remaining == 0
+        notice = (
+            f"今日已有 {taken} 位用户获取了这个方向的完整启动包，今日份数已领完，明天 0 点刷新。"
+            if sold_out
+            else f"今日已有 {taken} 位用户获取了这个方向的完整启动包，今日剩余 {remaining} 份。"
+        )
+    else:
+        remaining = None
+        sold_out = False
+        notice = f"今日已有 {taken} 位用户获取了这个方向的完整启动包。"
+
+    return {
+        "opportunity_id": opportunity_id,
+        "today_taken": taken,
+        "daily_limit": limit,
+        "today_remaining": remaining,
+        "sold_out": sold_out,
+        "notice": notice,
+    }
+
+
 async def get_detail(db, owner: OwnerContext, opportunity_id: str, task_id: str | None = None) -> dict:
     """M3-03：商机详情。锁定商机未解锁时返回 40301。"""
     op = opp_data.get_opportunity(opportunity_id)
@@ -205,7 +258,10 @@ async def get_detail(db, owner: OwnerContext, opportunity_id: str, task_id: str 
     if is_locked and not await is_entitled(db, owner, opportunity_id):
         raise BizError(40301)
 
-    return to_detail(op, score, locked=is_locked)
+    data = to_detail(op, score, locked=is_locked)
+    # V5.0 第 2.3 节「今日限制」：详情底部稀缺提示（真实计数，不造假）
+    data["today"] = await today_quota(db, opportunity_id)
+    return data
 
 
 # ---------------------------------------------------------------- 收藏（M3-06）

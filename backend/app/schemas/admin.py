@@ -89,6 +89,8 @@ class AdminOrderOut(CamelModel):
     paid_at: Optional[str] = None
     refund_requested: bool = False
     refund_reason: Optional[str] = None
+    # M2-05（V5.0）：交付物是否已被下载 —— 已下载的订单退款需人工审核
+    downloaded: bool = False
     abnormal: bool = False
     abnormal_type: Optional[str] = None
 

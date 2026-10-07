@@ -13,7 +13,8 @@ import {
   wechatLogin,
   deleteAccount
 } from '@/services/repo'
-import { cancelSubscription } from '@/services/aApi'
+import { cancelSubscription, updateUserProfile } from '@/services/aApi'
+import { CITIES } from '@/constants/cities'
 import {
   getMyReports,
   getTalkTopicHistory,
@@ -42,6 +43,27 @@ const ORDER_LABEL: Record<string, string> = {
   closed: '已关闭'
 }
 
+// M0-02（V5.0）画像编辑：字段 ≤6 个，全部单选 / 滑块，不用键盘输入。
+// 下面的选项文案必须与后端存值逐字一致，否则画像会出现两套说法。
+const CAPITAL_BANDS = ['3 万以内', '3–10 万', '10–30 万', '30 万以上']
+const HOURS_BANDS = ['2 小时以内', '2–4 小时', '4–8 小时', '8 小时以上']
+const EXPERIENCE_OPTS = ['零经验起步', '有相关经验', '做过同样的生意']
+// 常用城市置顶，避免每次都在 300+ 项里翻找；「全选城市」展开完整列表
+const HOT_CITIES = [
+  '北京市',
+  '上海市',
+  '广州市',
+  '深圳市',
+  '杭州市',
+  '成都市',
+  '武汉市',
+  '西安市',
+  '南京市',
+  '重庆市',
+  '长沙市',
+  '苏州市'
+]
+
 export default function M10User() {
   const user = useAppStore((s) => s.user)
   const token = useAppStore((s) => s.token)
@@ -61,6 +83,16 @@ export default function M10User() {
   const [reports, setReports] = useState<ShareReport[]>([])
   const [topics, setTopics] = useState<TalkTopic[]>([])
   const [favorites, setFavorites] = useState<FavoriteOpportunity[]>([])
+  // M0-02（V5.0）画像编辑弹层
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [cityAll, setCityAll] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({
+    city: '',
+    capitalBand: '',
+    dailyHoursBand: '',
+    experience: ''
+  })
 
   const load = async () => {
     setLoading(true)
@@ -96,6 +128,42 @@ export default function M10User() {
   useEffect(() => {
     if (token) load()
   }, [token])
+
+  // M0-02（V5.0）：打开画像编辑，把当前值填成草稿（取消不会影响已存数据）
+  const openProfileEdit = () => {
+    setDraft({
+      city: member?.city || '',
+      capitalBand: member?.capitalBand || '',
+      dailyHoursBand: member?.dailyHoursBand || '',
+      experience: member?.experience || ''
+    })
+    setCityAll(false)
+    setProfileOpen(true)
+  }
+
+  const saveProfile = async () => {
+    setSaving(true)
+    try {
+      await updateUserProfile({
+        city: draft.city || null,
+        capitalBand: draft.capitalBand || null,
+        dailyHoursBand: draft.dailyHoursBand || null,
+        experience: draft.experience || null
+      })
+      // 画像与额度同源（都在 /api/user/me），保存后重新拉一次保证展示一致
+      setMember(await getMembership())
+      setProfileOpen(false)
+      Taro.showToast({ title: '已保存', icon: 'success' })
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '保存失败，请重试', icon: 'none' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const pickDraft = (key: 'capitalBand' | 'dailyHoursBand' | 'experience', v: string) => {
+    setDraft((d) => ({ ...d, [key]: d[key] === v ? '' : v }))
+  }
 
   // V5.0 第 11 页：资料头 + 三宫格统计
   const displayName = user?.phone ? '微信用户' : '我的'
@@ -327,6 +395,53 @@ export default function M10User() {
         </View>
       )}
 
+      {/* M0-02 / M0-03（V5.0）：生意画像 + 会员额度（已购次数 / 已用启动包数 / 额度剩余） */}
+      {member && (
+        <View className='bf-card'>
+          <View className='bf-row m10-kvhead'>
+            <Text className='bf-card__title'>我的生意画像与额度</Text>
+            <Text className='bf-btn bf-btn--ghost bf-btn--sm' onClick={openProfileEdit}>
+              编辑画像
+            </Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>所在城市</Text>
+            <Text className='m10-kv__v'>{member.city || '未填写'}</Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>启动资金</Text>
+            <Text className='m10-kv__v'>{member.capitalBand || '未填写'}</Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>每日可投入</Text>
+            <Text className='m10-kv__v'>{member.dailyHoursBand || '未填写'}</Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>相关经验</Text>
+            <Text className='m10-kv__v'>{member.experience || '未填写'}</Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>已购次数</Text>
+            <Text className='m10-kv__v'>{member.purchasedCount ?? 0} 次</Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>已用启动包</Text>
+            <Text className='m10-kv__v'>{member.usedPackageCount ?? 0} 个</Text>
+          </View>
+          <View className='m10-kv'>
+            <Text className='bf-muted m10-kv__k'>剩余额度</Text>
+            <Text className='m10-kv__v'>
+              {member.quotaUnlimited ? '不限次（会员）' : `${member.quotaRemaining ?? 0} 次`}
+            </Text>
+          </View>
+          <Text className='bf-muted m10-quota__note'>
+            {member.quotaUnlimited
+              ? '会员有效期内可不限次生成启动包。'
+              : '单次礼包按「一单一次生成」计额度，退款后可重新购买。'}
+          </Text>
+        </View>
+      )}
+
       {invite && (
         <View className='bf-card'>
           <Text className='bf-card__title'>邀请奖励</Text>
@@ -491,6 +606,85 @@ export default function M10User() {
           注销账号
         </View>
       </View>
+
+      {/* M0-02（V5.0）画像编辑弹层：全部单选 / 点选，无需键盘输入 */}
+      {profileOpen && (
+        <View className='m10-mask' onClick={() => setProfileOpen(false)}>
+          <View className='m10-modal' onClick={(e) => e.stopPropagation()}>
+            <Text className='m10-modal__title'>编辑生意画像</Text>
+            <Text className='bf-muted m10-modal__sub'>
+              画像越准，诊断出的商机越贴合你。全部点选即可，不用打字。
+            </Text>
+
+            <Text className='m10-field__label'>所在城市</Text>
+            <View className='m10-chips'>
+              {(cityAll ? CITIES : HOT_CITIES).map((c) => (
+                <Text
+                  key={c}
+                  className={`m10-chip${draft.city === c ? ' is-on' : ''}`}
+                  onClick={() => setDraft((d) => ({ ...d, city: d.city === c ? '' : c }))}
+                >
+                  {c}
+                </Text>
+              ))}
+            </View>
+            <Text className='m10-more' onClick={() => setCityAll((v) => !v)}>
+              {cityAll ? '收起城市列表' : `更多城市（共 ${CITIES.length} 个）`}
+            </Text>
+
+            <Text className='m10-field__label'>启动资金</Text>
+            <View className='m10-chips'>
+              {CAPITAL_BANDS.map((b) => (
+                <Text
+                  key={b}
+                  className={`m10-chip${draft.capitalBand === b ? ' is-on' : ''}`}
+                  onClick={() => pickDraft('capitalBand', b)}
+                >
+                  {b}
+                </Text>
+              ))}
+            </View>
+
+            <Text className='m10-field__label'>每日可投入时间</Text>
+            <View className='m10-chips'>
+              {HOURS_BANDS.map((b) => (
+                <Text
+                  key={b}
+                  className={`m10-chip${draft.dailyHoursBand === b ? ' is-on' : ''}`}
+                  onClick={() => pickDraft('dailyHoursBand', b)}
+                >
+                  {b}
+                </Text>
+              ))}
+            </View>
+
+            <Text className='m10-field__label'>相关经验</Text>
+            <View className='m10-chips'>
+              {EXPERIENCE_OPTS.map((b) => (
+                <Text
+                  key={b}
+                  className={`m10-chip${draft.experience === b ? ' is-on' : ''}`}
+                  onClick={() => pickDraft('experience', b)}
+                >
+                  {b}
+                </Text>
+              ))}
+            </View>
+
+            <View className='bf-row m10-modal__acts'>
+              <View className='bf-btn bf-btn--ghost m10-modal__btn' onClick={() => setProfileOpen(false)}>
+                取消
+              </View>
+              <View
+                className={`bf-btn m10-modal__btn${saving ? ' is-disabled' : ''}`}
+                onClick={saving ? undefined : saveProfile}
+              >
+                {saving ? '保存中…' : '保存'}
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

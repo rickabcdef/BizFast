@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     # ---- M3 商机 ----
     free_opportunity_count: int = 3  # M3-01：免费展示 3 个
     opportunity_cache_ttl_seconds: int = 24 * 3600
+    # V5.0 第 2.3 节「今日限制」：每个商机单日真实可售份数（0 = 不展示稀缺提示）
+    # 提示里的「今日已有 X 位」「今日剩余 Y 份」都按订单表实时统计，绝不虚假宣传。
+    opportunity_daily_limit: int = 50
 
     # ---- M2 支付（V5.0 五档定价）----
     # 档位 2/3/4：开业礼包 29.9 单次 / AI 合伙人月卡 99 / 创业陪跑年卡 599
@@ -74,7 +77,8 @@ class Settings(BaseSettings):
     # 开业礼包附赠工具箱使用权天数
     gift_tool_days: int = 30
     order_expire_minutes: int = 30  # 待支付超时关闭
-    refund_window_days: int = 7  # M5-07：7 天无理由
+    # V5.0 M2-05 退款窗口：窗口内未下载可自助全额退，已下载转人工审核；超窗口联系客服
+    refund_window_days: int = 7
     payment_mock: bool = True  # 未接真实渠道时走本地模拟支付（回调可自行触发）
     city_list_version: str = "2026.10"
     # M2-05 分享：二维码指向的正式落地页域名（留空则用当前请求的 host，方便本地联调）

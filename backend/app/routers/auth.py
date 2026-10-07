@@ -46,7 +46,29 @@ def _profile(profile: dict) -> dict:
         "invite_code": profile.get("invite_code"),
         "expire_at": profile.get("plan_expire_at"),
         "auto_renew": bool(profile.get("auto_renew")),
+        # ---- M0-02（V5.0）用户画像 ----
+        "city": profile.get("city"),
+        "capital_band": profile.get("capital_band"),
+        "daily_hours_band": profile.get("daily_hours_band"),
+        "experience": profile.get("experience"),
+        # ---- M0-03（V5.0）会员额度：已购次数 / 已用启动包数 / 额度剩余 ----
+        "purchased_count": profile.get("purchased_count", 0),
+        "used_package_count": profile.get("used_package_count", 0),
+        "quota_total": profile.get("quota_total", 0),
+        "quota_remaining": profile.get("quota_remaining", 0),
+        "quota_unlimited": bool(profile.get("quota_unlimited", False)),
     }
+
+
+async def _capture_profile(db: AsyncSession, request: Request, user) -> None:
+    """M0-02（V5.0）：登录 / 注册时把首屏已选的条件落成用户画像（不重复问用户）。"""
+    if user is None:
+        return
+    try:
+        owner = current_owner(request)
+        await auth_service.sync_profile_from_task(db, user, guest_token=owner.guest_token)
+    except Exception:  # 画像采集失败不阻断登录主流程
+        pass
 
 
 async def _auth_result(db: AsyncSession, login: dict) -> dict:
@@ -100,6 +122,8 @@ async def sms_login(
         result = await auth_service.login_with_sms(db, body.phone, body.code)
     except ValueError as e:
         raise BizError(code=40001, message=str(e))
+    user = (await db.execute(select(User).where(User.id == result["user_id"]))).scalar_one_or_none()
+    await _capture_profile(db, request, user)
     return ok(result, _rid(request))
 
 
@@ -164,6 +188,7 @@ async def login(
     user = (await db.execute(select(User).where(User.id == login_info["user_id"]))).scalar_one_or_none()
     if user is not None:
         await _bind_inviter(db, user, body.inviterCode)
+        await _capture_profile(db, request, user)
     return ok(await _auth_result(db, login_info), _rid(request))
 
 
@@ -179,6 +204,8 @@ async def wechat_login(
         login_info = await auth_service.login_with_wechat(db, unionid)
     except ValueError as e:
         raise BizError(code=40001, message=str(e))
+    user = (await db.execute(select(User).where(User.id == login_info["user_id"]))).scalar_one_or_none()
+    await _capture_profile(db, request, user)
     return ok(await _auth_result(db, login_info), _rid(request))
 
 
@@ -196,6 +223,26 @@ async def user_me(
     except ValueError as e:
         raise BizError(code=40101, message=str(e))
     return ok(_profile(profile), _rid(request))
+
+
+@user_router.post("/profile", summary="更新用户画像（M0-02）")
+async def update_user_profile(
+    body: auth_service.ProfileUpdateBody,
+    request: Request,
+    owner: OwnerContext = Depends(current_owner),
+    db: AsyncSession = Depends(get_db),
+):
+    """M0-02（V5.0）：更新「城市 / 启动资金区间 / 可投入时间 / 是否有经验」。
+
+    字段 ≤6 个、全部单选或滑块，不强制真实姓名；登录后随时可改。
+    """
+    if owner.is_guest or not owner.user_id:
+        raise BizError(code=40101, message="请先登录")
+    try:
+        result = await auth_service.update_profile(db, owner.user_id, body)
+    except ValueError as e:
+        raise BizError(code=40101, message=str(e))
+    return ok(_profile(result), _rid(request))
 
 
 @user_router.get("/orders", summary="我的订单列表（契约路径）")

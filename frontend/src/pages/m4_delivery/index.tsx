@@ -303,14 +303,20 @@ export default function M4Delivery() {
 
   // ---------------- 下载与预览 ----------------
   /** Mock 模式下条目自带 data URL（离线可打开）；真实模式按后端路径取（可带 format 选择格式）。 */
-  const itemUrl = (item: DeliverableFile, fmt?: DeliverableFormat) => {
-    if (fmt && fmt.url) return fmt.url.startsWith('data:') ? fmt.url : packageItemUrl(orderId, item.code, fmt.fileType)
-    return item.url && item.url.startsWith('data:') ? item.url : packageItemUrl(orderId, item.code)
+  const itemUrl = (item: DeliverableFile, fmt?: DeliverableFormat, download = false) => {
+    if (fmt && fmt.url)
+      return fmt.url.startsWith('data:')
+        ? fmt.url
+        : packageItemUrl(orderId, item.code, fmt.fileType, download)
+    return item.url && item.url.startsWith('data:')
+      ? item.url
+      : packageItemUrl(orderId, item.code, undefined, download)
   }
 
   const downloadItem = (item: DeliverableFile, fmt?: DeliverableFormat) => {
     const f = fmt || itemFormats(item)[0]
-    saveFile(itemUrl(item, f), downloadName(item, f))
+    // M2-05（V5.0）：下载会打上「已获取」标记，之后的退款走人工审核
+    saveFile(itemUrl(item, f, true), downloadName(item, f))
   }
 
   const downloadZip = () => {

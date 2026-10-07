@@ -463,3 +463,24 @@
   margin: 8rpx 0 16rpx;
   background: rgba(139, 147, 184, 0.1);
 }
+
+/* V5.0 第 2.3 节「今日限制」：真实计数稀缺提示（详情页底部） */
+.m3-today {
+  margin: 16rpx 0 0;
+  padding: 18rpx 22rpx;
+  border-radius: 16rpx;
+  background: rgba(123, 108, 255, 0.12);
+  border: 2rpx solid rgba(123, 108, 255, 0.32);
+}
+.m3-today.is-out {
+  background: rgba(255, 125, 0, 0.12);
+  border-color: rgba(255, 125, 0, 0.34);
+}
+.m3-today__text {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #c9ccff;
+}
+.m3-today.is-out .m3-today__text {
+  color: #ffc98a;
+}

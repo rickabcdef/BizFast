@@ -75,7 +75,7 @@ async def get_order(order_id: str, request: Request, db: AsyncSession = Depends(
     )
 
 
-@router.post("/refund", summary="7 天无理由退款（24 小时内到账）")
+@router.post("/refund", summary="退款申请（V5.0 M2-05：交付物未下载可自助全额退；已下载转人工审核）")
 async def refund(
     payload: RefundCreate, request: Request, db: AsyncSession = Depends(get_db)
 ):

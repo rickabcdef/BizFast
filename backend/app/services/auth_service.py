@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cache
@@ -50,6 +50,18 @@ class WechatLoginBody(BaseModel):
 
 class RefreshBody(BaseModel):
     refresh_token: str
+
+
+class ProfileUpdateBody(BaseModel):
+    """M0-02（V5.0）用户画像：城市 / 资金区间 / 每日时间 / 经验，均可单独更新。
+
+    沿用首屏的点选值，字段 ≤6 个、全部单选或滑块，不强制真实姓名。
+    """
+
+    city: str | None = None
+    capital_band: str | None = None
+    daily_hours_band: str | None = None
+    experience: str | None = None
 
 
 def _generate_invite_code() -> str:
@@ -222,12 +234,12 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> dict:
 
 
 async def get_user_profile(db: AsyncSession, user_id: str) -> dict:
-    """获取用户信息。"""
+    """获取用户信息（含 M0-02 画像 与 M0-03 会员额度）。"""
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if user is None:
         raise ValueError("用户不存在")
 
-    return {
+    profile = {
         "user_id": user.id,
         "phone": user.phone,
         "unionid": user.unionid,
@@ -237,7 +249,133 @@ async def get_user_profile(db: AsyncSession, user_id: str) -> dict:
         "auto_renew": user.auto_renew,
         "invite_code": user.invite_code,
         "created_at": user.created_at.isoformat() if user.created_at else None,
+        # ---- M0-02（V5.0）用户画像：≤6 个字段，全部来自首屏单选 / 滑块 ----
+        "city": user.city,
+        "capital_band": user.capital_band,
+        "daily_hours_band": user.daily_hours_band,
+        "experience": user.experience,
     }
+
+    # ---- M0-03（V5.0）会员额度：已购次数 / 已用启动包数 / 额度剩余 ----
+    try:
+        from app.services import payment as payment_service
+
+        profile.update(await payment_service.membership_quota(db, user))
+    except Exception:  # 额度统计失败不影响资料读取
+        pass
+    return profile
+
+
+# ---------------------------------------------------------------- M0-02 用户画像（V5.0）
+def _capital_band(capital: int) -> str:
+    if capital < 30000:
+        return "3 万以内"
+    if capital < 100000:
+        return "3–10 万"
+    if capital < 300000:
+        return "10–30 万"
+    return "30 万以上"
+
+
+def _clean_city(city: str | None) -> str | None:
+    """画像城市入库前统一归一化：与诊断链路保持一致（「上海市」→「上海」）。
+
+    不在城市库中的输入保留用户原值，避免把合法输入误清空。
+    """
+    raw = (city or "").strip()[:32]
+    if not raw:
+        return None
+    from app.data.cities import normalize_city
+
+    return (normalize_city(raw) or raw)[:32]
+
+
+def _hours_band(hours: int) -> str:
+    if hours <= 2:
+        return "2 小时以内"
+    if hours <= 4:
+        return "2–4 小时"
+    if hours <= 8:
+        return "4–8 小时"
+    return "8 小时以上"
+
+
+def _load_json(raw):
+    import json
+
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+async def sync_profile_from_task(db: AsyncSession, user: User, guest_token: str | None = None) -> bool:
+    """M0-02（V5.0）：把用户最近一次诊断的条件回写成用户画像。
+
+    PRD 要求在注册 / 付费时采集「所在城市 / 启动资金区间 / 可投入时间 / 是否有经验」。
+    这四个字段用户在首屏已经选过一次 —— 不重复问，直接落库。
+    只填空字段，不覆盖用户后来手动修改过的值。
+    """
+    from app.models import DiagnosisTask
+
+    conds = [DiagnosisTask.user_id == user.id]
+    if guest_token or user.guest_token:
+        conds.append(DiagnosisTask.guest_token == (guest_token or user.guest_token))
+    task = (
+        await db.execute(
+            select(DiagnosisTask)
+            .where(or_(*conds))
+            .order_by(DiagnosisTask.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if task is None:
+        return False
+
+    changed = False
+    if not user.city and task.city:
+        user.city = task.city[:32]
+        changed = True
+    if not user.capital_band and task.capital:
+        user.capital_band = _capital_band(int(task.capital))
+        changed = True
+    if not user.daily_hours_band and task.daily_hours:
+        user.daily_hours_band = _hours_band(int(task.daily_hours))
+        changed = True
+    if not user.experience:
+        exp = _load_json(task.extra).get("experience")
+        if exp:
+            # task.extra 里存的是 none/some/pro 编码，画像对外展示要落成中文文案
+            from app.services.diagnose import EXPERIENCE_LABELS
+
+            user.experience = EXPERIENCE_LABELS.get(str(exp), str(exp))[:24]
+            changed = True
+
+    if changed:
+        await db.commit()
+    return changed
+
+
+async def update_profile(db: AsyncSession, user_id: str, body: "ProfileUpdateBody") -> dict:
+    """M0-02（V5.0）：更新用户画像（全部单选 / 滑块，不强制真实姓名）。"""
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if user is None:
+        raise ValueError("用户不存在")
+
+    if body.city is not None:
+        user.city = _clean_city(body.city)
+    if body.capital_band is not None:
+        user.capital_band = (body.capital_band or "").strip()[:24] or None
+    if body.daily_hours_band is not None:
+        user.daily_hours_band = (body.daily_hours_band or "").strip()[:24] or None
+    if body.experience is not None:
+        user.experience = (body.experience or "").strip()[:24] or None
+
+    await db.commit()
+    return await get_user_profile(db, user_id)
 
 
 async def delete_account(db: AsyncSession, user_id: str) -> dict:

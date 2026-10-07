@@ -49,6 +49,14 @@ async def match_detail(
     return ok(detail, _rid(request))
 
 
+@router.get("/{opportunity_id}/today", summary="「今日限制」真实计数（V5.0 第 2.3 节）")
+async def today_quota(
+    opportunity_id: str, request: Request, db: AsyncSession = Depends(get_db)
+):
+    """返回该商机今日已获取人数与剩余份数（秒级实时，数字来自真实订单）。"""
+    return ok(await match_service.today_quota(db, opportunity_id), _rid(request))
+
+
 @router.post("/{opportunity_id}/favorite", summary="收藏 / 取消收藏商机（M3-06）")
 async def favorite(
     opportunity_id: str, request: Request, db: AsyncSession = Depends(get_db)

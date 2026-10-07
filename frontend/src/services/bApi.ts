@@ -81,10 +81,19 @@ export async function getMyPackages(): Promise<PackageResult[]> {
 }
 
 /** 单件下载 / 预览地址（M4-04：预览不产生额外费用；format 选择多格式交付物的具体格式）。 */
-export function packageItemUrl(orderId: string, code: string, format?: string): string {
+export function packageItemUrl(
+  orderId: string,
+  code: string,
+  format?: string,
+  download = false
+): string {
   const url = resolveUrl(`/api/package/${orderId}/item/${code}`)
-  if (!format) return url
-  return `${url}?format=${encodeURIComponent(format)}`
+  const params: string[] = []
+  if (format) params.push(`format=${encodeURIComponent(format)}`)
+  // M2-05（V5.0）：只有真下载才打 dl=1，预览不加 —— 后端据此区分「已下载」与「仅预览」，
+  // 未下载的订单用户仍可自助全额退款。
+  if (download) params.push('dl=1')
+  return params.length ? `${url}?${params.join('&')}` : url
 }
 
 /** 打包下载地址（M4-03：10 件交付物 ZIP 一键下载，包内均为中文命名）。 */

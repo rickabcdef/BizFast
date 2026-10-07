@@ -100,7 +100,18 @@ export async function getMembership(): Promise<Membership> {
   return {
     plan: me.plan === 'none' ? 'single' : (me.plan as Membership['plan']),
     expireAt: me.expireAt || '',
-    autoRenew: !!me.autoRenew
+    autoRenew: !!me.autoRenew,
+    // M0-02（V5.0）用户画像
+    city: me.city,
+    capitalBand: me.capitalBand,
+    dailyHoursBand: me.dailyHoursBand,
+    experience: me.experience,
+    // M0-03（V5.0）会员额度
+    purchasedCount: me.purchasedCount,
+    usedPackageCount: me.usedPackageCount,
+    quotaTotal: me.quotaTotal,
+    quotaRemaining: me.quotaRemaining,
+    quotaUnlimited: me.quotaUnlimited
   }
 }
 

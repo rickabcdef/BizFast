@@ -78,8 +78,8 @@ const rowClass = ({ row }: { row: AdminOrder }) => (row.abnormal ? 'bf-abnormal'
 const doExport = () => {
   exportCsv(
     `生意快启_订单对账表_${Date.now()}.csv`,
-    ['订单号', '用户', '套餐', '金额', '状态', '渠道', '下单时间', '支付时间', '异常标记', '退款申请'],
-    rows.value.map((o) => [o.id, o.userPhone, o.planName, o.amountYuan, o.statusLabel, o.channel, o.createdAt, o.paidAt || '', o.abnormal ? ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常' : '否', o.refundRequested ? o.refundReason || '是' : '否'])
+    ['订单号', '用户', '套餐', '金额', '状态', '渠道', '下单时间', '支付时间', '已下载', '异常标记', '退款申请'],
+    rows.value.map((o) => [o.id, o.userPhone, o.planName, o.amountYuan, o.statusLabel, o.channel, o.createdAt, o.paidAt || '', o.downloaded ? '是' : '否', o.abnormal ? ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常' : '否', o.refundRequested ? o.refundReason || '是' : '否'])
   )
   ElMessage.success('对账表已导出')
 }
@@ -94,7 +94,7 @@ const doRefund = async (o: AdminOrder, action: 'approve' | 'reject') => {
       const r = await processRefund(auth.session as AdminSession, o.id, action, value)
       ElMessage.success(r.message)
     } else {
-      await ElMessageBox.confirm(`确认同意退款 ¥${o.amountYuan}（24h 内原路到账）？`, '同意退款', { type: 'warning', confirmButtonText: '确认退款', cancelButtonText: '取消' })
+      await ElMessageBox.confirm(`确认同意退款 ¥${o.amountYuan}（24h 内原路到账，会员权益同步回收）？`, '同意退款', { type: 'warning', confirmButtonText: '确认退款', cancelButtonText: '取消' })
       const r = await processRefund(auth.session as AdminSession, o.id, action)
       ElMessage.success(r.message)
     }
@@ -207,9 +207,11 @@ const deliveryText = (o: AdminOrder) => {
         <el-table-column label="支付时间" width="150">
           <template #default="{ row }">{{ row.paidAt || '—' }}</template>
         </el-table-column>
-        <el-table-column label="交付状态" width="110">
+        <el-table-column label="交付状态" width="140">
           <template #default="{ row }">
             <span class="tag" :class="deliveryTag(row)">{{ deliveryText(row) }}</span>
+            <!-- V5.0 M2-05：退款审核必须知道用户是否已下载交付物 -->
+            <span v-if="row.downloaded" class="tag tag-orange" style="margin-left: 4px">已下载</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90">

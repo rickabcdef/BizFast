@@ -35,8 +35,15 @@ class User(Base):
     # M5-08 自动续费签约：会员可自助开启/取消，取消入口不超过 3 步
     auto_renew: Mapped[bool] = mapped_column(Boolean, default=False)
     renew_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # M0-03（V5.0）：到期提醒分「3 天」「1 天」两档，各只发一次，用档位去重
+    renew_stage: Mapped[int | None] = mapped_column(Integer)
     # M8-03 邀请：每位用户一个唯一邀请码（注册时生成）
     invite_code: Mapped[str | None] = mapped_column(String(16), unique=True)
+    # M0-02（V5.0）用户画像：注册 / 付费时采集，字段 ≤6 个、全部单选或滑块，不强制真实姓名
+    city: Mapped[str | None] = mapped_column(String(32))  # 所在城市
+    capital_band: Mapped[str | None] = mapped_column(String(24))  # 启动资金区间（档位标签）
+    daily_hours_band: Mapped[str | None] = mapped_column(String(24))  # 每日可投入时间（档位标签）
+    experience: Mapped[str | None] = mapped_column(String(24))  # 是否有相关经验
     # M10 注销：15 日内清隐私数据（先标记，定时任务到点后物理清除）
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     purge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -96,6 +103,11 @@ class Order(Base):
     discount_cents: Mapped[int] = mapped_column(Integer, default=0)
     # M5-10 风控：命中规则时标记需人工审核，不直接放行
     risk_flag: Mapped[str | None] = mapped_column(String(32))
+    # M2-05（V5.0）：交付物是否已被下载 —— 未下载可自助全额退款，下载后退款需人工审核
+    downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # M2-05 人工审核队列：pending（待审核）/ approved / rejected；空表示无申请
+    refund_review: Mapped[str | None] = mapped_column(String(16))
+    refund_reason: Mapped[str | None] = mapped_column(String(255))
     # 状态时间戳（M5-05：状态流转可追溯，每步有时间戳）
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

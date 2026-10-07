@@ -342,12 +342,15 @@ async def download_item(
     code: str,
     request: Request,
     format: str | None = None,
+    dl: bool = False,
     owner: OwnerContext = Depends(current_owner),
     db: AsyncSession = Depends(get_db),
 ):
     """下载或预览单个交付物（M4-04，预览不产生额外费用）。
 
     `format` 缺省返回主格式，可选 pdf|excel|word|png|svg|txt。
+    `dl=1` 表示这是**下载**而非在线预览 —— M2-05（V5.0）据此记录「交付物已下载」，
+    之后用户再申请退款就需要人工审核；预览不记录，用户仍有自助退款的空间。
     """
     pkg = await _get_package(db, order_id)
     if not pkg:
@@ -389,6 +392,11 @@ async def download_item(
     ext = _EXT.get(fmt, "bin")
     filename = f"生意快启_{name}.{ext}"
     ascii_name = f"bizfast_{code}.{ext}"
+    if dl:
+        # M2-05（V5.0）：一次真实下载即视为「已获取交付物」，退款转为人工审核
+        from app.services import payment as payment_service
+
+        await payment_service.record_download(db, order_id)
     return _file_response(data, fmt, filename, ascii_name, inline=True)
 
 
@@ -403,6 +411,11 @@ async def download_zip(
     pkg = await _get_package(db, order_id)
     if not pkg or not pkg.zip_url:
         raise BizError(code=40401, message="ZIP 文件尚未生成")
+
+    # M2-05（V5.0）：打包下载同样是「已获取交付物」，退款转为人工审核
+    from app.services import payment as payment_service
+
+    await payment_service.record_download(db, order_id)
 
     key = url_to_key(pkg.zip_url)
     storage = get_storage()

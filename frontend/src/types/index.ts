@@ -81,6 +81,16 @@ export interface UserProfile {
   role?: string
   expireAt?: string
   autoRenew?: boolean
+  // M0-02（V5.0）用户画像：≤6 个字段，全部来自首屏单选 / 滑块
+  capitalBand?: string
+  dailyHoursBand?: string
+  experience?: string
+  // M0-03（V5.0）会员额度：已购次数 / 已用启动包数 / 额度剩余
+  purchasedCount?: number
+  usedPackageCount?: number
+  quotaTotal?: number
+  quotaRemaining?: number
+  quotaUnlimited?: boolean
 }
 
 // 登录返回：token 存本地，user 更新全局态
@@ -101,6 +111,17 @@ export interface Membership {
   plan: Exclude<Plan, 'none'>
   expireAt: string
   autoRenew: boolean
+  // M0-02（V5.0）用户画像
+  city?: string
+  capitalBand?: string
+  dailyHoursBand?: string
+  experience?: string
+  // M0-03（V5.0）会员额度：已购次数 / 已用启动包数 / 额度剩余
+  purchasedCount?: number
+  usedPackageCount?: number
+  quotaTotal?: number
+  quotaRemaining?: number
+  quotaUnlimited?: boolean
 }
 
 export interface InviteInfo {

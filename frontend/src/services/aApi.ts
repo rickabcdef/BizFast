@@ -186,6 +186,16 @@ export interface RevenueItem {
   note: string
 }
 
+/** V5.0 第 2.3 节「今日限制」：真实计数的稀缺提示（数字来自真实订单，不造假）。 */
+export interface TodayQuota {
+  opportunityId: string
+  todayTaken: number
+  dailyLimit: number
+  todayRemaining: number | null
+  soldOut: boolean
+  notice: string
+}
+
 export interface OpportunityDetail extends OpportunityCard {
   intro: string
   targetCustomers: string
@@ -196,6 +206,7 @@ export interface OpportunityDetail extends OpportunityCard {
   cases: CaseItem[]
   stopLoss: string
   steps: string[]
+  today?: TodayQuota
 }
 
 export interface MatchList {
@@ -219,6 +230,11 @@ export function getMatchDetail(opportunityId: string, taskId?: string): Promise<
 
 export function toggleFavorite(opportunityId: string): Promise<{ opportunityId: string; favorited: boolean }> {
   return api.post(`/api/match/${opportunityId}/favorite`)
+}
+
+/** V5.0 第 2.3 节「今日限制」：秒级刷新今日已获取人数与剩余份数。 */
+export function getTodayQuota(opportunityId: string): Promise<TodayQuota> {
+  return api.get<TodayQuota>(`/api/match/${opportunityId}/today`)
 }
 
 // ---------------- M5 付费与订单 ----------------
@@ -303,6 +319,12 @@ export interface OrderView {
   timeline: TimelineItem[]
   canRefund: boolean
   refundDeadline: string | null
+  /** M2-05（V5.0）：交付物是否已下载 —— 已下载的退款要走人工审核 */
+  downloaded?: boolean
+  refundReview?: string | null
+  refundReviewing?: boolean
+  refundPath?: 'self' | 'review'
+  refundNotice?: string
   risk: RiskInfo
 }
 
@@ -437,7 +459,17 @@ export function payCallback(
 export function refundOrder(
   orderId: string,
   reason?: string
-): Promise<{ orderId: string; status: OrderStatus; statusLabel: string; refundedAt: string | null; message: string }> {
+): Promise<{
+  orderId: string
+  status: OrderStatus
+  statusLabel: string
+  /** M2-05（V5.0）：auto_approved=未下载自助退款；pending=已下载转人工审核 */
+  review?: 'auto_approved' | 'pending' | 'approved' | 'rejected'
+  reviewRequired?: boolean
+  rightsRevoked?: boolean
+  refundedAt: string | null
+  message: string
+}> {
   return api.post('/api/payment/refund', { orderId, reason: reason || null })
 }
 
@@ -521,4 +553,38 @@ export function getNotifySettings(): Promise<NotifySetting> {
 
 export function updateNotifySettings(patch: Partial<NotifySetting>): Promise<NotifySetting> {
   return api.put<NotifySetting>('/api/notify/settings', patch)
+}
+
+// ---------------- M0-02 用户画像（V5.0） ----------------
+// PRD 要求：字段 ≤6 个，全部单选 / 滑块，不用键盘输入；不强制填真实姓名。
+export interface UserProfileInput {
+  city?: string | null
+  capitalBand?: string | null
+  dailyHoursBand?: string | null
+  experience?: string | null
+}
+
+/** 更新用户画像（只传要改的字段，其余保持不变）。 */
+export function updateUserProfile(input: UserProfileInput): Promise<UserProfileView> {
+  return api.post<UserProfileView>('/api/user/profile', input)
+}
+
+export interface UserProfileView {
+  id: string
+  phone: string | null
+  plan: Plan
+  expireAt: string | null
+  autoRenew: boolean
+  registerAt: string | null
+  // M0-02 画像
+  city: string | null
+  capitalBand: string | null
+  dailyHoursBand: string | null
+  experience: string | null
+  // M0-03 会员额度
+  purchasedCount: number
+  usedPackageCount: number
+  quotaTotal: number
+  quotaRemaining: number
+  quotaUnlimited: boolean
 }

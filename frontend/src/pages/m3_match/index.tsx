@@ -631,6 +631,13 @@ function OpportunityDetailView({
         ))}
       </Section>
 
+      {/* V5.0 第 2.3 节「今日限制」：真实计数的稀缺感，数字来自后台实时统计 */}
+      {detail.today && (
+        <View className={`m3-today ${detail.today.soldOut ? 'is-out' : ''}`}>
+          <Text className='m3-today__text'>{detail.today.notice}</Text>
+        </View>
+      )}
+
       <View className='bf-btn m3-detail__cta' onClick={onPay}>
         生成这个方案的完整启动包
       </View>
@@ -698,7 +705,7 @@ function PaywallModal({
         <View className='bf-btn bf-btn--ghost m3-modal__btn' onClick={onYear}>
           599 元/年，创业全程陪跑（最省心）
         </View>
-        <Text className='bf-muted m3-modal__tip'>7 天无理由退款，24 小时内到账。</Text>
+        <Text className='bf-muted m3-modal__tip'>7 天内交付物未下载可自助全额退款；已下载的退款需人工审核（V5.0 M2-05）。</Text>
       </View>
     </View>
   )
