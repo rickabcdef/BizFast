@@ -28,11 +28,11 @@ async def _prepared_order(client, drain, plan="single", platform="web"):
 async def test_three_price_tiers(client):
     data = (await client.get("/api/payment/plans")).json()["data"]
     plans = {p["plan"]: p for p in data["plans"]}
-    assert plans["single"]["priceCents"] == 990
-    assert plans["month"]["priceCents"] == 3900
-    assert plans["year"]["priceCents"] == 19900
-    assert plans["year"]["highlight"] is True
-    assert plans["year"]["badge"] == "最划算"
+    assert plans["single"]["priceCents"] == 2990
+    assert plans["month"]["priceCents"] == 9900
+    assert plans["year"]["priceCents"] == 59900
+    assert plans["single"]["highlight"] is True
+    assert plans["single"]["badge"] == "★ 现金流主力"
     assert all(p["rights"] for p in data["plans"])
 
 
@@ -51,7 +51,7 @@ async def test_order_state_machine_and_idempotent_callback(client, drain):
     order_id = created["orderId"]
     assert created["status"] == "pending"
     assert created["reused"] is False
-    assert created["amountCents"] == 990
+    assert created["amountCents"] == 2990
 
     # 幂等：同用户同商机重复创建返回同一订单
     again = (
@@ -129,7 +129,7 @@ async def test_refund_before_payment_rejected(client, drain):
 async def test_membership_grants_entitlement(client, drain):
     _, locked_id, created = await _prepared_order(client, drain, plan="year")
     order_id = created["orderId"]
-    assert created["amountCents"] == 19900
+    assert created["amountCents"] == 59900
     await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
     # 年度会员：无需绑定单一商机即可查看锁定商机详情
     detail = (await client.get(f"/api/match/{locked_id}")).json()

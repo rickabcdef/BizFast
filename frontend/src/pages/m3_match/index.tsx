@@ -98,7 +98,7 @@ export default function M3Match() {
     }
   }
 
-  const goPay = (plan: 'single' | 'year', matchId?: string) => {
+  const goPay = (plan: 'single' | 'month' | 'year', matchId?: string) => {
     setPaywall(null)
     Taro.navigateTo({
       url: `/pages/m5_pay/index?plan=${plan}${matchId ? `&matchId=${matchId}` : ''}`
@@ -392,6 +392,7 @@ export default function M3Match() {
           card={paywall}
           onClose={() => setPaywall(null)}
           onSingle={() => goPay('single', paywall.id)}
+          onMonth={() => goPay('month', paywall.id)}
           onYear={() => goPay('year', paywall.id)}
         />
       )}
@@ -662,16 +663,18 @@ function Table({ rows }: { rows: { a: string; b: string; note: string }[] }) {
   )
 }
 
-// ---------------------------------------------------------------- 付费弹窗（M3-07）
+// ---------------------------------------------------------------- 付费弹窗（M3-07 / V5.0 M2-02 三档入口）
 function PaywallModal({
   card,
   onClose,
   onSingle,
+  onMonth,
   onYear
 }: {
   card: OpportunityCard
   onClose: () => void
   onSingle: () => void
+  onMonth: () => void
   onYear: () => void
 }) {
   return (
@@ -682,15 +685,18 @@ function PaywallModal({
           这份方案与你的三个条件匹配度最高（{card.recommendScore} 分），包含 10 件可直接使用的文件。
         </Text>
         <View className='m3-modal__list'>
-          <Text className='m3-modal__li'>· 投入构成与收益测算，一分钱花在哪都写清楚</Text>
-          <Text className='m3-modal__li'>· 真实案例 + 风险清单 + 止损线</Text>
-          <Text className='m3-modal__li'>· 30 天行动日历与获客文案模板</Text>
+          <Text className='m3-modal__li'>· 专属商机可行性评分卡 + 回本测算表</Text>
+          <Text className='m3-modal__li'>· 客户画像、供应商线索、定价与开业活动方案</Text>
+          <Text className='m3-modal__li'>· 30 天行动日历 + 获客文案 + 开业物料包 + 风险止损线</Text>
         </View>
         <View className='bf-btn m3-modal__btn' onClick={onSingle}>
-          9.9 元，只买这一个方案
+          29.9 元，立刻拿到 10 件开干交付物 ★
+        </View>
+        <View className='bf-btn bf-btn--ghost m3-modal__btn' onClick={onMonth}>
+          99 元/月，AI 合伙人（不限次生成 + AI 教练）
         </View>
         <View className='bf-btn bf-btn--ghost m3-modal__btn' onClick={onYear}>
-          199 元/年，全年不限次（最划算）
+          599 元/年，创业全程陪跑（最省心）
         </View>
         <Text className='bf-muted m3-modal__tip'>7 天无理由退款，24 小时内到账。</Text>
       </View>

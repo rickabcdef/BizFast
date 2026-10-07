@@ -510,3 +510,54 @@
   margin-bottom: 20rpx;
   text-align: left;
 }
+
+/* ---------- V5.0 档位 5：增值加购包（UI 切图第 12 页） ---------- */
+.m5-addons__sub {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+}
+.m5-addons__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.m5-addon {
+  flex: 1 1 44%;
+  min-width: 44%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  padding: 20rpx 16rpx;
+  text-align: center;
+}
+.m5-addon__name {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+.m5-addon__price {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #9b5cff;
+}
+
+/* ---------- V5.0 定价说明 ---------- */
+.m5-pricing-note {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-top: 20rpx;
+}
+.m5-pricing-note__text {
+  font-size: 22rpx;
+  line-height: 1.9;
+  color: #8b93b8;
+}
+.m5-pricing-note__b {
+  font-weight: 700;
+  color: #c9cfe8;
+}

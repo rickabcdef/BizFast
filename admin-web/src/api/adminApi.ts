@@ -510,6 +510,85 @@ export async function getAdminShareStats(): Promise<Record<string, unknown>> {
   return request('/api/admin/share/stats')
 }
 
+// ===================================================================
+// V5.0 三块新看板：成本监控 / 转化漏斗 / 裂变数据
+// ===================================================================
+
+export interface CostBucket {
+  tokens: number
+  costCents: number
+  costLabel: string
+  calls: number
+  revenueCents: number
+  revenueLabel: string
+  costRatio: number
+  alert: boolean
+}
+
+export interface CostMonitor {
+  today: CostBucket
+  month: CostBucket
+  byModel: { model: string; costCents: number; costLabel: string; tokens: number }[]
+  byFeature: { feature: string; featureLabel: string; costCents: number; costLabel: string; tokens: number; calls: number }[]
+  gates: {
+    modelTier: string
+    cacheHitRate: number
+    templateRatio: number
+    maxRounds: { diagnose: number; package: number; coach: number }
+  }
+  budget: { free: number; single: number; month: number; year: number }
+  alertRatio: number
+  alert: boolean
+  notice: string
+}
+
+/** M4-05 AI 成本监控（超 25% 自动告警） */
+export async function getCostMonitor(): Promise<CostMonitor> {
+  return request('/api/admin/cost-monitor')
+}
+
+export interface FunnelStep {
+  step: string
+  label: string
+  value: number
+  rateFromTop: number
+  rateFromPrev: number | null
+  dropAlert: boolean
+}
+
+export interface FunnelData {
+  period: string
+  steps: FunnelStep[]
+  overallConversion: number
+  notice: string
+}
+
+/** M4-07 转化漏斗（访问 → 诊断 → 付费 → 下载） */
+export async function getFunnel(period: 'day' | 'week' | 'month' = 'day'): Promise<FunnelData> {
+  return request(`/api/admin/funnel${buildQuery({ period })}`)
+}
+
+export interface GrowthData {
+  rows: { channel: string; clicks: number }[]
+  /** 后端出口统一 camelize（见 backend/app/core 信封层），此处必须用 camelCase。 */
+  summary: {
+    shares: number
+    registers: number
+    pays: number
+    shareRate: number
+    uniqueInviters: number
+    paidInvitees: number
+    kFactor: number
+    fissionCacCents: number
+    fissionCacLabel: string
+  }
+}
+
+/** M4-08 裂变数据看板（转发量 / 新用户 / 付费 / K 因子） */
+export async function getGrowth(): Promise<GrowthData> {
+  return request('/api/admin/growth')
+}
+
 // ---------------- CSV 下载工具 ----------------
 
 export function downloadText(fileName: string, content: string): void {

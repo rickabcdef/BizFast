@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 指尖解压</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .bubble-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+        }
+        .bubble {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), var(--brand-purple));
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.2), 0 4px 8px rgba(123,97,255,0.3);
+        }
+        .bubble::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 20%;
+            width: 20%;
+            height: 20%;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+        }
+        .bubble:hover {
+            transform: scale(1.05);
+        }
+        .bubble:active {
+            transform: scale(0.95);
+        }
+        .bubble.popped {
+            background: rgba(255,255,255,0.05);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+            transform: scale(0.9);
+        }
+        .bubble.popped::before {
+            display: none;
+        }
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            margin-bottom: 16px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-item .num {
+            font-size: 24px;
+            font-weight: 700;
+            background: var(--brand-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-item .label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <a href="javascript:history.back()" class="back-btn">←</a>
+        
+        <div class="page-header fade-in" style="padding-top: 10px;">
+            <h1>🫧 指尖解压</h1>
+            <p>捏爆泡泡，释放压力，10秒放松一下</p>
+        </div>
+        
+        <div class="game-stats fade-in stagger-1">
+            <div class="stat-item">
+                <div class="num" id="count">0</div>
+                <div class="label">已捏爆</div>
+            </div>
+            <div class="stat-item">
+                <div class="num" id="remain">30</div>
+                <div class="label">剩余</div>
+            </div>
+            <div class="stat-item">
+                <div class="num" id="time">0</div>
+                <div class="label">用时(秒)</div>
+            </div>
+        </div>
+        
+        <div class="bubble-grid fade-in stagger-2" id="bubbleGrid">
+            <!-- 30个泡泡 -->
+        </div>
+        
+        <div style="margin-top: 24px; text-align: center;">
+            <button class="btn btn-secondary" id="resetBtn" style="width: auto; display: inline-block;">🔄 重新开始</button>
+        </div>
+        
+        <div class="card fade-in stagger-3" style="margin-top: 24px;">
+            <p style="color: var(--text-muted); font-size: 13px; text-align: center; line-height: 1.6;">
+                💡 捏泡泡的时候深呼吸，把压力都捏碎~<br>
+                捏完这30个，你的启动包也差不多生成好了
+            </p>
+        </div>
+        
+    </div>
+    
+    <script src="common.js"></script>
+    <script>
+        const grid = document.getElementById('bubbleGrid');
+        const countEl = document.getElementById('count');
+        const remainEl = document.getElementById('remain');
+        const timeEl = document.getElementById('time');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        let count = 0;
+        let startTime = null;
+        let timer = null;
+        
+        function initGame() {
+            grid.innerHTML = '';
+            count = 0;
+            countEl.textContent = '0';
+            remainEl.textContent = '30';
+            timeEl.textContent = '0';
+            startTime = null;
+            if (timer) clearInterval(timer);
+            
+            for (let i = 0; i < 30; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.addEventListener('click', function() {
+                    if (this.classList.contains('popped')) return;
+                    
+                    if (!startTime) {
+                        startTime = Date.now();
+                        timer = setInterval(() => {
+                            timeEl.textContent = Math.floor((Date.now() - startTime) / 1000);
+                        }, 100);
+                    }
+                    
+                    this.classList.add('popped');
+                    count++;
+                    countEl.textContent = count;
+                    remainEl.textContent = 30 - count;
+                    
+                    // 播放爆破音效（简单CSS动画，不需要音频文件）
+                    this.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(0.9)';
+                    }, 100);
+                    
+                    if (count === 30) {
+                        clearInterval(timer);
+                        setTimeout(() => {
+                            alert('太棒了！全部捏爆，压力归零~');
+                        }, 300);
+                    }
+                });
+                grid.appendChild(bubble);
+            }
+        }
+        
+        resetBtn.addEventListener('click', initGame);
+        initGame();
+    </script>
+</body>
+</html>

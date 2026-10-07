@@ -31,3 +31,14 @@
 .m10-invite {
   margin-top: 12rpx;
 }
+
+/* ---------- V5.0 档位升级入口（UI 切图第 11 页） ---------- */
+.m10-plan-entry {
+  display: flex;
+  justify-content: center;
+  margin: 24rpx 0;
+}
+.m10-plan-entry__btn {
+  width: auto;
+  padding: 0 48rpx;
+}

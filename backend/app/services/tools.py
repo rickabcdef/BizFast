@@ -33,6 +33,93 @@ def _now() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# V5.0 M8 工具箱权益（免费层边界）
+#   档位 2 开业礼包：赠 2 个零风险小工具使用权 30 天
+#   档位 3/4 会员：工具箱全部功能
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 开业礼包赠送的 2 个工具（选择使用频次最高、零成本的两件）
+GIFT_TOOLS = ["image", "qrcode"]
+ALL_TOOLS = ["image", "pdf", "qrcode", "copywriting"]
+
+TOOL_NAMES = {
+    "image": "图片压缩与格式转换",
+    "pdf": "PDF 合并与拆分",
+    "qrcode": "自定义二维码生成",
+    "copywriting": "文案小助手",
+}
+
+
+async def tool_access(db, owner) -> dict:
+    """返回当前用户的工具箱权益（V5.0 M8：免费层基础、付费层增值）。"""
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from app.core.config import settings as _s
+    from app.core.context import ensure_owner_user
+    from app.models import Order
+
+    user = await ensure_owner_user(db, owner)
+    plan = user.plan or "none"
+    now = datetime.now(timezone.utc)
+
+    expire = user.plan_expire_at
+    if expire is not None and expire.tzinfo is None:
+        expire = expire.replace(tzinfo=timezone.utc)
+    member_active = plan in ("month", "year") and (expire is None or expire > now)
+
+    # 开业礼包（单次）附赠 30 天使用权
+    gift_until = None
+    if not member_active:
+        latest_single = (
+            await db.execute(
+                select(Order)
+                .where(
+                    Order.user_id == user.id,
+                    Order.plan == "single",
+                    Order.status.in_(["paid", "generating", "delivered"]),
+                )
+                .order_by(Order.paid_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if latest_single is not None:
+            paid_at = latest_single.paid_at or latest_single.created_at
+            if paid_at is not None and paid_at.tzinfo is None:
+                paid_at = paid_at.replace(tzinfo=timezone.utc)
+            candidate = paid_at + timedelta(days=_s.gift_tool_days)
+            if candidate > now:
+                gift_until = candidate
+
+    if member_active:
+        available = list(ALL_TOOLS)
+        scope = "member"
+        desc = "会员权益：工具箱全部功能不限次使用"
+    elif gift_until is not None:
+        available = list(GIFT_TOOLS)
+        scope = "gift"
+        desc = f"开业礼包赠送：{len(GIFT_TOOLS)} 个工具使用权，有效至 {gift_until.strftime('%Y-%m-%d')}"
+    else:
+        available = []
+        scope = "free"
+        desc = "免费层可体验诊断与商机；购买开业礼包即赠 2 个工具 30 天使用权"
+
+    return {
+        "scope": scope,
+        "plan": plan,
+        "is_member": member_active,
+        "expire_at": expire.isoformat() if (member_active and expire) else None,
+        "gift_until": gift_until.isoformat() if gift_until else None,
+        "available_tools": available,
+        "available_names": [TOOL_NAMES[t] for t in available],
+        "all_tools": [{"key": t, "name": TOOL_NAMES[t], "unlocked": t in available} for t in ALL_TOOLS],
+        "desc": desc,
+        "is_free_tier": not available,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 1. 图片压缩与格式转换
 # ─────────────────────────────────────────────────────────────────────────────
 

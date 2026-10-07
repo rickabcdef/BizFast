@@ -310,6 +310,19 @@ export function getPlans(): Promise<{ plans: PlanOption[] }> {
   return api.get<{ plans: PlanOption[] }>('/api/payment/plans')
 }
 
+/** V5.0 档位 5：增值加购包（按项计价，成本高、绝不并入标准套餐）。 */
+export interface AddonOption {
+  addon: string
+  name: string
+  priceCents: number
+  priceLabel: string
+  unitLabel: string
+}
+
+export function getAddons(): Promise<{ addons: AddonOption[] }> {
+  return api.get<{ addons: AddonOption[] }>('/api/payment/addons')
+}
+
 export function createOrder(input: {
   plan: Plan
   platform: Platform

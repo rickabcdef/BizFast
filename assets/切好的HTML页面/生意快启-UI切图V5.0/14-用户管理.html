@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 管理后台 · 用户管理</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body.admin-page .particles { display: none; }
+        body.admin-page { background: var(--bg-primary); }
+    </style>
+</head>
+<body class="admin-page">
+    <div class="particles" id="particles"></div>
+    
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="logo-text">🚀 生意快启</div>
+                <div class="logo-sub">管理后台 v1.0</div>
+            </div>
+            <ul class="admin-menu">
+                <div class="admin-menu-group">概览</div>
+                <li><a href="13-管理后台.html" class="admin-menu-item"><span class="menu-icon">📊</span>数据看板</a></li>
+                
+                <div class="admin-menu-group">业务管理</div>
+                <li><a href="14-用户管理.html" class="admin-menu-item active"><span class="menu-icon">👥</span>用户管理</a></li>
+                <li><a href="15-订单管理.html" class="admin-menu-item"><span class="menu-icon">💳</span>订单管理</a></li>
+                <li><a href="16-商机与提示词.html" class="admin-menu-item"><span class="menu-icon">💡</span>商机库/提示词</a></li>
+                
+                <div class="admin-menu-group">增长与成本</div>
+                <li><a href="18-成本监控.html" class="admin-menu-item"><span class="menu-icon">💰</span>成本监控</a></li>
+                <li><a href="19-转化与裂变.html" class="admin-menu-item"><span class="menu-icon">📈</span>转化与裂变</a></li>
+
+                <div class="admin-menu-group">系统</div>
+                <li><a href="#" class="admin-menu-item"><span class="menu-icon">⚙️</span>系统设置</a></li>
+                <li><a href="index.html" class="admin-menu-item"><span class="menu-icon">↩️</span>返回前台原型</a></li>
+            </ul>
+        </aside>
+        
+        <main class="admin-main">
+            <div class="admin-topbar fade-in">
+                <div>
+                    <h1>👥 用户管理</h1>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">共 <strong style="color: var(--text-primary);">12,847</strong> 位注册用户 · 付费用户 <strong style="color: var(--success);">1,086</strong> 人（8.5%）</p>
+                </div>
+                <div class="topbar-right">
+                    <button class="btn-admin btn-admin-outline">📥 导出用户数据</button>
+                    <div class="admin-user">
+                        <div class="admin-avatar">管</div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">管理员</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">超级管理员</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 筛选栏 -->
+            <div class="filter-bar fade-in">
+                <input class="filter-input" placeholder="🔍 搜索用户名/手机号/用户ID" style="flex: 2;">
+                <select class="filter-select">
+                    <option>全部会员等级</option>
+                    <option>免费用户</option>
+                    <option>AI合伙人月卡</option>
+                    <option>创业陪跑年卡</option>
+                    <option>单次购买</option>
+                </select>
+                <select class="filter-select">
+                    <option>全部用户状态</option>
+                    <option>正常</option>
+                    <option>已封禁</option>
+                    <option>已注销</option>
+                </select>
+                <select class="filter-select">
+                    <option>注册时间（全部）</option>
+                    <option>今日</option>
+                    <option>近7天</option>
+                    <option>近30天</option>
+                </select>
+                <select class="filter-select">
+                    <option>来源渠道（全部）</option>
+                    <option>微信小程序</option>
+                    <option>H5网页</option>
+                    <option>朋友推荐</option>
+                    <option>抖音推广</option>
+                </select>
+                <button class="btn-admin">🔍 查询</button>
+                <button class="btn-admin btn-admin-outline">重置</button>
+            </div>
+            
+            <!-- 用户统计小卡 -->
+            <div class="admin-stats fade-in stagger-1" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">今日新增</div>
+                    <div class="stat-value" style="font-size: 22px;">328</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">免费用户</div>
+                    <div class="stat-value" style="font-size: 22px;">11,761</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">AI合伙人月卡</div>
+                    <div class="stat-value" style="font-size: 22px; color: var(--brand-blue);">487</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">创业陪跑年卡</div>
+                    <div class="stat-value" style="font-size: 22px; color: var(--brand-purple);">342</div>
+                </div>
+            </div>
+            
+            <!-- 用户表格 -->
+            <div class="admin-table-wrap fade-in stagger-2">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>会员等级</th>
+                            <th>累计消费</th>
+                            <th>启动包数</th>
+                            <th>注册来源</th>
+                            <th>注册时间</th>
+                            <th>最后登录</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">张</div><div><div class="user-name">张伟</div><div class="user-sub">ID:10847 · 138****8888</div></div></div></td>
+                            <td><span class="tag tag-purple">👑 创业陪跑年卡</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥599.00</td>
+                            <td>3</td>
+                            <td><span class="tag tag-blue">微信小程序</span></td>
+                            <td>2026-10-05</td>
+                            <td>刚刚</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">李</div><div><div class="user-name">李娜</div><div class="user-sub">ID:10846 · 139****6666</div></div></div></td>
+                            <td><span class="tag tag-blue">📅 AI合伙人月卡</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥48.90</td>
+                            <td>2</td>
+                            <td><span class="tag tag-green">朋友推荐</span></td>
+                            <td>2026-10-05</td>
+                            <td>5分钟前</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">王</div><div><div class="user-name">王强</div><div class="user-sub">ID:10845 · 137****2222</div></div></div></td>
+                            <td><span class="tag tag-gray">免费用户</span></td>
+                            <td style="color: var(--text-muted);">¥0.00</td>
+                            <td>0</td>
+                            <td><span class="tag tag-orange">抖音推广</span></td>
+                            <td>2026-10-04</td>
+                            <td>2小时前</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">赵</div><div><div class="user-name">赵敏</div><div class="user-sub">ID:10844 · 135****9999</div></div></div></td>
+                            <td><span class="tag tag-orange">🎁 单次购买</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥29.90</td>
+                            <td>1</td>
+                            <td><span class="tag tag-blue">H5网页</span></td>
+                            <td>2026-10-04</td>
+                            <td>昨天</td>
+                            <td><span class="tag tag-orange">退款中</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">处理退款</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">刘</div><div><div class="user-name">刘洋</div><div class="user-sub">ID:10843 · 186****3333</div></div></div></td>
+                            <td><span class="tag tag-purple">👑 创业陪跑年卡</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥599.00</td>
+                            <td>5</td>
+                            <td><span class="tag tag-blue">微信小程序</span></td>
+                            <td>2026-10-04</td>
+                            <td>3小时前</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">陈</div><div><div class="user-name">陈静</div><div class="user-sub">ID:10842 · 152****7777</div></div></div></td>
+                            <td><span class="tag tag-blue">📅 AI合伙人月卡</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥99.00</td>
+                            <td>1</td>
+                            <td><span class="tag tag-green">朋友推荐</span></td>
+                            <td>2026-10-03</td>
+                            <td>1天前</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">孙</div><div><div class="user-name">孙明</div><div class="user-sub">ID:10841 · 188****5555</div></div></div></td>
+                            <td><span class="tag tag-gray">免费用户</span></td>
+                            <td style="color: var(--text-muted);">¥0.00</td>
+                            <td>0</td>
+                            <td><span class="tag tag-orange">抖音推广</span></td>
+                            <td>2026-10-03</td>
+                            <td>2天前</td>
+                            <td><span class="tag tag-red">已封禁</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link" style="color: var(--success);">解封</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">周</div><div><div class="user-name">周磊</div><div class="user-sub">ID:10840 · 133****1111</div></div></div></td>
+                            <td><span class="tag tag-purple">👑 创业陪跑年卡</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥238.00</td>
+                            <td>8</td>
+                            <td><span class="tag tag-blue">微信小程序</span></td>
+                            <td>2026-10-02</td>
+                            <td>昨天</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">吴</div><div><div class="user-name">吴芳</div><div class="user-sub">ID:10839 · 136****4444</div></div></div></td>
+                            <td><span class="tag tag-orange">🎁 单次购买</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥29.90</td>
+                            <td>1</td>
+                            <td><span class="tag tag-blue">H5网页</span></td>
+                            <td>2026-10-02</td>
+                            <td>2天前</td>
+                            <td><span class="tag tag-green">正常</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link">封禁</a></td>
+                        </tr>
+                        <tr>
+                            <td><div class="user-cell"><div class="user-avatar-sm">郑</div><div><div class="user-name">郑涛</div><div class="user-sub">ID:10838 · 159****8888</div></div></div></td>
+                            <td><span class="tag tag-blue">📅 AI合伙人月卡</span></td>
+                            <td style="color: var(--success); font-weight: 600;">¥99.00</td>
+                            <td>2</td>
+                            <td><span class="tag tag-green">朋友推荐</span></td>
+                            <td>2026-10-01</td>
+                            <td>3天前</td>
+                            <td><span class="tag tag-gray">已注销</span></td>
+                            <td><a class="action-link">详情</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    <div>共 <strong>12,847</strong> 条记录 · 当前第 1 / 1285 页</div>
+                    <div class="pagination-btns">
+                        <button class="page-btn">‹</button>
+                        <button class="page-btn active">1</button>
+                        <button class="page-btn">2</button>
+                        <button class="page-btn">3</button>
+                        <button class="page-btn">4</button>
+                        <button class="page-btn">5</button>
+                        <button class="page-btn">…</button>
+                        <button class="page-btn">1285</button>
+                        <button class="page-btn">›</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

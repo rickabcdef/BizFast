@@ -26,6 +26,13 @@ const menuGroups = [
     ]
   },
   {
+    group: '增长与成本',
+    items: [
+      { path: '/cost', label: '成本监控', icon: 'Money', perm: 'dashboard' },
+      { path: '/growth', label: '转化与裂变', icon: 'TrendCharts', perm: 'dashboard' }
+    ]
+  },
+  {
     group: '系统',
     items: [
       { path: '/roles', label: '权限管理', icon: 'Lock', perm: 'roles' },

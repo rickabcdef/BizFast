@@ -1,10 +1,12 @@
 """Models package：统一导出实体。"""
 from app.models.models import (
+    AiCostLog,
     Coupon,
     CouponRedemption,
     DeliverableFile,
     DiagnosisTask,
     Favorite,
+    FunnelEvent,
     GameScore,
     InviteRelation,
     Notification,
@@ -15,6 +17,8 @@ from app.models.models import (
     RiskEvent,
     ShareCard,
     ShareEvent,
+    ShareReport,
+    TalkTopic,
     User,
 )
 
@@ -35,4 +39,9 @@ __all__ = [
     "Coupon",
     "CouponRedemption",
     "RiskEvent",
+    # V5.0 新增
+    "AiCostLog",
+    "TalkTopic",
+    "ShareReport",
+    "FunnelEvent",
 ]

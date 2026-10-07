@@ -30,6 +30,12 @@ def _rid(request: Request) -> str:
     return getattr(request.state, "request_id", "")
 
 
+@router.get("/access", summary="工具箱权益（V5.0 M8：开业礼包赠 2 个工具 30 天 / 会员全部）")
+async def tool_access(request: Request, db: AsyncSession = Depends(get_db)):
+    owner = current_owner(request)
+    return ok(await tools_service.tool_access(db, owner), _rid(request))
+
+
 @router.post("/image/compress", summary="图片压缩与格式转换")
 async def compress_image(
     request: Request,

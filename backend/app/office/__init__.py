@@ -56,6 +56,11 @@ FILE_EXT: dict[str, str] = {
     "zip": "zip",
 }
 
+# V5.0 第 7.2 闸门 3「模板化交付」：10 件交付物中 7 件模板填充、只有 3 件走 AI 实时生成。
+# 这 3 件是内容生成的绝对主力（评分卡 / 获客文案 / 风险清单），其余 7 件仅替换用户变量。
+AI_DELIVERABLES: frozenset[str] = frozenset({"D01", "D07", "D10"})
+TEMPLATE_DELIVERABLES: frozenset[str] = frozenset(DELIVERABLES) - AI_DELIVERABLES
+
 # 中文字体路径（系统自带，跨平台 fallback）
 _FONT_PATHS = [
     # Windows

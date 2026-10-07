@@ -11,6 +11,7 @@ import type { Plan } from '@/types'
 import {
   cancelSubscription,
   createOrder,
+  getAddons,
   getCoupons,
   getOrder,
   getPlans,
@@ -19,6 +20,7 @@ import {
   refundOrder,
   setAutoRenew as setAutoRenewApi,
   validateCoupon,
+  type AddonOption,
   type CouponItem,
   type CouponValidateOut,
   type OrderCreateOut,
@@ -59,6 +61,8 @@ export default function M5Pay() {
   const setOrderId = useAppStore((s) => s.setOrderId)
   const [platform] = useState(() => getPlatform())
   const [plans, setPlans] = useState<PlanOption[]>([])
+  // V5.0 档位 5：增值加购包（成本高，按需单买，不并入标准套餐）
+  const [addons, setAddons] = useState<AddonOption[]>([])
   const [plan, setPlan] = useState<Plan>('single')
   const [matchId, setMatchId] = useState<string | null>(null)
   const [paying, setPaying] = useState<OrderCreateOut | null>(null)
@@ -91,6 +95,10 @@ export default function M5Pay() {
     getPlans()
       .then((d) => setPlans(d.plans))
       .catch((e: any) => setError(e?.message || '服务开小差了，请重试'))
+    // 加购包属展示项，缺失不影响下单主流程
+    getAddons()
+      .then((d) => setAddons(d.addons || []))
+      .catch(() => undefined)
     // 券清单与订阅状态属于「锦上添花」，失败不影响下单主流程，因此各自静默兜底
     getCoupons()
       .then((d) => {
@@ -239,7 +247,7 @@ export default function M5Pay() {
   const orderChannelLabel = order ? CHANNEL_LABELS[order.channel] || order.channel : ''
 
   // M5-09：金额预览。有券就显示券后价，没有就显示原价——绝不先显示低价再在支付时加回去。
-  const listLabel = current?.priceLabel || '9.9'
+  const listLabel = current?.priceLabel || '29.9'
   const finalLabel = couponInfo ? couponInfo.finalLabel : listLabel
 
   /** M5-08：开关自动续费（开与关都只需一步，不设障碍）。 */
@@ -424,7 +432,7 @@ export default function M5Pay() {
 
           {/* 三档权益清单（M5-03：同屏对比） */}
           <View className='bf-card'>
-            <Text className='bf-card__title'>已选：{current?.name || '单次启动包'}</Text>
+            <Text className='bf-card__title'>已选：{current?.name || '开业礼包'}</Text>
             <View className='m5-rights'>
               {(current?.rights || []).map((r) => (
                 <View key={r} className='m5-right'>
@@ -434,6 +442,26 @@ export default function M5Pay() {
               ))}
             </View>
           </View>
+
+          {/* V5.0 档位 5：增值加购包（UI 切图第 12 页）——标准套餐不含高成本 AI 视频/数字人 */}
+          {addons.length > 0 && (
+            <View className='bf-card m5-addons'>
+              <Text className='bf-card__title'>➕ 增值加购包（按需单买）</Text>
+              <Text className='bf-muted m5-addons__sub'>
+                标准套餐不含以下高成本项目，需要时按条购买
+              </Text>
+              <View className='m5-addons__grid'>
+                {addons.map((a) => (
+                  <View key={a.addon} className='m5-addon'>
+                    <Text className='m5-addon__name'>{a.name}</Text>
+                    <Text className='m5-addon__price'>
+                      {a.priceLabel} / {a.unitLabel}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* ---------- M5-09 优惠券 / 邀请码 ---------- */}
           <View className='bf-card'>
@@ -610,6 +638,15 @@ export default function M5Pay() {
           <Text className='bf-muted m5-foot'>
             支持 7 天无理由退款，24 小时内原路到账。支付成功后立即开始生成 10 件交付物。
           </Text>
+
+          {/* V5.0 定价说明（UI 切图第 12 页）：长期定价，不做限时折扣 */}
+          <View className='m5-pricing-note'>
+            <Text className='m5-pricing-note__text'>
+              <Text className='m5-pricing-note__b'>定价说明：</Text>
+              所有价格均为长期定价，不做限时折扣、不做跳楼价促销。AI 视频与数字人成本较高，
+              只能作为加购项单独购买，不包含在标准套餐内。
+            </Text>
+          </View>
         </>
       )}
 

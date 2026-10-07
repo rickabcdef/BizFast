@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 生成启动包</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .success-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-in forwards;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="display: flex; flex-direction: column; justify-content: center; min-height: 100vh; text-align: center;">
+        
+        <div class="fade-in" style="margin-bottom: 32px;">
+            <div style="font-size: 64px; margin-bottom: 24px;">⚙️</div>
+            <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">支付成功！正在为你生成启动包</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">AI正在帮你完成所有准备工作，预计3-5分钟</p>
+        </div>
+        
+        <div class="card fade-in stagger-1" style="text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 14px;">生成进度</span>
+                <span style="color: var(--brand-purple); font-weight: 600;" id="percent">60%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 60%;"></div>
+            </div>
+            
+            <div class="step-list">
+                <div class="step-item">
+                    <div class="check">✓</div>
+                    <div class="step-text done">匹配本地一手供应商资源</div>
+                </div>
+                <div class="step-item">
+                    <div class="check">✓</div>
+                    <div class="step-text done">自动计算回本周期Excel公式</div>
+                </div>
+                <div class="step-item">
+                    <div class="check">✓</div>
+                    <div class="step-text done">撰写获客朋友圈/抖音文案</div>
+                </div>
+                <div class="step-item">
+                    <div class="check">⏳</div>
+                    <div class="step-text" id="currentStep">制作宣传海报与收款二维码...</div>
+                </div>
+                <div class="step-item">
+                    <div class="check pending"></div>
+                    <div class="step-text" style="color: var(--text-muted);">编排30天逐日行动日历</div>
+                </div>
+                <div class="step-item">
+                    <div class="check pending"></div>
+                    <div class="step-text" style="color: var(--text-muted);">打包所有文件准备下载</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-2" style="background: rgba(123, 97, 255, 0.1); border-color: rgba(123, 97, 255, 0.3);">
+            <div style="display: flex; gap: 12px;">
+                <a href="09-指尖解压游戏.html" style="flex: 1; text-decoration: none; color: inherit;">
+                    <div style="padding: 16px; background: var(--bg-card); border-radius: var(--radius-md); text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">🫧</div>
+                        <div style="font-size: 14px; font-weight: 500;">指尖解压</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">捏泡泡放松</div>
+                    </div>
+                </a>
+                <a href="10-数字合成游戏.html" style="flex: 1; text-decoration: none; color: inherit;">
+                    <div style="padding: 16px; background: var(--bg-card); border-radius: var(--radius-md); text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 8px;">🔢</div>
+                        <div style="font-size: 14px; font-weight: 500;">数字合成</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">玩两把等一会</div>
+                    </div>
+                </a>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 12px;">玩两把游戏的功夫，启动包就生成好了</p>
+        </div>
+        
+        <div style="margin-top: 24px;">
+            <a href="07-交付页.html" class="btn btn-secondary" style="background: transparent; border: none; color: var(--text-muted); width: auto;">跳过等待，直接看结果 →</a>
+        </div>
+        
+    </div>
+    
+    <script src="common.js"></script>
+    <script>
+        // 撒礼花
+        function createConfetti() {
+            const container = document.createElement('div');
+            container.className = 'success-particles';
+            document.body.appendChild(container);
+            const colors = ['#165DFF', '#7B61FF', '#00B42A', '#FF7D00', '#FFD700'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                container.appendChild(confetti);
+            }
+        }
+        createConfetti();
+        
+        // 模拟进度
+        let percent = 60;
+        const steps = ['制作宣传海报与收款二维码...', '编排30天逐日行动日历...', '打包所有文件准备下载...'];
+        let stepIndex = 0;
+        
+        const interval = setInterval(() => {
+            percent += Math.random() * 4;
+            if (percent >= 100) {
+                percent = 100;
+                clearInterval(interval);
+                setTimeout(() => {
+                    window.location.href = '07-交付页.html';
+                }, 500);
+            }
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('percent').textContent = Math.round(percent) + '%';
+            
+            if (percent > 75 && stepIndex < 1) {
+                stepIndex = 1;
+                document.querySelectorAll('.step-item .check')[3].textContent = '✓';
+                document.querySelectorAll('.step-item .step-text')[3].classList.add('done');
+                document.querySelectorAll('.step-item .check')[4].textContent = '⏳';
+                document.getElementById('currentStep').textContent = steps[1];
+            }
+            if (percent > 90 && stepIndex < 2) {
+                stepIndex = 2;
+                document.querySelectorAll('.step-item .check')[4].textContent = '✓';
+                document.querySelectorAll('.step-item .step-text')[4].classList.add('done');
+                document.querySelectorAll('.step-item .check')[5].textContent = '⏳';
+                document.getElementById('currentStep').textContent = steps[2];
+            }
+        }, 600);
+    </script>
+</body>
+</html>

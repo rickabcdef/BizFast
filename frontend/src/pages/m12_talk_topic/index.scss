@@ -1,0 +1,203 @@
+/* V5.0 M5-03 今日谈资卡 —— 对齐 UI 切图 V5.0 第 17 页 */
+
+.m12 {
+  min-height: 100vh;
+  padding: 20px 18px 40px;
+  background:
+    radial-gradient(600px 380px at 20% 0%, rgba(123, 97, 255, 0.22), transparent),
+    radial-gradient(700px 460px at 90% 12%, rgba(22, 93, 255, 0.18), transparent),
+    var(--bf-bg, #0b1026);
+  box-sizing: border-box;
+
+  &__loading {
+    padding: 80px 0;
+    text-align: center;
+    color: var(--bf-text-muted, #8b93b8);
+    font-size: 14px;
+  }
+
+  &__head {
+    margin-bottom: 16px;
+  }
+
+  &__title {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--bf-text, #e8ecff);
+  }
+
+  &__sub {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--bf-text-muted, #8b93b8);
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  &__date {
+    font-size: 13px;
+    color: var(--bf-text-muted, #8b93b8);
+  }
+
+  /* 可转发的谈资卡 */
+  &__card {
+    position: relative;
+    overflow: hidden;
+    padding: 22px;
+    border-radius: 18px;
+    border: 1px solid rgba(123, 97, 255, 0.35);
+    background: linear-gradient(150deg, #1b2540 0%, #131c33 60%, #0f172a 100%);
+    box-shadow: 0 12px 40px rgba(22, 93, 255, 0.18);
+  }
+
+  &__tag {
+    display: inline-block;
+    padding: 3px 10px;
+    margin-bottom: 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    background: rgba(22, 93, 255, 0.18);
+    color: #93b4ff;
+  }
+
+  &__headline {
+    display: block;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--bf-text, #e8ecff);
+    margin-bottom: 14px;
+  }
+
+  &__num {
+    display: block;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.2;
+    background: linear-gradient(90deg, #165dff 0%, #7b61ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  &__numlabel {
+    display: block;
+    margin: 6px 0 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(232, 236, 255, 0.72);
+  }
+
+  &__bodywrap {
+    padding-top: 14px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  }
+
+  &__body {
+    display: block;
+    font-size: 13px;
+    line-height: 1.9;
+    color: rgba(232, 236, 255, 0.72);
+    margin-bottom: 4px;
+  }
+
+  &__source {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__srctext {
+    font-size: 11px;
+    color: var(--bf-text-muted, #8b93b8);
+  }
+
+  &__brand {
+    font-size: 11px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #165dff 0%, #7b61ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  &__slist {
+    margin-top: 16px;
+  }
+
+  &__sline {
+    display: block;
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: rgba(232, 236, 255, 0.82);
+  }
+
+  &__actions {
+    margin-top: 16px;
+
+    .bf-btn + .bf-btn {
+      margin-top: 10px;
+    }
+  }
+
+  &__tip {
+    display: block;
+    margin-top: 10px;
+    font-size: 12px;
+    text-align: center;
+    color: #00b42a;
+  }
+
+  &__rules {
+    margin-top: 16px;
+  }
+
+  &__rule {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 10px;
+  }
+
+  &__rulenum {
+    margin-right: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #7b61ff;
+  }
+
+  &__ruletext {
+    flex: 1;
+    font-size: 12.5px;
+    line-height: 1.9;
+    color: rgba(232, 236, 255, 0.72);
+  }
+
+  &__entry {
+    margin-top: 16px;
+    border-color: rgba(0, 180, 42, 0.3);
+  }
+
+  &__entrydesc {
+    display: block;
+    margin: 8px 0 12px;
+    line-height: 1.8;
+  }
+
+  &__compliance {
+    margin-top: 16px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+}

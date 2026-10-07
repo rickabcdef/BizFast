@@ -31,7 +31,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import DeliverableFile, DiagnosisTask, Order, Package
-from app.office import DELIVERABLES, FILE_EXT, generate_formats
+from app.office import AI_DELIVERABLES, DELIVERABLES, FILE_EXT, generate_formats
+from app.services import ai_cost
 from app.storage import get_storage
 
 logger = logging.getLogger(__name__)
@@ -213,6 +214,12 @@ async def _generation_once(order_id: str, user_id: str, force: bool) -> bool:
         try:
             context = await build_context(db, order)
             all_codes = sorted(DELIVERABLES.keys())
+            # V5.0 闸门 6：生成前先做一次预算熔断判定（触及上限则全量降级模板模式）
+            owner_key = f"user:{user_id}"
+            budget = await ai_cost.check_budget(db, owner_key, order.plan or "none", "package")
+            ai_allowed = bool(budget["allow_ai"])
+            if not ai_allowed:
+                logger.warning("启动包生成触发预算熔断，降级模板模式：order_id=%s", order_id)
 
             for code in all_codes:
                 name, _primary = DELIVERABLES[code]
@@ -251,6 +258,30 @@ async def _generation_once(order_id: str, user_id: str, force: bool) -> bool:
                     except Exception as exc:  # 单个格式失败不阻断其余交付物
                         await db.rollback()
                         logger.exception("交付物落库失败: %s %s [%s] - %s", code, name, fmt, exc)
+
+                # V5.0 第 7 章闸门 3「模板化交付」成本记账：7 件模板填充 + 3 件 AI 实时生成。
+                # 成本红线：开业礼包单次 ≤ 3.5 元，故此处必须如实记账，供 M4-05 看板核算毛利率。
+                try:
+                    if code in AI_DELIVERABLES and ai_allowed:
+                        prompt = f"为{context.get('city', '本市')}的{name}生成个性化内容"
+                        await ai_cost.record_ai_call(
+                            db,
+                            "package",
+                            prompt,
+                            name,  # completion 量级按交付物名称占位，token 由估算函数换算
+                            owner_key=owner_key,
+                            order_id=order_id,
+                            rounds=3,
+                        )
+                    else:
+                        # 模板填充（含熔断降级的 AI 件）：成本极低，如实入账
+                        await ai_cost.record_template_deliverable(
+                            db, order_id, owner_key, code, chars=800
+                        )
+                    await db.commit()
+                except Exception as exc:  # 记账失败绝不影响交付
+                    await db.rollback()
+                    logger.warning("AI 成本记账失败（不影响交付）: %s - %s", code, exc)
 
             if not file_paths:
                 raise RuntimeError("全部交付物生成失败")

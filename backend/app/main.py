@@ -3,7 +3,9 @@
 挂载各模块路由，注册全局异常处理（中文提示，ADR-006），提供健康检查。
 同时注入 request_id 与游客身份（X-Guest-Token），使游客可免登录走完诊断与商机（M1-07）。
 """
+import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import logging
@@ -32,6 +34,30 @@ from app.routers import (
     tools,
 )
 
+logger = logging.getLogger(__name__)
+
+
+async def _daily_talk_topic_loop() -> None:
+    """V5.0 M5-03：今日谈资卡每日 0 点自动生成（后续访问走幂等命中，零重复成本）。"""
+    from app.core.database import AsyncSessionLocal
+    from app.services import talk_topic
+
+    while True:
+        try:
+            now = datetime.now()
+            next_run = (now + timedelta(days=1)).replace(
+                hour=0, minute=0, second=30, microsecond=0
+            )
+            await asyncio.sleep(max(60.0, (next_run - now).total_seconds()))
+            async with AsyncSessionLocal() as db:
+                await talk_topic.run_daily(db)
+            logger.info("今日谈资卡定时生成完成")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # 定时任务永不因单次失败退出
+            logger.warning("今日谈资卡定时生成失败：%s", exc)
+            await asyncio.sleep(3600)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,8 +74,28 @@ async def lifespan(app: FastAPI):
         async with AsyncSessionLocal() as db:
             await coupon_service.seed_catalog(db)
     except Exception as exc:  # pragma: no cover - 播种失败不应阻断服务启动
-        logging.getLogger(__name__).warning("优惠码播种失败：%s", exc)
+        logger.warning("优惠码播种失败：%s", exc)
+
+    # V5.0 M5-03：启动即预热今日谈资卡 + 挂起每日 0 点自动生成任务
+    talk_task: asyncio.Task | None = None
+    try:
+        from app.core.database import AsyncSessionLocal
+        from app.services import talk_topic
+
+        async with AsyncSessionLocal() as db:
+            await talk_topic.run_daily(db)
+        talk_task = asyncio.create_task(_daily_talk_topic_loop())
+    except Exception as exc:  # pragma: no cover
+        logger.warning("今日谈资卡预热失败：%s", exc)
+
     yield
+
+    if talk_task is not None:
+        talk_task.cancel()
+        try:
+            await talk_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 app = FastAPI(

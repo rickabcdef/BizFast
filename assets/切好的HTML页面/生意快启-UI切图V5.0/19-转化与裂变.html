@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 转化与裂变</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .funnel-row { margin-bottom: 14px; }
+        .funnel-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+        .funnel-head .f-name { font-weight: 600; }
+        .funnel-head .f-num { color: var(--text-secondary); }
+        .funnel-track { height: 26px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
+        .funnel-in {
+            height: 100%;
+            border-radius: 6px;
+            display: flex; align-items: center; padding-left: 10px;
+            font-size: 12px; font-weight: 600; color: #fff;
+        }
+        .funnel-rate { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+        .kpi-note { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="logo-text">🚀 生意快启</div>
+                <div class="logo-sub">管理后台 v1.0</div>
+            </div>
+            <ul class="admin-menu">
+                <div class="admin-menu-group">概览</div>
+                <li><a href="13-管理后台.html" class="admin-menu-item"><span class="menu-icon">📊</span>数据看板</a></li>
+
+                <div class="admin-menu-group">业务管理</div>
+                <li><a href="14-用户管理.html" class="admin-menu-item"><span class="menu-icon">👥</span>用户管理</a></li>
+                <li><a href="15-订单管理.html" class="admin-menu-item"><span class="menu-icon">💳</span>订单管理</a></li>
+                <li><a href="16-商机与提示词.html" class="admin-menu-item"><span class="menu-icon">💡</span>商机库/提示词</a></li>
+
+                <div class="admin-menu-group">增长与成本</div>
+                <li><a href="18-成本监控.html" class="admin-menu-item"><span class="menu-icon">💰</span>成本监控</a></li>
+                <li><a href="19-转化与裂变.html" class="admin-menu-item active"><span class="menu-icon">📈</span>转化与裂变</a></li>
+
+                <div class="admin-menu-group">系统</div>
+                <li><a href="#" class="admin-menu-item"><span class="menu-icon">⚙️</span>系统设置</a></li>
+                <li><a href="index.html" class="admin-menu-item"><span class="menu-icon">↩️</span>返回前台原型</a></li>
+            </ul>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-topbar fade-in">
+                <div>
+                    <h1>📈 转化与裂变</h1>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">看转化率，不看打开次数 · 数据延迟 ≤ 5 分钟</p>
+                </div>
+                <div class="topbar-right">
+                    <span style="font-size: 13px; color: var(--text-muted);">2026-10-06 周二 10:32</span>
+                    <div class="admin-user">
+                        <div class="admin-avatar">管</div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">管理员</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">超级管理员</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 告警 -->
+            <div class="alert-card alert-success fade-in">
+                <span style="font-size: 18px;">✅</span>
+                <div>
+                    上线 14 天首单转化率 <strong style="color: var(--success);">3.3%</strong>，已达验证关标准（≥ 3%）；
+                    LTV/CAC = <strong style="color: var(--success);">11.7</strong>，远高于投放门槛（≥ 3），可以开始小额投放。
+                </div>
+            </div>
+
+            <!-- 4 个核心 KPI -->
+            <div class="admin-stats fade-in stagger-1">
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(0,180,42,0.15);">🎯</div>
+                    <div class="stat-label">首单转化率（14 天）</div>
+                    <div class="stat-value big-number" data-target="3.3" data-suffix="%">0%</div>
+                    <div class="stat-trend trend-up" style="color: var(--success);">✓ 达标（≥3%）</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(123,97,255,0.15);">🔗</div>
+                    <div class="stat-label">K 因子（病毒系数）</div>
+                    <div class="stat-value big-number" data-target="0.42">0</div>
+                    <div class="stat-trend">每 100 用户带来 42 个新用户</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(22,93,255,0.15);">💸</div>
+                    <div class="stat-label">CAC 获客成本</div>
+                    <div class="stat-value big-number" data-target="18.6">¥0</div>
+                    <div class="stat-trend trend-down">↓ 主要靠免费裂变</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(255,125,0,0.15);">⚖️</div>
+                    <div class="stat-label">LTV / CAC</div>
+                    <div class="stat-value big-number" data-target="11.7">0</div>
+                    <div class="stat-trend trend-up" style="color: var(--success);">✓ 高于门槛 3</div>
+                </div>
+            </div>
+
+            <div class="admin-chart-row fade-in stagger-2" style="margin-top: 20px;">
+                <!-- 转化漏斗 -->
+                <div class="admin-chart-card">
+                    <div class="chart-header">
+                        <h2>转化漏斗（近 14 天）</h2>
+                        <span style="font-size: 12px; color: var(--text-muted);">看任务完成，不看打开次数</span>
+                    </div>
+
+                    <div class="funnel-row">
+                        <div class="funnel-head"><span class="f-name">① 独立访问</span><span class="f-num">12,480 人</span></div>
+                        <div class="funnel-track"><div class="funnel-in" style="width: 100%; background: linear-gradient(90deg,#165DFF,#3D7BFF);">100%</div></div>
+                    </div>
+
+                    <div class="funnel-row">
+                        <div class="funnel-head"><span class="f-name">② 完成商机诊断</span><span class="f-num">3,842 人</span></div>
+                        <div class="funnel-track"><div class="funnel-in" style="width: 62%; background: linear-gradient(90deg,#3D7BFF,#5A78FF);">30.8% 完成率</div></div>
+                        <div class="funnel-rate">流失最大的一步：一半以上的人在第 2 步离开</div>
+                    </div>
+
+                    <div class="funnel-row">
+                        <div class="funnel-head"><span class="f-name">③ 点开付费页</span><span class="f-num">620 人</span></div>
+                        <div class="funnel-track"><div class="funnel-in" style="width: 38%; background: linear-gradient(90deg,#5A78FF,#7B61FF);">16.1%</div></div>
+                    </div>
+
+                    <div class="funnel-row">
+                        <div class="funnel-head"><span class="f-name">④ 完成支付</span><span class="f-num">412 人</span></div>
+                        <div class="funnel-track"><div class="funnel-in" style="width: 26%; background: linear-gradient(90deg,#7B61FF,#00B42A);">66.5% 付款率</div></div>
+                        <div class="funnel-rate">首单转化率 = 412 ÷ 12,480 = <strong style="color: var(--success);">3.3%</strong>（存活线 3%）</div>
+                    </div>
+                </div>
+
+                <!-- 裂变数据 -->
+                <div class="admin-chart-card">
+                    <div class="chart-header"><h2>裂变数据（近 14 天）</h2></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                        <div class="admin-stat-card" style="padding: 16px;">
+                            <div class="stat-label" style="font-size: 12px;">转发 / 保存卡片</div>
+                            <div class="stat-value" style="font-size: 22px;">8,642 次</div>
+                        </div>
+                        <div class="admin-stat-card" style="padding: 16px;">
+                            <div class="stat-label" style="font-size: 12px;">带来新用户</div>
+                            <div class="stat-value" style="font-size: 22px; color: var(--success);">2,318 人</div>
+                        </div>
+                        <div class="admin-stat-card" style="padding: 16px;">
+                            <div class="stat-label" style="font-size: 12px;">裂变获客成本</div>
+                            <div class="stat-value" style="font-size: 22px; color: var(--success);">¥0.03 / 次</div>
+                        </div>
+                        <div class="admin-stat-card" style="padding: 16px;">
+                            <div class="stat-label" style="font-size: 12px;">谈资卡核准率</div>
+                            <div class="stat-value" style="font-size: 22px; color: var(--success);">99.4%</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.9;">
+                        ✅ 最有效的转发物：<strong style="color: var(--text-secondary);">今日谈资卡</strong>（占转发量 61%）<br>
+                        ✅ 转发高峰时段：<strong style="color: var(--text-secondary);">20:00—22:00</strong>（饭桌、睡前聊天时段）<br>
+                        ⚠️ 唯一一条被停发的内容：涉及未核实本地补贴金额，已当天停发并复核
+                    </div>
+                </div>
+            </div>
+
+            <!-- 邀请明细 -->
+            <div class="admin-chart-card fade-in stagger-3" style="margin-top: 20px;">
+                <div class="chart-header">
+                    <h2>转发带来付费的明细</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);">按带来付费数排序 · 前 20 名</span>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr><th>传播者</th><th>身份</th><th>转发内容</th><th>触达人数</th><th>带来付费</th><th>裂变成本</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">王</div><div><div class="user-name">王**</div><div class="user-sub">138****6621</div></div></div></td>
+                                <td><span class="tag tag-blue">小老板</span></td>
+                                <td>今日谈资卡</td>
+                                <td>186</td>
+                                <td style="color: var(--success); font-weight: 600;">7 人</td>
+                                <td>¥0.03</td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">李</div><div><div class="user-name">李**</div><div class="user-sub">139****8877</div></div></div></td>
+                                <td><span class="tag tag-purple">上班族</span></td>
+                                <td>机会热度图</td>
+                                <td>142</td>
+                                <td style="color: var(--success); font-weight: 600;">5 人</td>
+                                <td>¥0.03</td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">陈</div><div><div class="user-name">陈**</div><div class="user-sub">137****5512</div></div></div></td>
+                                <td><span class="tag tag-blue">夫妻小店</span></td>
+                                <td>今日谈资卡</td>
+                                <td>98</td>
+                                <td style="color: var(--success); font-weight: 600;">4 人</td>
+                                <td>¥0.03</td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">张</div><div><div class="user-name">张**</div><div class="user-sub">186****3320</div></div></div></td>
+                                <td><span class="tag tag-gray">长辈（传播者）</span></td>
+                                <td>给孩子的生意建议书</td>
+                                <td>76</td>
+                                <td style="color: var(--success); font-weight: 600;">3 人</td>
+                                <td>¥0.03</td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">刘</div><div><div class="user-name">刘**</div><div class="user-sub">135****9908</div></div></div></td>
+                                <td><span class="tag tag-gray">宝妈（传播者）</span></td>
+                                <td>今日谈资卡</td>
+                                <td>64</td>
+                                <td style="color: var(--success); font-weight: 600;">2 人</td>
+                                <td>¥0.03</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 14px; font-size: 12.5px; color: var(--text-muted);">
+                    说明：长辈、宝妈等传播者本人几乎不付费，但他们的转发带来了真正的付费用户，是零成本获客的主要来源。
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="common.js"></script>
+</body>
+</html>

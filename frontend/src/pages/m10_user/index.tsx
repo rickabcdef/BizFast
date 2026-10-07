@@ -20,9 +20,9 @@ import './index.scss'
 // M10 个人中心 | 负责人: D | 优先级: P0
 const PLAN_LABEL: Record<string, string> = {
   none: '游客',
-  single: '单次付费',
-  month: '月度会员',
-  year: '年度会员'
+  single: '开业礼包',
+  month: 'AI 合伙人月卡',
+  year: '创业陪跑年卡'
 }
 const ORDER_LABEL: Record<string, string> = {
   pending: '待支付',
@@ -302,6 +302,16 @@ export default function M10User() {
           >
             休息一下
           </View>
+        </View>
+      </View>
+
+      {/* V5.0 档位升级入口（UI 切图第 11 页：🚀 选择你的开干方案 → 第 12 页） */}
+      <View className='m10-plan-entry'>
+        <View
+          className='bf-btn m10-plan-entry__btn'
+          onClick={() => Taro.navigateTo({ url: '/pages/m5_pay/index?plan=single' })}
+        >
+          🚀 选择你的开干方案
         </View>
       </View>
 

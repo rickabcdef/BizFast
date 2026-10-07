@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 成本监控</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .gate-table td { font-size: 13px; }
+        .gate-name { font-weight: 600; }
+        .gate-desc { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+        .cost-bar-row { margin-bottom: 18px; }
+        .cost-bar-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+        .cost-bar-track { height: 10px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden; }
+        .cost-bar-in { height: 100%; border-radius: 6px; background: var(--brand-gradient); }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="logo-text">🚀 生意快启</div>
+                <div class="logo-sub">管理后台 v1.0</div>
+            </div>
+            <ul class="admin-menu">
+                <div class="admin-menu-group">概览</div>
+                <li><a href="13-管理后台.html" class="admin-menu-item"><span class="menu-icon">📊</span>数据看板</a></li>
+
+                <div class="admin-menu-group">业务管理</div>
+                <li><a href="14-用户管理.html" class="admin-menu-item"><span class="menu-icon">👥</span>用户管理</a></li>
+                <li><a href="15-订单管理.html" class="admin-menu-item"><span class="menu-icon">💳</span>订单管理</a></li>
+                <li><a href="16-商机与提示词.html" class="admin-menu-item"><span class="menu-icon">💡</span>商机库/提示词</a></li>
+
+                <div class="admin-menu-group">增长与成本</div>
+                <li><a href="18-成本监控.html" class="admin-menu-item active"><span class="menu-icon">💰</span>成本监控</a></li>
+                <li><a href="19-转化与裂变.html" class="admin-menu-item"><span class="menu-icon">📈</span>转化与裂变</a></li>
+
+                <div class="admin-menu-group">系统</div>
+                <li><a href="#" class="admin-menu-item"><span class="menu-icon">⚙️</span>系统设置</a></li>
+                <li><a href="index.html" class="admin-menu-item"><span class="menu-icon">↩️</span>返回前台原型</a></li>
+            </ul>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-topbar fade-in">
+                <div>
+                    <h1>💰 成本监控</h1>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">实时监控 AI 成本 · 占收入比超 25% 自动告警</p>
+                </div>
+                <div class="topbar-right">
+                    <span style="font-size: 13px; color: var(--text-muted);">2026-10-06 周二 10:32</span>
+                    <div class="admin-user">
+                        <div class="admin-avatar">管</div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">管理员</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">超级管理员</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 状态告警 -->
+            <div class="alert-card alert-success fade-in">
+                <span style="font-size: 18px;">✅</span>
+                <div>
+                    当前成本占收入比 <strong style="color: var(--success);">8.6%</strong>，处于安全区间（警戒线 15%，红线 25%）。
+                    六道成本闸门全部正常，本月未触发降级。
+                </div>
+            </div>
+
+            <!-- 4 个核心卡 -->
+            <div class="admin-stats fade-in stagger-1">
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(255,125,0,0.15);">🔥</div>
+                    <div class="stat-label">今日 AI 成本</div>
+                    <div class="stat-value big-number" data-target="28.6">¥0</div>
+                    <div class="stat-trend trend-up">↑ 4.2% 较昨日</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(0,180,42,0.15);">📉</div>
+                    <div class="stat-label">成本占收入比</div>
+                    <div class="stat-value big-number" data-target="8.6" data-suffix="%">0%</div>
+                    <div class="stat-trend trend-up" style="color: var(--success);">✓ 低于警戒线</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(22,93,255,0.15);">📅</div>
+                    <div class="stat-label">本月累计成本</div>
+                    <div class="stat-value big-number" data-target="286.43">¥0</div>
+                    <div class="stat-trend">本月 10 月 1 日起算</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(123,97,255,0.15);">🎁</div>
+                    <div class="stat-label">平均单次成本（开业礼包）</div>
+                    <div class="stat-value big-number" data-target="3.20">¥0</div>
+                    <div class="stat-trend trend-up" style="color: var(--success);">毛利率 89.3%</div>
+                </div>
+            </div>
+
+            <!-- 六道闸门 -->
+            <div class="admin-chart-card fade-in stagger-2" style="margin-top: 20px;">
+                <div class="chart-header">
+                    <h2>🛡️ 六道成本闸门状态</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);">全部正常 · 每日自动校验</span>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table gate-table">
+                        <thead>
+                            <tr><th>闸门</th><th>当前设置</th><th>运行数据</th><th>状态</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><div class="gate-name">① 模型路由</div><div class="gate-desc">默认轻档，验收不过才升档</div></td>
+                                <td>主：轻量模型<br>备：标准模型</td>
+                                <td>本月升档 3 次</td>
+                                <td><span class="tag tag-green">✓ 正常</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="gate-name">② 缓存复用</div><div class="gate-desc">提示词/商机库/模板全量缓存</div></td>
+                                <td>前缀缓存已开启</td>
+                                <td>命中率 <strong style="color: var(--success);">34%</strong></td>
+                                <td><span class="tag tag-green">✓ 正常</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="gate-name">③ 模板化生成</div><div class="gate-desc">10 件交付物：7 件模板 + 3 件 AI</div></td>
+                                <td>模板 7 / AI 3</td>
+                                <td>模板占比 <strong style="color: var(--success);">70%</strong></td>
+                                <td><span class="tag tag-green">✓ 正常</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="gate-name">④ 轮数上限</div><div class="gate-desc">防止智能体放飞</div></td>
+                                <td>诊断≤8 轮<br>启动包≤25 轮<br>对话≤5 轮</td>
+                                <td>本月超限 0 次</td>
+                                <td><span class="tag tag-green">✓ 正常</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="gate-name">⑤ 多模态限额</div><div class="gate-desc">免费层不给生图，视频只加购</div></td>
+                                <td>生图按张扣额度</td>
+                                <td>视频/数字人 <strong>未混入</strong>标准套餐</td>
+                                <td><span class="tag tag-green">✓ 正常</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="gate-name">⑥ 预算与熔断</div><div class="gate-desc">用户级/项目级/密钥级三重上限</div></td>
+                                <td>已配置三重上限</td>
+                                <td>本月触发降级 0 次</td>
+                                <td><span class="tag tag-green">✓ 正常</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="admin-chart-row fade-in stagger-3" style="margin-top: 20px;">
+                <!-- 成本分布 -->
+                <div class="admin-chart-card">
+                    <div class="chart-header"><h2>成本分布（本月）</h2></div>
+                    <div style="padding: 4px 0;">
+                        <div class="cost-bar-row">
+                            <div class="cost-bar-head"><span>📝 文本生成</span><span>¥186.4 · 65%</span></div>
+                            <div class="cost-bar-track"><div class="cost-bar-in" style="width: 65%;"></div></div>
+                        </div>
+                        <div class="cost-bar-row">
+                            <div class="cost-bar-head"><span>🎨 图片生成</span><span>¥72.3 · 25%</span></div>
+                            <div class="cost-bar-track"><div class="cost-bar-in" style="width: 25%; background: linear-gradient(90deg,#7B61FF,#165DFF);"></div></div>
+                        </div>
+                        <div class="cost-bar-row">
+                            <div class="cost-bar-head"><span>🎬 视频（加购）</span><span>¥19.6 · 7%</span></div>
+                            <div class="cost-bar-track"><div class="cost-bar-in" style="width: 7%; background: linear-gradient(90deg,#FF7D00,#F53F3F);"></div></div>
+                        </div>
+                        <div class="cost-bar-row">
+                            <div class="cost-bar-head"><span>🧑‍💼 数字人（加购）</span><span>¥8.1 · 3%</span></div>
+                            <div class="cost-bar-track"><div class="cost-bar-in" style="width: 3%; background: linear-gradient(90deg,#FF7D00,#F53F3F);"></div></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 12px; color: var(--text-muted);">
+                        视频与数字人全部来自加购，未计入标准套餐成本
+                    </div>
+                </div>
+
+                <!-- 30 天趋势 -->
+                <div class="admin-chart-card">
+                    <div class="chart-header"><h2>近 7 天成本（元）</h2></div>
+                    <div class="bar-chart">
+                        <div class="bar-col"><div class="bar-fill" style="height: 62%;"><span class="bar-value">¥22.4</span></div><span class="bar-label">9/30</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 70%;"><span class="bar-value">¥25.1</span></div><span class="bar-label">10/1</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 66%;"><span class="bar-value">¥23.8</span></div><span class="bar-label">10/2</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 78%;"><span class="bar-value">¥27.9</span></div><span class="bar-label">10/3</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 74%;"><span class="bar-value">¥26.5</span></div><span class="bar-label">10/4</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 80%;"><span class="bar-value">¥27.4</span></div><span class="bar-label">10/5</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 84%;"><span class="bar-value">¥28.6</span></div><span class="bar-label">10/6</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 成本明细 -->
+            <div class="admin-chart-card fade-in stagger-4" style="margin-top: 20px;">
+                <div class="chart-header">
+                    <h2>成本明细（按模块）</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);">近 7 天</span>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr><th>模块</th><th>调用次数</th><th>成本</th><th>单次成本</th><th>占收入比</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>商机诊断（免费层）</td><td>3,842</td><td>¥115.3</td><td>¥0.03</td><td>3.5%</td></tr>
+                            <tr><td>启动包生成（付费）</td><td>412</td><td>¥1,318.4</td><td>¥3.20</td><td style="color: var(--success);">89.3% 毛利率</td></tr>
+                            <tr><td>今日谈资卡</td><td>2,180</td><td>¥65.4</td><td>¥0.03</td><td>2.0%</td></tr>
+                            <tr><td>AI 生意教练（月卡）</td><td>1,264</td><td>¥75.8</td><td>¥0.06</td><td>2.3%</td></tr>
+                            <tr><td>加购：视频 / 数字人</td><td>18</td><td>¥27.7</td><td>¥1.54</td><td style="color: var(--success);">≥80% 毛利率</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="common.js"></script>
+</body>
+</html>

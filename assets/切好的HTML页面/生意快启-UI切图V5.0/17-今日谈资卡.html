@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 今日谈资</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .talk-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .talk-date {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        /* 可转发的谈资卡 */
+        .talk-card {
+            background: linear-gradient(150deg, #1B2540 0%, #131C33 60%, #0F172A 100%);
+            border: 1px solid rgba(123,97,255,0.35);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            box-shadow: 0 12px 40px rgba(22,93,255,0.18);
+            position: relative;
+            overflow: hidden;
+        }
+        .talk-card::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, rgba(123,97,255,0.35), transparent 70%);
+            pointer-events: none;
+        }
+        .talk-tag {
+            display: inline-block;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: rgba(22,93,255,0.18);
+            color: #93B4FF;
+            margin-bottom: 14px;
+        }
+        .talk-title {
+            font-size: 19px;
+            font-weight: 700;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+        .talk-num {
+            font-size: 34px;
+            font-weight: 800;
+            background: var(--brand-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+        .talk-num-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+        .talk-body {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.9;
+            padding-top: 14px;
+            border-top: 1px dashed var(--border-glass);
+        }
+        .talk-source {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-glass);
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .talk-brand {
+            font-weight: 700;
+            background: var(--brand-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .rule-list {
+            margin-top: 8px;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 2;
+        }
+        .rule-list .rn {
+            color: var(--brand-purple);
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        .sub-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .sub-chip {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .sub-chip.on {
+            border-color: var(--brand-blue);
+            color: #fff;
+            background: rgba(22,93,255,0.12);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <a href="02-首页.html" class="back-btn">←</a>
+
+        <div class="page-header fade-in" style="padding-top: 10px;">
+            <h1 style="font-size: 24px;">💬 今日谈资</h1>
+            <p>每天一条，饭桌上有话聊、有面子</p>
+        </div>
+
+        <div class="talk-head fade-in stagger-1">
+            <span class="talk-date">2026 年 10 月 6 日 · 第 12 期</span>
+            <span class="talk-tag" style="margin: 0;">📍 上海 · 本地生活</span>
+        </div>
+
+        <!-- 可转发的谈资卡 -->
+        <div class="talk-card fade-in stagger-2">
+            <span class="talk-tag">💰 我算过一笔账</span>
+            <div class="talk-title">社区生鲜团购在二三线城市，还有空间</div>
+
+            <div class="talk-num">12 个</div>
+            <div class="talk-num-label">本市 2026 年第三季度新增社区自提点数量</div>
+
+            <div class="talk-body">
+                平均单个自提点启动成本约 <strong style="color: var(--text-primary);">3.5 万元</strong>，大头是冷柜和首批备货。
+                和夫妻小超市相比，它不需要临街铺面，靠小区群就能起量，
+                回本周期普遍在 <strong style="color: var(--text-primary);">8 到 14 个月</strong>。
+            </div>
+
+            <div class="talk-source">
+                <span>来源：本地生活服务行业月报 · 2026-10-06</span>
+                <span class="talk-brand">生意快启</span>
+            </div>
+        </div>
+
+        <!-- 操作 -->
+        <div class="btn-area fade-in stagger-3" style="margin-top: 16px;">
+            <button class="btn btn-primary" id="saveBtn">保存卡片，发到群里</button>
+            <button class="btn btn-secondary" style="margin-top: 10px;" id="shareBtn">直接转发给微信好友</button>
+        </div>
+
+        <!-- 免费入口（给听的人一个用得上入口） -->
+        <div class="card fade-in stagger-4" style="margin-top: 16px; border-color: rgba(0,180,42,0.3);">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">🎁 朋友看到这条，能免费做什么？</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.8; margin-bottom: 12px;">
+                卡片下方会自动带上一个免费入口，朋友点进来就能做一次商机诊断（不收费、不用注册）。
+            </div>
+            <a href="02-首页.html" class="btn btn-secondary" style="display: block; text-align: center;">看看朋友点进来会看到什么 →</a>
+        </div>
+
+        <!-- 三条铁律 -->
+        <div class="card fade-in stagger-5" style="margin-top: 16px;">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">📌 每一条谈资都遵守三条铁律</div>
+            <div class="rule-list">
+                <span class="rn">①</span>说「我看到什么」，不说「我赚了多少」<br>
+                <span class="rn">②</span>必须带来源和更新日期，查不到来源不发<br>
+                <span class="rn">③</span>必须给听的人一个免费用得上的入口
+            </div>
+        </div>
+
+        <!-- 订阅设置 -->
+        <div class="card fade-in stagger-5" style="margin-top: 16px;">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">🔔 每天几点收到？</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px;">每天早上 8:00 推送一条你所在城市、所在行业的谈资</div>
+            <div class="sub-row">
+                <div class="sub-chip on">上海</div>
+                <div class="sub-chip on">本地生活</div>
+                <div class="sub-chip">全部行业</div>
+            </div>
+        </div>
+
+        <div class="card fade-in stagger-5" style="margin-top: 16px; background: rgba(255,255,255,0.03);">
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.9;">
+                ⚠️ 内容合规提示：不生成未经核实的具体收益数字，不使用「内部消息」「稳赚不赔」等表述，
+                涉及政策补贴一律标注「以官方最新公布为准」。本栏目内容核准率须 ≥ 99%，低于该值当天停发。
+            </div>
+        </div>
+
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        document.getElementById('saveBtn').addEventListener('click', function(){
+            this.textContent = '✓ 已保存到相册';
+            setTimeout(() => { this.textContent = '保存卡片，发到群里'; }, 1800);
+        });
+        document.getElementById('shareBtn').addEventListener('click', function(){
+            this.textContent = '✓ 已唤起微信';
+            setTimeout(() => { this.textContent = '直接转发给微信好友'; }, 1800);
+        });
+    </script>
+</body>
+</html>

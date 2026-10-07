@@ -191,7 +191,7 @@ async def invite_info(db, owner) -> dict:
 
 
 async def get_share_stats(db) -> dict:
-    """M8-04 / M11(D) 分享转化概览：按渠道点击 + 邀请注册/付费汇总 + 分享率。"""
+    """M8-04 / M4-08 分享转化概览：按渠道点击 + 邀请注册/付费汇总 + 分享率 + K 因子。"""
     events = (await db.execute(select(ShareEvent))).scalars().all()
     by_channel: dict[str, int] = {}
     for e in events:
@@ -202,7 +202,9 @@ async def get_share_stats(db) -> dict:
 
     invites = (await db.execute(select(InviteRelation))).scalars().all()
     registers = len(invites)
+    unique_inviters = len({inv.inviter_user_id for inv in invites})
     pays = 0
+    paid_invitees = 0
     for inv in invites:
         cnt = (
             await db.execute(
@@ -215,12 +217,21 @@ async def get_share_stats(db) -> dict:
             )
         ).scalar_one()
         pays += cnt
+        if cnt:
+            paid_invitees += 1
 
     total_shares = sum(r["clicks"] for r in rows)
     result_cnt = (
         await db.execute(select(func.count()).select_from(DiagnosisTask))
     ).scalar_one() or 0
     share_rate = round(total_shares / result_cnt, 4) if result_cnt else 0.0
+
+    # K 因子：平均每个发起邀请的用户带来多少新用户（K>1 即自增长飞轮）
+    k_factor = round(registers / unique_inviters, 4) if unique_inviters else 0.0
+
+    # 单用户裂变获客成本：裂变总成本（双方各 ¥10 邀请券 × 2）/ 裂变带来的付费用户数
+    invite_cost_cents = registers * 1000 * 2  # 每次成功邀请发出两张 ¥10 券
+    fe_cac_cents = int(invite_cost_cents / paid_invitees) if paid_invitees else 0
 
     return {
         "rows": rows,
@@ -229,5 +240,10 @@ async def get_share_stats(db) -> dict:
             "registers": registers,
             "pays": pays,
             "share_rate": share_rate,
+            "unique_inviters": unique_inviters,
+            "paid_invitees": paid_invitees,
+            "k_factor": k_factor,
+            "fission_cac_cents": fe_cac_cents,
+            "fission_cac_label": f"{fe_cac_cents / 100:.2f}",
         },
     }

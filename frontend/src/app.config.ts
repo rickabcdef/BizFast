@@ -11,7 +11,8 @@ export default defineAppConfig({
     'pages/m8_share/index',
     'pages/m9_notify/index',
     'pages/m10_user/index',
-    'pages/m11_admin/index'
+    'pages/m11_admin/index',
+    'pages/m12_talk_topic/index'
   ],
   window: {
     backgroundTextStyle: 'light',

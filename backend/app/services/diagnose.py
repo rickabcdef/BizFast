@@ -31,6 +31,7 @@ from app.data import cities as city_data
 from app.data import opportunities as opp_data
 from app.models import DiagnosisTask
 from app.queue.runner import run_coroutine
+from app.services import ai_cost
 from app.storage import get_storage
 
 logger = logging.getLogger(__name__)
@@ -592,7 +593,7 @@ async def run_diagnose_task(task_id: str) -> None:
 
             for index, (stage_key, stage_label) in enumerate(STAGES):
                 stage_started = time.perf_counter()
-                await _do_stage(stage_key, state, task, tags)
+                await _do_stage(db, stage_key, state, task, tags)
 
                 done = index + 1
                 task.stage = stage_key
@@ -641,15 +642,37 @@ async def run_diagnose_task(task_id: str) -> None:
             await db.commit()
 
 
-async def _do_stage(stage_key: str, state: dict, task: DiagnosisTask, tags: dict) -> None:
+async def _do_stage(db, stage_key: str, state: dict, task: DiagnosisTask, tags: dict) -> None:
     """单个阶段的真实计算。"""
     if stage_key == "scan":
         state["tier_weights"] = city_data.TIER_WEIGHTS[tags["city_level"]]
-        text, degraded = ai_client.try_complete(
+        prompt = (
             f"用户在{task.city}，启动资金{task.capital}元，每天可投入{task.daily_hours}小时。"
             f"请用一句不超过 30 字的中文给出最值得尝试的方向。"
         )
+        owner_key = (
+            f"guest:{task.guest_token}" if task.guest_token else f"user:{task.user_id}"
+        )
+        # V5.0 闸门 6：预算熔断 —— 触及上限时自动降级模板/规则引擎，不拒绝服务
+        budget = await ai_cost.check_budget(db, owner_key, "none", "diagnose")
+        if budget["allow_ai"]:
+            text, degraded = ai_client.try_complete(prompt)
+        else:
+            text, degraded = None, True
+            state["template_mode"] = True
         state["degraded"] = degraded
+        # V5.0 第 7 章：AI 成本记账（诊断 ≤8 轮上限；本阶段为 1 轮）
+        await ai_cost.record_ai_call(
+            db,
+            "diagnose",
+            prompt,
+            text,
+            owner_key=owner_key,
+            cache_hit=False,
+            template_mode=bool(state.get("template_mode")),
+            rounds=1,
+        )
+        await db.flush()
 
     elif stage_key == "match":
         state["ranked"] = rank_opportunities(tags, task.capital, task_extra(task))

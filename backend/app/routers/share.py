@@ -15,7 +15,14 @@ from app.core.errors import BizError
 from app.core.security import ACCESS_TOKEN_TYPE, decode_token
 from app.models import User
 from app.schemas.common import ok
-from app.schemas.share import BindInviteIn, ShareCardIn, ShareTrackIn
+from app.schemas.share import (
+    BindInviteIn,
+    FunnelTrackIn,
+    ReportCreateIn,
+    ShareCardIn,
+    ShareTrackIn,
+    TalkTopicTrackIn,
+)
 from app.services import share as share_service
 
 router = APIRouter(prefix="/api", tags=["share"])
@@ -57,11 +64,6 @@ async def create_share_card(
     )
 
 
-@router.get("/share/{card_id}", summary="获取分享卡片数据（M8-01）")
-async def get_share_card(card_id: str, request: Request, db: AsyncSession = Depends(get_db)):
-    return ok(await share_service.get_card(db, card_id), _rid(request))
-
-
 @router.post("/share/track", summary="分享行为埋点（M8-02）")
 async def track_share(payload: ShareTrackIn, request: Request, db: AsyncSession = Depends(get_db)):
     owner = current_owner(request)
@@ -86,3 +88,82 @@ async def admin_share_stats(
     request: Request, db: AsyncSession = Depends(get_db), _admin: User = Depends(require_admin)
 ):
     return ok(await share_service.get_share_stats(db), _rid(request))
+
+
+# ============================================================ V5.0 M5 裂变与传播
+
+@router.get("/share/talk-topic/today", summary="今日谈资卡（V5.0 M5-03，免费传播物）")
+async def talk_topic_today(
+    request: Request, city: str = "全国", db: AsyncSession = Depends(get_db)
+):
+    from app.services import talk_topic as talk_service
+
+    return ok(await talk_service.today(db, city), _rid(request))
+
+
+@router.get("/share/talk-topic/history", summary="历史谈资卡（V5.0 M5-03）")
+async def talk_topic_history(
+    request: Request, days: int = 7, city: str = "全国", db: AsyncSession = Depends(get_db)
+):
+    from app.services import talk_topic as talk_service
+
+    return ok({"items": await talk_service.history(db, days, city)}, _rid(request))
+
+
+@router.post("/share/talk-topic/track", summary="谈资卡转发埋点（V5.0 M5-04）")
+async def talk_topic_track(
+    payload: TalkTopicTrackIn, request: Request, db: AsyncSession = Depends(get_db)
+):
+    from app.services import funnel as funnel_service
+    from app.services import share as share_svc
+
+    owner = current_owner(request)
+    await share_svc.track_event(db, owner, payload.topicId, payload.channel)
+    await funnel_service.track(db, owner.owner_key, "visit", payload.channel)
+    return ok({"ok": True}, _rid(request))
+
+
+@router.get("/share/report/templates", summary="开业喜报模板清单（V5.0 M5-02，≥3 种）")
+async def report_templates(request: Request):
+    from app.services import share_report as report_service
+
+    return ok({"templates": await report_service.list_templates()}, _rid(request))
+
+
+@router.post("/share/report", summary="生成开业喜报（V5.0 M3-06 / M5-02）")
+async def create_report(
+    payload: ReportCreateIn, request: Request, db: AsyncSession = Depends(get_db)
+):
+    from app.services import share_report as report_service
+
+    owner = current_owner(request)
+    return ok(
+        await report_service.create_report(db, owner, payload.orderId, payload.template),
+        _rid(request),
+    )
+
+
+@router.get("/share/reports", summary="我的喜报与素材（V5.0 M10）")
+async def my_reports(request: Request, db: AsyncSession = Depends(get_db)):
+    from app.services import share_report as report_service
+
+    owner = current_owner(request)
+    return ok({"items": await report_service.list_reports(db, owner)}, _rid(request))
+
+
+@router.post("/events/track", summary="转化漏斗埋点（V5.0 M4-07 / M5-04）")
+async def track_funnel(
+    payload: FunnelTrackIn, request: Request, db: AsyncSession = Depends(get_db)
+):
+    from app.services import funnel as funnel_service
+
+    owner = current_owner(request)
+    return ok(
+        await funnel_service.track(db, owner.owner_key, payload.step, payload.source), _rid(request)
+    )
+
+
+# 动态路径必须放在所有具体 /share/xxx 路由之后，否则会抢先匹配 /share/reports 等静态路径
+@router.get("/share/{card_id}", summary="获取分享卡片数据（M8-01）")
+async def get_share_card(card_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    return ok(await share_service.get_card(db, card_id), _rid(request))

@@ -23,9 +23,9 @@ const detailOpen = ref(false)
 const MEMBER_FILTERS = [
   { value: '', label: '全部会员等级' },
   { value: 'none', label: '免费用户' },
-  { value: 'single', label: '单次购买' },
-  { value: 'month', label: '月度会员' },
-  { value: 'year', label: '年度会员' }
+  { value: 'single', label: '开业礼包' },
+  { value: 'month', label: 'AI 合伙人月卡' },
+  { value: 'year', label: '创业陪跑年卡' }
 ]
 
 const SOURCE_FILTERS = [
@@ -71,8 +71,8 @@ const stats = computed(() => {
   return [
     { label: '当前列表', value: String(all) },
     { label: '免费用户', value: String(free) },
-    { label: '月度会员', value: String(month), color: 'var(--bf-primary)' },
-    { label: '年度会员', value: String(year), color: 'var(--bf-primary-2)' }
+    { label: 'AI 合伙人月卡', value: String(month), color: 'var(--bf-primary)' },
+    { label: '创业陪跑年卡', value: String(year), color: 'var(--bf-primary-2)' }
   ]
 })
 

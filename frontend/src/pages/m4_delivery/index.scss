@@ -469,3 +469,92 @@
   display: inline-block;
   padding: 14rpx 40rpx;
 }
+
+/* ---------- V5.0 需求 3.3：文件旁配套小工具入口 ---------- */
+.m4-file__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 14rpx;
+  padding-top: 14rpx;
+  border-top: 2rpx dashed rgba(255, 255, 255, 0.12);
+}
+.m4-file__tool {
+  font-size: 22rpx;
+  line-height: 1.6;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  color: #b8b0ff;
+  background: rgba(123, 97, 255, 0.14);
+  border: 2rpx solid rgba(123, 97, 255, 0.34);
+}
+.m4-tools__all {
+  margin-top: 16rpx;
+}
+
+/* ---------- V5.0 M3-06 / M5-02 开业喜报弹窗 ---------- */
+.m4-report__tip {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.7;
+  margin-bottom: 20rpx;
+}
+.m4-report__tpls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+.m4-report__tpl {
+  flex: 1 1 28%;
+  min-width: 28%;
+  text-align: center;
+  padding: 20rpx 12rpx;
+  font-size: 24rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2rpx solid rgba(255, 255, 255, 0.12);
+}
+.m4-report__tpl.is-active {
+  border-color: #7b61ff;
+  background: rgba(123, 97, 255, 0.16);
+  color: #cfc4ff;
+}
+.m4-report__img {
+  width: 100%;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+}
+.m4-report__title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 6rpx;
+}
+.m4-report__sub {
+  display: block;
+  font-size: 24rpx;
+  color: #8b93b8;
+  margin-bottom: 12rpx;
+}
+.m4-report__lines {
+  display: block;
+  margin-bottom: 12rpx;
+}
+.m4-report__line {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.8;
+  color: #c9cfe8;
+}
+.m4-report__brand {
+  display: block;
+  font-size: 22rpx;
+  margin-bottom: 16rpx;
+}
+.m4-end__tip {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.7;
+  margin-top: 12rpx;
+}

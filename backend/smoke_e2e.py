@@ -165,9 +165,9 @@ if opp_id:
 # ─────────────── M5 支付 ───────────────
 s, b = req("GET", "/api/payment/plans")
 plans = data_of(b).get("plans") or []
-check("M5 三档价格（9.9/39/199）",
+check("M2 三档价格（V5.0：29.9/99/599）",
       s == 200 and len(plans) == 3
-      and {int(p.get("priceCents", 0)) for p in plans} >= {990, 3900, 19900},
+      and {int(p.get("priceCents", 0)) for p in plans} >= {2990, 9900, 59900},
       b)
 
 s, b = req("GET", "/api/payment/coupons", token=guest_token, guest=GUEST)

@@ -27,11 +27,11 @@ async def test_coupon_validate_preview_and_rules_are_explicit(client):
     # 大小写不敏感
     assert data["code"] == "WELCOME5"
     assert data["discountCents"] == 500
-    assert data["finalCents"] == 990 - 500
+    assert data["finalCents"] == 2990 - 500
     # 金额文案统一由后端出（前端不重复实现四舍五入），三个标签必须自洽
-    assert data["originalLabel"] == "9.9"
+    assert data["originalLabel"] == "29.9"
     assert data["discountLabel"] == "5"
-    assert data["finalLabel"] == "4.9"
+    assert data["finalLabel"] == "24.9"
     # PRD：规则必须在页面明示 → 接口必须回传规则文案
     assert "不可叠加" in data["rules"]
 
@@ -51,13 +51,13 @@ async def test_coupon_preview_matches_actual_order_amount(client):
 async def test_coupon_applied_to_order_and_not_stackable(client):
     """下单带券 → 实付金额 = 原价 - 减免；同一订单不可能再叠加第二张券。"""
     created = (await _create_order(client, couponCode="WELCOME5")).json()["data"]
-    assert created["originalCents"] == 990
+    assert created["originalCents"] == 2990
     assert created["discountCents"] == 500
-    assert created["amountCents"] == 490
+    assert created["amountCents"] == 2490
     assert created["couponCode"] == "WELCOME5"
 
     order = (await client.get(f"/api/payment/order/{created['orderId']}")).json()["data"]
-    assert order["amountCents"] == 490
+    assert order["amountCents"] == 2490
     assert order["discountCents"] == 500
     assert order["couponCode"] == "WELCOME5"
 
@@ -78,12 +78,12 @@ async def test_coupon_plan_scope_and_min_amount_are_enforced(client):
 
     ok = (await client.post("/api/payment/coupon/validate", json={"code": "YEAR20", "plan": "year"})).json()["data"]
     assert ok["discountCents"] == 2000
-    assert ok["finalCents"] == 19900 - 2000
+    assert ok["finalCents"] == 59900 - 2000
 
 
 async def test_invite_code_percent_discount(client):
     r = (await client.post("/api/payment/coupon/validate", json={"code": "invite10", "plan": "month"})).json()["data"]
-    assert r["discountCents"] == round(3900 * 10 / 100)
+    assert r["discountCents"] == round(9900 * 10 / 100)
     assert r["kind"] == "invite"
 
 

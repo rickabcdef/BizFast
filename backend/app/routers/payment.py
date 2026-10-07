@@ -31,9 +31,14 @@ def _client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
-@router.get("/plans", summary="三档价格锚点（9.9 / 39 / 199）")
+@router.get("/plans", summary="三档支付入口（V5.0：29.9 开业礼包 / 99 月卡 / 599 年卡）")
 async def plans(request: Request):
     return ok({"plans": payment_service.plan_options()}, _rid(request))
+
+
+@router.get("/addons", summary="V5.0 档位 5：增值加购包（按项计价，不并入标准套餐）")
+async def addons(request: Request):
+    return ok({"addons": payment_service.addon_options()}, _rid(request))
 
 
 @router.post("/create", summary="创建支付订单（幂等 + 券核销 + 风控）")

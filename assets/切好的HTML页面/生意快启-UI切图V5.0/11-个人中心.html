@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 个人中心</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .profile-header {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(22,93,255,0.2), rgba(123,97,255,0.2));
+            border-radius: var(--radius-lg);
+            margin-bottom: 20px;
+            border: 1px solid rgba(123,97,255,0.3);
+        }
+        .avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--brand-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 12px;
+            border: 3px solid rgba(255,255,255,0.2);
+        }
+        .vip-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-top: 8px;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--border-glass);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .stats-row .stat {
+            background: var(--bg-card);
+            padding: 16px;
+            text-align: center;
+        }
+        .stats-row .stat .num {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .stats-row .stat .label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container page-with-tabbar">
+        
+        <div class="page-header fade-in" style="text-align: left; margin-bottom: 16px;">
+            <h1 style="font-size: 22px;">👤 个人中心</h1>
+        </div>
+        
+        <div class="profile-header fade-in stagger-1">
+            <div class="avatar">👨‍💼</div>
+            <div style="font-size: 18px; font-weight: 600; margin-bottom: 4px;">微信用户</div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">138****8888</div>
+            <div class="vip-badge">👑 创业陪跑年卡 · 有效期至2027-10-04</div>
+        </div>
+        
+        <div class="stats-row fade-in stagger-2">
+            <div class="stat">
+                <div class="num">3</div>
+                <div class="label">我的启动包</div>
+            </div>
+            <div class="stat">
+                <div class="num">12</div>
+                <div class="label">已生成商机</div>
+            </div>
+            <div class="stat">
+                <div class="num">5</div>
+                <div class="label">收藏工具</div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-3">
+            <div style="font-size: 15px; font-weight: 600; margin-bottom: 8px; padding: 0 4px;">📦 我的启动包</div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">🛒</div>
+                <div class="content">
+                    <div class="title">社区生鲜自提站</div>
+                    <div class="desc">生成于 2026-10-04 · 上海 · 1-5万</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">🍜</div>
+                <div class="content">
+                    <div class="title">社区便民早餐车</div>
+                    <div class="desc">生成于 2026-10-03 · 上海 · 3-5万</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">📱</div>
+                <div class="content">
+                    <div class="title">短视频本地探店</div>
+                    <div class="desc">生成于 2026-10-01 · 上海 · 1万内</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-4">
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">👑</div>
+                <div class="content">
+                    <div class="title">我的会员</div>
+                    <div class="desc">创业陪跑年卡，查看权益和续费</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">📋</div>
+                <div class="content">
+                    <div class="title">我的订单</div>
+                    <div class="desc">查看购买记录，申请退款</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">❤️</div>
+                <div class="content">
+                    <div class="title">我的收藏</div>
+                    <div class="desc">收藏的商机和工具</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-5">
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">💬</div>
+                <div class="content">
+                    <div class="title">联系客服</div>
+                    <div class="desc">遇到问题随时找我们</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">⭐</div>
+                <div class="content">
+                    <div class="title">给我们评分</div>
+                    <div class="desc">你的评价是我们前进的动力</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">⚙️</div>
+                <div class="content">
+                    <div class="title">设置</div>
+                    <div class="desc">账号、隐私、通知设置</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            <div class="list-item" style="cursor: pointer;">
+                <div class="icon">ℹ️</div>
+                <div class="content">
+                    <div class="title">关于我们</div>
+                    <div class="desc">版本 v1.0.0</div>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center; padding: 24px 0;">
+            <a href="12-选择你的开干方案.html" class="btn btn-primary" style="width: auto; display: inline-block;">🚀 选择你的开干方案</a>
+        </div>
+        
+    </div>
+    
+    <!-- 底部导航 -->
+    <div class="tab-nav">
+        <a href="02-首页.html" class="tab-item">
+            <span class="tab-icon">🔍</span>
+            <span>找生意</span>
+        </a>
+        <a href="08-工具箱.html" class="tab-item">
+            <span class="tab-icon">🛠️</span>
+            <span>工具箱</span>
+        </a>
+        <a href="11-个人中心.html" class="tab-item active">
+            <span class="tab-icon">👤</span>
+            <span>我的</span>
+        </a>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

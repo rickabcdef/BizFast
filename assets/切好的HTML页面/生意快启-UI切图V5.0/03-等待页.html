@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 诊断中</title>
+    <link rel="stylesheet" href="common.css">
+</head>
+<body>
+    <div class="container" style="display: flex; flex-direction: column; justify-content: center; min-height: 100vh; text-align: center;">
+        
+        <a href="02-首页.html" class="back-btn">←</a>
+        
+        <div class="fade-in">
+            <div style="font-size: 64px; margin-bottom: 24px; animation: pulse 1.5s infinite;">🔮</div>
+            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 12px;">正在为你诊断商机</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 32px;">AI正在分析上海市场，比对1247个小生意案例...</p>
+        </div>
+        
+        <div class="card fade-in stagger-1" style="text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 14px;">诊断进度</span>
+                <span style="color: var(--brand-purple); font-weight: 600;" id="percent">40%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 40%;"></div>
+            </div>
+            
+            <div class="step-list">
+                <div class="step-item">
+                    <div class="check">✓</div>
+                    <div class="step-text done">扫描上海市场热门赛道</div>
+                </div>
+                <div class="step-item">
+                    <div class="check">✓</div>
+                    <div class="step-text done">匹配启动资金与时间要求</div>
+                </div>
+                <div class="step-item">
+                    <div class="check">⏳</div>
+                    <div class="step-text" id="step3">计算回本周期与毛利率...</div>
+                </div>
+                <div class="step-item">
+                    <div class="check pending"></div>
+                    <div class="step-text" style="color: var(--text-muted);">筛选真实成功案例</div>
+                </div>
+                <div class="step-item">
+                    <div class="check pending"></div>
+                    <div class="step-text" style="color: var(--text-muted);">标记风险点与避坑提醒</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card fade-in stagger-2" style="background: rgba(123, 97, 255, 0.1); border-color: rgba(123, 97, 255, 0.3);">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-size: 24px;">🫧</span>
+                <span style="font-weight: 600;">等待无聊？玩10秒泡泡放松一下</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">不耽误诊断，玩完刚好出结果</p>
+            <a href="09-指尖解压游戏.html" class="btn btn-secondary" style="width: auto; display: inline-block;">去玩一下</a>
+        </div>
+        
+        <div style="margin-top: 24px;">
+            <a href="04-结果页.html" class="btn btn-secondary" style="background: transparent; border: none; color: var(--text-muted); width: auto;">跳过等待，直接看结果 →</a>
+        </div>
+        
+    </div>
+    
+    <script src="common.js"></script>
+    <script>
+        // 模拟进度
+        let percent = 40;
+        const interval = setInterval(() => {
+            percent += Math.random() * 5;
+            if (percent >= 100) {
+                percent = 100;
+                clearInterval(interval);
+                setTimeout(() => {
+                    window.location.href = '04-结果页.html';
+                }, 500);
+            }
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('percent').textContent = Math.round(percent) + '%';
+        }, 800);
+    </script>
+</body>
+</html>

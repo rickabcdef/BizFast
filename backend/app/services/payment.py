@@ -1,6 +1,7 @@
-"""M5 付费与订单 业务逻辑层 - 负责人 A
+"""M2 付费与订单 业务逻辑层 - 负责人 A
 
-- M5-03 价格锚点：9.9 单次 / 39 月度 / 199 年度（同屏三档，突出年度最划算）
+- M2-02 三档支付入口（V5.0）：开业礼包 29.9 单次 / AI 合伙人月卡 99 / 创业陪跑年卡 599
+  另附档位 5「增值加购包」（按项计价，绝不并入标准套餐）
 - M5-04 支付渠道适配：按端选择渠道（Web 走支付宝/微信，小程序走微信 JSAPI，iOS 走 IAP…）
 - M5-05 订单状态机：待支付 → 已支付 → 生成中 → 已交付；→ 已关闭；已支付/生成中/已交付 → 已退款
 - M5-06 支付回调 + 主动查单双保险，不存在漏单
@@ -9,6 +10,8 @@
 
 未接真实渠道时（PAYMENT_MOCK=true）走本地模拟支付，用于本地联调与验收；
 真实渠道只需在 handle_callback 中补签名校验与网关调用，状态机无需改动。
+
+V5.0 心理账户命名（第 2.1 节）：付费名称永远不叫「会员费」，叫「开业礼包」「AI 合伙人」「创业陪跑」。
 """
 from __future__ import annotations
 
@@ -40,8 +43,25 @@ STATUS_LABELS = {
     "closed": "已关闭",
 }
 
-PLAN_NAMES = {"single": "单次启动包", "month": "月度会员", "year": "年度会员"}
+# V5.0 心理账户命名（第 2.1 节）
+PLAN_NAMES = {"single": "开业礼包", "month": "AI 合伙人月卡", "year": "创业全程陪跑年卡"}
 PLAN_UNITS = {"single": "单次", "month": "每月", "year": "每年"}
+
+# V5.0 档位 5：增值加购包（第 2.2 节；成本 ≤ 售价 20%，绝不并进标准套餐）
+ADDON_NAMES = {
+    "poster": "AI 海报加印",
+    "video": "AI 短视频",
+    "avatar": "数字人口播",
+    "leads": "供应商深度线索包",
+    "logo": "AI Logo 与 VI",
+}
+ADDON_UNITS = {
+    "poster": "张",
+    "video": "条",
+    "avatar": "条",
+    "leads": "套",
+    "logo": "套",
+}
 
 # 状态机允许的流转（M5-05）
 TRANSITIONS = {
@@ -68,7 +88,7 @@ def plan_price(plan: str) -> int:
 
 
 def plan_options() -> list[dict]:
-    """M5-03：三档价格同屏展示，年度档标注「最划算」。"""
+    """V5.0 M2-02：三档支付入口同屏展示，单次（开业礼包）高亮为主推档。"""
     return [
         {
             "plan": "single",
@@ -76,9 +96,13 @@ def plan_options() -> list[dict]:
             "price_cents": settings.price_single_cents,
             "price_label": amount_label(settings.price_single_cents),
             "unit_label": "单次",
-            "highlight": False,
-            "badge": "先试一次",
-            "rights": ["1 份完整生意启动包", "10 件可直接使用的文件", "永久保存在账号下"],
+            "highlight": True,
+            "badge": "★ 现金流主力",
+            "rights": [
+                "10 件完整启动包交付物",
+                "2 个零风险小工具使用权 30 天",
+                "永久保存在账号下，可随时重新下载",
+            ],
         },
         {
             "plan": "month",
@@ -87,8 +111,13 @@ def plan_options() -> list[dict]:
             "price_label": amount_label(settings.price_month_cents),
             "unit_label": "每月",
             "highlight": False,
-            "badge": "可随时取消",
-            "rights": ["30 天内不限次生成", "全部 10 件交付物", "会员专属重新生成"],
+            "badge": "月度经常性收入",
+            "rights": [
+                "无限次生成启动包",
+                "AI 生意教练 7×24 对话",
+                "工具箱全部功能",
+                "每周商机库更新",
+            ],
         },
         {
             "plan": "year",
@@ -96,11 +125,45 @@ def plan_options() -> list[dict]:
             "price_cents": settings.price_year_cents,
             "price_label": amount_label(settings.price_year_cents),
             "unit_label": "每年",
-            "highlight": True,
-            "badge": "最划算",
-            "rights": ["12 个月不限次生成", "折合每月约 16.6 元", "优先客服与商机库更新提醒"],
+            "highlight": False,
+            "badge": "拉高 LTV",
+            "rights": [
+                "月卡全部权益",
+                "30 天深度陪跑（每日任务 / 场景模拟 / 每周复盘）",
+                f"{settings.year_gift_video_quota} 条 AI 短视频 + {settings.year_gift_avatar_quota} 条数字人口播体验额度",
+                "折合每月约 " + amount_label(round(settings.price_year_cents / 12)),
+            ],
         },
     ]
+
+
+def addon_options() -> list[dict]:
+    """V5.0 档位 5：增值加购包（按项计价，绝不并入标准套餐）。
+
+    成本红线（第 7.3）：AI 视频 49/条、数字人口播 99/条，加购毛利率 ≥ 80%；
+    标准套餐（单次/月卡/年卡）不包含任何 AI 生成视频与数字人。
+    """
+    prices = settings.addon_prices_cents or {}
+    return [
+        {
+            "addon": code,
+            "name": ADDON_NAMES[code],
+            "price_cents": int(prices.get(code, 0)),
+            "price_label": amount_label(int(prices.get(code, 0))),
+            "unit_label": ADDON_UNITS[code],
+        }
+        for code in ADDON_NAMES
+        if code in prices
+    ]
+
+
+def addon_price(addon: str) -> int:
+    return int((settings.addon_prices_cents or {}).get(addon, 0))
+
+
+def gift_tool_days(plan: str) -> int:
+    """开业礼包附赠工具箱使用权天数（V5.0 档位 2：2 个零风险小工具 30 天）。"""
+    return settings.gift_tool_days if plan == "single" else 0
 
 
 def pay_channel_for(platform: str) -> str:

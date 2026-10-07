@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 管理后台 · 订单管理</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body.admin-page .particles { display: none; }
+        body.admin-page { background: var(--bg-primary); }
+    </style>
+</head>
+<body class="admin-page">
+    <div class="particles" id="particles"></div>
+    
+    <div class="admin-layout">
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="logo-text">🚀 生意快启</div>
+                <div class="logo-sub">管理后台 v1.0</div>
+            </div>
+            <ul class="admin-menu">
+                <div class="admin-menu-group">概览</div>
+                <li><a href="13-管理后台.html" class="admin-menu-item"><span class="menu-icon">📊</span>数据看板</a></li>
+                
+                <div class="admin-menu-group">业务管理</div>
+                <li><a href="14-用户管理.html" class="admin-menu-item"><span class="menu-icon">👥</span>用户管理</a></li>
+                <li><a href="15-订单管理.html" class="admin-menu-item active"><span class="menu-icon">💳</span>订单管理</a></li>
+                <li><a href="16-商机与提示词.html" class="admin-menu-item"><span class="menu-icon">💡</span>商机库/提示词</a></li>
+                
+                <div class="admin-menu-group">增长与成本</div>
+                <li><a href="18-成本监控.html" class="admin-menu-item"><span class="menu-icon">💰</span>成本监控</a></li>
+                <li><a href="19-转化与裂变.html" class="admin-menu-item"><span class="menu-icon">📈</span>转化与裂变</a></li>
+
+                <div class="admin-menu-group">系统</div>
+                <li><a href="#" class="admin-menu-item"><span class="menu-icon">⚙️</span>系统设置</a></li>
+                <li><a href="index.html" class="admin-menu-item"><span class="menu-icon">↩️</span>返回前台原型</a></li>
+            </ul>
+        </aside>
+        
+        <main class="admin-main">
+            <div class="admin-topbar fade-in">
+                <div>
+                    <h1>💳 订单管理</h1>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">全部订单查询、退款处理、对账导出、异常告警</p>
+                </div>
+                <div class="topbar-right">
+                    <button class="btn-admin btn-admin-outline">📊 对账单导出</button>
+                    <button class="btn-admin">💰 今日营收 ¥2,148</button>
+                    <div class="admin-user">
+                        <div class="admin-avatar">管</div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">管理员</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">超级管理员</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 异常告警 -->
+            <div class="alert-card alert-danger fade-in">
+                <span style="font-size: 18px;">🚨</span>
+                <div>
+                    <strong>异常订单告警：</strong>
+                    发现 <strong style="color: var(--danger);">3 笔已支付未交付</strong>订单（支付回调缺失），
+                    <strong style="color: var(--danger);">2 笔重复支付</strong>需要手动退款，
+                    请立即处理以避免用户投诉！
+                    <button class="btn-admin btn-admin-danger btn-sm" style="margin-left: 12px;">一键处理异常</button>
+                </div>
+            </div>
+            
+            <!-- Tab 切换 -->
+            <div class="config-tabs fade-in" style="margin-bottom: 0;">
+                <button class="config-tab active">全部订单</button>
+                <button class="config-tab">已支付 <span style="color: var(--success);">(107)</span></button>
+                <button class="config-tab">生成中 <span style="color: var(--warning);">(8)</span></button>
+                <button class="config-tab" style="color: var(--danger);">异常 <span>(5)</span></button>
+                <button class="config-tab">已退款 <span style="color: var(--text-muted);">(23)</span></button>
+            </div>
+            
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <input class="filter-input" placeholder="🔍 搜索订单号/用户手机号">
+                <select class="filter-select">
+                    <option>全部商品</option>
+                    <option>开业礼包 ¥29.9</option>
+                    <option>AI合伙人月卡 ¥99</option>
+                    <option>创业陪跑年卡 ¥599</option>
+                </select>
+                <select class="filter-select">
+                    <option>全部支付方式</option>
+                    <option>微信支付</option>
+                    <option>支付宝</option>
+                    <option>苹果内购</option>
+                </select>
+                <input type="date" class="filter-input" style="max-width: 160px;" value="2026-10-05">
+                <span style="color: var(--text-muted); align-self: center; font-size: 13px;">至</span>
+                <input type="date" class="filter-input" style="max-width: 160px;" value="2026-10-05">
+                <button class="btn-admin">🔍 查询</button>
+            </div>
+            
+            <!-- 订单统计 -->
+            <div class="admin-stats fade-in stagger-1" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 20px;">
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">今日订单</div>
+                    <div class="stat-value" style="font-size: 22px;">107</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">今日营收</div>
+                    <div class="stat-value" style="font-size: 22px; color: var(--success);">¥2,148</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">本月订单</div>
+                    <div class="stat-value" style="font-size: 22px;">1,842</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">本月营收</div>
+                    <div class="stat-value" style="font-size: 22px; color: var(--success);">¥36,892</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 14px 18px;">
+                    <div class="stat-label" style="font-size: 12px; margin-bottom: 4px;">退款金额</div>
+                    <div class="stat-value" style="font-size: 22px; color: var(--danger);">¥775</div>
+                </div>
+            </div>
+            
+            <!-- 订单表格 -->
+            <div class="admin-table-wrap fade-in stagger-2">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>订单号</th>
+                            <th>用户</th>
+                            <th>商品</th>
+                            <th>金额</th>
+                            <th>支付方式</th>
+                            <th>支付时间</th>
+                            <th>交付状态</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(245,63,63,0.05);">
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050001</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">赵</div><div><div class="user-name">赵敏</div><div class="user-sub">135****9999</div></div></div></td>
+                            <td>开业礼包</td>
+                            <td style="color: var(--text-muted); font-weight: 600;">¥29.90</td>
+                            <td><span class="tag tag-green">微信</span></td>
+                            <td>2026-10-05 10:23</td>
+                            <td><span class="tag tag-red">⚠️ 未交付</span></td>
+                            <td><span class="tag tag-red">异常</span></td>
+                            <td><a class="action-link" style="color: var(--success);">手动补单</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050002</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">张</div><div><div class="user-name">张伟</div><div class="user-sub">138****8888</div></div></div></td>
+                            <td>创业陪跑年卡</td>
+                            <td style="color: var(--success); font-weight: 600;">¥599.00</td>
+                            <td><span class="tag tag-green">微信</span></td>
+                            <td>2026-10-05 10:18</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050003</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">刘</div><div><div class="user-name">刘洋</div><div class="user-sub">186****3333</div></div></div></td>
+                            <td>创业陪跑年卡</td>
+                            <td style="color: var(--success); font-weight: 600;">¥599.00</td>
+                            <td><span class="tag tag-blue">支付宝</span></td>
+                            <td>2026-10-05 10:05</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050004</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">李</div><div><div class="user-name">李娜</div><div class="user-sub">139****6666</div></div></div></td>
+                            <td>AI合伙人月卡</td>
+                            <td style="color: var(--success); font-weight: 600;">¥99.00</td>
+                            <td><span class="tag tag-green">微信</span></td>
+                            <td>2026-10-05 09:58</td>
+                            <td><span class="tag tag-orange">⏳ 生成中 (62%)</span></td>
+                            <td><span class="tag tag-orange">处理中</span></td>
+                            <td><a class="action-link">详情</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050005</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">陈</div><div><div class="user-name">陈静</div><div class="user-sub">152****7777</div></div></div></td>
+                            <td>开业礼包</td>
+                            <td style="color: var(--success); font-weight: 600;">¥29.90</td>
+                            <td><span class="tag tag-purple">苹果</span></td>
+                            <td>2026-10-05 09:42</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050006</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">周</div><div><div class="user-name">周磊</div><div class="user-sub">133****1111</div></div></div></td>
+                            <td>开业礼包</td>
+                            <td style="color: var(--text-muted); font-weight: 600; text-decoration: line-through;">¥29.90</td>
+                            <td><span class="tag tag-green">微信</span></td>
+                            <td>2026-10-05 09:15</td>
+                            <td><span class="tag tag-gray">—</span></td>
+                            <td><span class="tag tag-gray">已退款</span></td>
+                            <td><a class="action-link">详情</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050007</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">吴</div><div><div class="user-name">吴芳</div><div class="user-sub">136****4444</div></div></div></td>
+                            <td>开业礼包</td>
+                            <td style="color: var(--success); font-weight: 600;">¥29.90</td>
+                            <td><span class="tag tag-blue">支付宝</span></td>
+                            <td>2026-10-05 08:56</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050008</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">孙</div><div><div class="user-name">孙明</div><div class="user-sub">188****5555</div></div></div></td>
+                            <td>AI合伙人月卡</td>
+                            <td style="color: var(--success); font-weight: 600;">¥99.00</td>
+                            <td><span class="tag tag-green">微信</span></td>
+                            <td>2026-10-05 08:32</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610050009</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">郑</div><div><div class="user-name">郑涛</div><div class="user-sub">159****8888</div></div></div></td>
+                            <td>创业陪跑年卡</td>
+                            <td style="color: var(--success); font-weight: 600;">¥599.00</td>
+                            <td><span class="tag tag-green">微信</span></td>
+                            <td>2026-10-05 08:10</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px;">ORD202610040099</td>
+                            <td><div class="user-cell"><div class="user-avatar-sm">黄</div><div><div class="user-name">黄丽</div><div class="user-sub">185****2222</div></div></div></td>
+                            <td>AI合伙人月卡</td>
+                            <td style="color: var(--success); font-weight: 600;">¥99.00</td>
+                            <td><span class="tag tag-blue">支付宝</span></td>
+                            <td>2026-10-04 23:48</td>
+                            <td><span class="tag tag-green">✓ 已交付</span></td>
+                            <td><span class="tag tag-green">已完成</span></td>
+                            <td><a class="action-link">详情</a><a class="action-link danger">退款</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    <div>共 <strong>3,928</strong> 条订单 · 累计营收 <strong style="color: var(--success);">¥86,429</strong></div>
+                    <div class="pagination-btns">
+                        <button class="page-btn">‹</button>
+                        <button class="page-btn active">1</button>
+                        <button class="page-btn">2</button>
+                        <button class="page-btn">3</button>
+                        <button class="page-btn">…</button>
+                        <button class="page-btn">393</button>
+                        <button class="page-btn">›</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

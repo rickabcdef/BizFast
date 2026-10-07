@@ -12,7 +12,8 @@ export default {
      * 整页白屏（开发模式与关闭提升后均不复现，已实测）。
      * 关闭它只牺牲一点运行性能，压缩（Terser）仍开启，产物体积基本不变。
      */
-    webpackChain(chain) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webpackChain(chain: any) {
       chain.optimization.concatenateModules(false)
     }
   }

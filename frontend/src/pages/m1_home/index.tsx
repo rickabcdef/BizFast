@@ -216,6 +216,18 @@ export default function M1Home() {
       >
         {loading ? '正在为你诊断…' : '帮我找生意'}
       </View>
+
+      {/* V5.0 M5-03：今日谈资卡入口（UI 切图第 17 页；免费、可转发，做社交裂变触点） */}
+      <View className='bf-card m1-talk' onClick={() => Taro.navigateTo({ url: '/pages/m12_talk_topic/index' })}>
+        <View className='bf-row'>
+          <Text className='bf-card__title'>💬 今日谈资</Text>
+          <Text className='bf-tag bf-tag--accent'>免费</Text>
+        </View>
+        <Text className='bf-muted m1-talk__sub'>
+          每天一条同城赚钱机会速览，饭桌上有话聊、有面子，一键转发给朋友
+        </Text>
+        <Text className='m1-talk__more'>看看今天的 →</Text>
+      </View>
     </View>
   )
 }

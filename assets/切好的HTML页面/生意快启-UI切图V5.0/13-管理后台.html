@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生意快启 - 管理后台 · 数据看板</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body.admin-page .particles { display: none; }
+        body.admin-page { background: var(--bg-primary); }
+    </style>
+</head>
+<body class="admin-page">
+    <div class="particles" id="particles"></div>
+    
+    <div class="admin-layout">
+        <!-- 侧边栏 -->
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <div class="logo-text">🚀 生意快启</div>
+                <div class="logo-sub">管理后台 v1.0</div>
+            </div>
+            <ul class="admin-menu">
+                <div class="admin-menu-group">概览</div>
+                <li><a href="13-管理后台.html" class="admin-menu-item active"><span class="menu-icon">📊</span>数据看板</a></li>
+                
+                <div class="admin-menu-group">业务管理</div>
+                <li><a href="14-用户管理.html" class="admin-menu-item"><span class="menu-icon">👥</span>用户管理</a></li>
+                <li><a href="15-订单管理.html" class="admin-menu-item"><span class="menu-icon">💳</span>订单管理</a></li>
+                <li><a href="16-商机与提示词.html" class="admin-menu-item"><span class="menu-icon">💡</span>商机库/提示词</a></li>
+                
+                <div class="admin-menu-group">增长与成本</div>
+                <li><a href="18-成本监控.html" class="admin-menu-item"><span class="menu-icon">💰</span>成本监控</a></li>
+                <li><a href="19-转化与裂变.html" class="admin-menu-item"><span class="menu-icon">📈</span>转化与裂变</a></li>
+
+                <div class="admin-menu-group">系统</div>
+                <li><a href="#" class="admin-menu-item"><span class="menu-icon">⚙️</span>系统设置</a></li>
+                <li><a href="index.html" class="admin-menu-item"><span class="menu-icon">↩️</span>返回前台原型</a></li>
+            </ul>
+        </aside>
+        
+        <!-- 主内容区 -->
+        <main class="admin-main">
+            <div class="admin-topbar fade-in">
+                <div>
+                    <h1>📊 数据看板</h1>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">实时监控产品核心指标 · 数据延迟 ≤ 5分钟</p>
+                </div>
+                <div class="topbar-right">
+                    <span style="font-size: 13px; color: var(--text-muted);">2026-10-05 周一 10:32</span>
+                    <div class="admin-user">
+                        <div class="admin-avatar">管</div>
+                        <div>
+                            <div style="font-size: 13px; font-weight: 500;">管理员</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">超级管理员</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 异常告警 -->
+            <div class="alert-card alert-warning fade-in">
+                <span style="font-size: 18px;">⚠️</span>
+                <div>
+                    <strong>待处理提醒：</strong>
+                    今日有 <strong style="color: var(--warning);">3 笔</strong>异常订单（已支付未交付），
+                    有 <strong style="color: var(--warning);">12 名</strong>用户申请退款待审核。
+                    <a href="15-订单管理.html" style="color: var(--warning); text-decoration: underline; margin-left: 8px;">立即处理 →</a>
+                </div>
+            </div>
+            
+            <!-- 4个核心数据卡 -->
+            <div class="admin-stats fade-in stagger-1">
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(22,93,255,0.15);">👤</div>
+                    <div class="stat-label">今日新增用户</div>
+                    <div class="stat-value big-number" data-target="328">0</div>
+                    <div class="stat-trend trend-up">↑ 14.6% 较昨日</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(123,97,255,0.15);">💳</div>
+                    <div class="stat-label">今日订单数</div>
+                    <div class="stat-value big-number" data-target="107">0</div>
+                    <div class="stat-trend trend-up">↑ 20.2% 较昨日</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(0,180,42,0.15);">💰</div>
+                    <div class="stat-label">今日营收（元）</div>
+                    <div class="stat-value big-number" data-target="2148">¥0</div>
+                    <div class="stat-trend trend-up">↑ 21.7% 较昨日</div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="stat-icon" style="background: rgba(255,125,0,0.15);">📈</div>
+                    <div class="stat-label">付费转化率</div>
+                    <div class="stat-value big-number" data-target="8.4" data-suffix="%">0%</div>
+                    <div class="stat-trend trend-up">↑ 0.8% 较上周</div>
+                </div>
+            </div>
+            
+            <!-- 第二行数据卡 -->
+            <div class="admin-stats fade-in stagger-2" style="grid-template-columns: repeat(5, 1fr);">
+                <div class="admin-stat-card" style="padding: 16px;">
+                    <div class="stat-label" style="font-size: 12px;">累计用户</div>
+                    <div class="stat-value" style="font-size: 20px;" class="big-number" data-target="12847">0</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 16px;">
+                    <div class="stat-label" style="font-size: 12px;">累计付费</div>
+                    <div class="stat-value" style="font-size: 20px;" class="big-number" data-target="1086">0</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 16px;">
+                    <div class="stat-label" style="font-size: 12px;">累计营收</div>
+                    <div class="stat-value" style="font-size: 20px;">¥86,429</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 16px;">
+                    <div class="stat-label" style="font-size: 12px;">退款率</div>
+                    <div class="stat-value" style="font-size: 20px; color: var(--success);">2.1%</div>
+                </div>
+                <div class="admin-stat-card" style="padding: 16px;">
+                    <div class="stat-label" style="font-size: 12px;">启动包交付成功率</div>
+                    <div class="stat-value" style="font-size: 20px; color: var(--success);">99.6%</div>
+                </div>
+            </div>
+            
+            <!-- 图表区：营收趋势 + 分类占比 -->
+            <div class="admin-chart-row fade-in stagger-3">
+                <div class="admin-chart-card">
+                    <div class="chart-header">
+                        <h3>📈 营收趋势</h3>
+                        <div class="chart-tabs">
+                            <button class="chart-tab">今日</button>
+                            <button class="chart-tab active">7天</button>
+                            <button class="chart-tab">30天</button>
+                        </div>
+                    </div>
+                    <div class="bar-chart">
+                        <div class="bar-col"><div class="bar-fill" style="height: 40%;"><span class="bar-value">¥892</span></div><span class="bar-label">9/29</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 55%;"><span class="bar-value">¥1156</span></div><span class="bar-label">9/30</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 50%;"><span class="bar-value">¥1089</span></div><span class="bar-label">10/1</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 65%;"><span class="bar-value">¥1342</span></div><span class="bar-label">10/2</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 60%;"><span class="bar-value">¥1256</span></div><span class="bar-label">10/3</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 78%;"><span class="bar-value">¥1765</span></div><span class="bar-label">10/4</span></div>
+                        <div class="bar-col"><div class="bar-fill" style="height: 90%;"><span class="bar-value">¥2148</span></div><span class="bar-label">10/5</span></div>
+                    </div>
+                </div>
+                
+                <div class="admin-chart-card">
+                    <div class="chart-header">
+                        <h3>🥧 商机分类占比</h3>
+                    </div>
+                    <div class="donut-wrap">
+                        <div class="donut" style="background: conic-gradient(#165DFF 0% 35%, #7B61FF 35% 60%, #00B42A 60% 80%, #FF7D00 80% 100%);">
+                            <div class="donut-inner">
+                                <div class="dn big-number" data-target="1247">0</div>
+                                <div class="dl">商机总数</div>
+                            </div>
+                        </div>
+                        <div class="legend-list">
+                            <div class="legend-row"><div class="legend-dot" style="background: #165DFF;"></div><div class="legend-name">餐饮小吃</div><div class="legend-val">35%</div></div>
+                            <div class="legend-row"><div class="legend-dot" style="background: #7B61FF;"></div><div class="legend-name">社区服务</div><div class="legend-val">25%</div></div>
+                            <div class="legend-row"><div class="legend-dot" style="background: #00B42A;"></div><div class="legend-name">电商新零售</div><div class="legend-val">20%</div></div>
+                            <div class="legend-row"><div class="legend-dot" style="background: #FF7D00;"></div><div class="legend-name">本地生活</div><div class="legend-val">20%</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 热门商机 + 最近订单 -->
+            <div class="admin-chart-row fade-in stagger-4">
+                <div class="admin-chart-card">
+                    <div class="chart-header">
+                        <h3>🔥 热门商机 TOP 10</h3>
+                        <a href="16-商机与提示词.html" style="font-size: 12px; color: var(--brand-blue); text-decoration: none;">管理商机库 →</a>
+                    </div>
+                    <div class="rank-list">
+                        <div class="rank-item"><div class="rank-num top1">1</div><div class="rank-name">社区团购团长</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 95%;"></div></div><div class="rank-count">328次</div></div>
+                        <div class="rank-item"><div class="rank-num top2">2</div><div class="rank-name">便民早餐车</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 82%;"></div></div><div class="rank-count">276次</div></div>
+                        <div class="rank-item"><div class="rank-num top3">3</div><div class="rank-name">家政服务中介</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 70%;"></div></div><div class="rank-count">234次</div></div>
+                        <div class="rank-item"><div class="rank-num">4</div><div class="rank-name">小区快递驿站</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 58%;"></div></div><div class="rank-count">189次</div></div>
+                        <div class="rank-item"><div class="rank-num">5</div><div class="rank-name">短视频探店</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 48%;"></div></div><div class="rank-count">156次</div></div>
+                        <div class="rank-item"><div class="rank-num">6</div><div class="rank-name">社区生鲜店</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 42%;"></div></div><div class="rank-count">138次</div></div>
+                        <div class="rank-item"><div class="rank-num">7</div><div class="rank-name">手机维修店</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 36%;"></div></div><div class="rank-count">117次</div></div>
+                        <div class="rank-item"><div class="rank-num">8</div><div class="rank-name">宠物寄养服务</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 30%;"></div></div><div class="rank-count">98次</div></div>
+                        <div class="rank-item"><div class="rank-num">9</div><div class="rank-name">文具打印店</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 24%;"></div></div><div class="rank-count">76次</div></div>
+                        <div class="rank-item"><div class="rank-num">10</div><div class="rank-name">鲜花礼品店</div><div class="rank-bar"><div class="rank-bar-fill" style="width: 20%;"></div></div><div class="rank-count">64次</div></div>
+                    </div>
+                </div>
+                
+                <div class="admin-chart-card">
+                    <div class="chart-header">
+                        <h3>📋 最近订单</h3>
+                        <a href="15-订单管理.html" style="font-size: 12px; color: var(--brand-blue); text-decoration: none;">查看全部 →</a>
+                    </div>
+                    <table class="admin-table" style="margin-top: 8px;">
+                        <thead>
+                            <tr>
+                                <th>用户</th>
+                                <th>商品</th>
+                                <th>金额</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">张</div><div><div class="user-name">张**</div><div class="user-sub">138****8888</div></div></div></td>
+                                <td>创业陪跑年卡</td>
+                                <td style="color: var(--success); font-weight: 600;">¥599</td>
+                                <td><span class="tag tag-green">✓ 已支付</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">李</div><div><div class="user-name">李**</div><div class="user-sub">139****6666</div></div></div></td>
+                                <td>开业礼包</td>
+                                <td style="color: var(--success); font-weight: 600;">¥29.9</td>
+                                <td><span class="tag tag-green">✓ 已支付</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">王</div><div><div class="user-name">王**</div><div class="user-sub">137****2222</div></div></div></td>
+                                <td>AI合伙人月卡</td>
+                                <td style="color: var(--success); font-weight: 600;">¥99</td>
+                                <td><span class="tag tag-orange">⏳ 生成中</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">赵</div><div><div class="user-name">赵**</div><div class="user-sub">135****9999</div></div></div></td>
+                                <td>开业礼包</td>
+                                <td style="color: var(--danger); font-weight: 600;">¥29.9</td>
+                                <td><span class="tag tag-red">⚠️ 异常</span></td>
+                            </tr>
+                            <tr>
+                                <td><div class="user-cell"><div class="user-avatar-sm">刘</div><div><div class="user-name">刘**</div><div class="user-sub">186****3333</div></div></div></td>
+                                <td>创业陪跑年卡</td>
+                                <td style="color: var(--success); font-weight: 600;">¥599</td>
+                                <td><span class="tag tag-green">✓ 已支付</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="common.js"></script>
+</body>
+</html>

@@ -370,3 +370,101 @@ class GameScore(Base):
     extra_data: Mapped[str | None] = mapped_column(Text)  # JSON：关卡数等
     is_personal_best: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+# ============================================================ V5.0 新增
+
+
+class AiCostLog(Base):
+    """V5.0 第 7 章 AI 成本记账（支撑 M4-05 成本监控看板与 25% 告警）。
+
+    每一笔 AI 调用落一条流水：Token 消耗 + 折算成本（分）。
+    `template_mode` 标记是否走了模板降级（预算熔断），`cache_hit` 标记缓存命中，
+    用于核算「六道闸门」的实际节流效果。
+    """
+
+    __tablename__ = "ai_cost_logs"
+    __table_args__ = (
+        Index("ix_ai_cost_feature_created", "feature", "created_at"),
+        Index("ix_ai_cost_owner_created", "owner_key", "created_at"),
+        Index("ix_ai_cost_created", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_key: Mapped[str | None] = mapped_column(String(64), index=True)
+    order_id: Mapped[str | None] = mapped_column(String(36))
+    # 功能位：diagnose（诊断）/ package（启动包）/ coach（AI 教练）/ poster（海报）/ report（喜报）…
+    feature: Mapped[str] = mapped_column(String(32), default="diagnose")
+    model: Mapped[str] = mapped_column(String(64), default="")
+    tier: Mapped[str] = mapped_column(String(8), default="light")  # light/mid/top
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_cents: Mapped[int] = mapped_column(Integer, default=0)  # 折算成本（分）
+    cache_hit: Mapped[bool] = mapped_column(Boolean, default=False)
+    template_mode: Mapped[bool] = mapped_column(Boolean, default=False)  # 熔断降级到模板模式
+    rounds: Mapped[int] = mapped_column(Integer, default=0)  # 本次消耗轮数（轮数上限闸门）
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class TalkTopic(Base):
+    """V5.0 M5-03 今日谈资卡（免费传播物）。
+
+    每天一条「同城/本行业赚钱机会速览」，模板化生成（单次成本 ≤ 0.03 元），
+    卡片不带付费引导，只带品牌标识与来源日期，支持一键转发。
+    """
+
+    __tablename__ = "talk_topics"
+    __table_args__ = (UniqueConstraint("topic_date", "city", name="uq_talk_topic_date_city"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    topic_date: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD
+    city: Mapped[str] = mapped_column(String(32), default="全国")
+    industry: Mapped[str] = mapped_column(String(32), default="综合")
+    title: Mapped[str] = mapped_column(String(128), default="")
+    lines: Mapped[str] = mapped_column(Text, default="[]")  # JSON：卡片要点（3—5 条）
+    content: Mapped[str] = mapped_column(Text, default="{}")  # JSON：完整渲染内容（版式字段）
+    source: Mapped[str] = mapped_column(String(64), default="生意快启商机库")
+    cover_text: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class ShareReport(Base):
+    """V5.0 M3-06 / M5-02 开业喜报（可发朋友圈，≥ 3 种模板）。
+
+    喜报不带硬付费引导，只带品牌标识与 slogan；落库支撑「我的喜报与素材」。
+    """
+
+    __tablename__ = "share_reports"
+    __table_args__ = (Index("ix_report_user_created", "user_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
+    order_id: Mapped[str | None] = mapped_column(String(36))
+    template: Mapped[int] = mapped_column(Integer, default=1)  # 1/2/3 三种模板
+    title: Mapped[str] = mapped_column(String(128), default="")
+    subtitle: Mapped[str] = mapped_column(String(128), default="")
+    image_url: Mapped[str | None] = mapped_column(Text)
+    share_url: Mapped[str | None] = mapped_column(Text)
+    data: Mapped[str] = mapped_column(Text, default="{}")  # JSON：喜报文案字段
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class FunnelEvent(Base):
+    """V5.0 M4-07 转化漏斗埋点。
+
+    step：visit（访问）→ diagnose_start（开始诊断）→ diagnose_done（完成诊断）
+    → pay_click（点击付费）→ pay_success（支付成功）→ download（下载交付物）。
+    """
+
+    __tablename__ = "funnel_events"
+    __table_args__ = (
+        Index("ix_funnel_step_created", "step", "created_at"),
+        Index("ix_funnel_owner_created", "owner_key", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_key: Mapped[str | None] = mapped_column(String(64), index=True)
+    step: Mapped[str] = mapped_column(String(24), index=True)
+    source: Mapped[str | None] = mapped_column(String(32))  # 来源渠道
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

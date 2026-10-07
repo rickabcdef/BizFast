@@ -100,6 +100,97 @@ export function regeneratePackage(orderId: string): Promise<{ orderId: string; s
   )
 }
 
+// ==================== V5.0 新增：M5 裂变 / M3-06 喜报 / M8 工具箱权益 ====================
+
+/** 今日谈资卡（V5.0 M5-03，免费传播物；每天一条，不带付费引导）。 */
+export interface TalkTopic {
+  id: string
+  date: string
+  city: string
+  industry: string
+  title: string
+  lines: string[]
+  source: string
+  brand: string
+  coverText: string
+  shareUrl: string | null
+  tag: string
+  headline: string
+  highlightNum: string
+  highlightLabel: string
+  body: string
+  stat: { paybackMonths?: number; marginPct?: number; capitalText?: string; category?: string }
+  noPaywall: boolean
+}
+
+export function getTalkTopicToday(city?: string): Promise<TalkTopic> {
+  const q = city ? `?city=${encodeURIComponent(city)}` : ''
+  return api.get<TalkTopic>(`/api/share/talk-topic/today${q}`)
+}
+
+export function getTalkTopicHistory(days = 7, city?: string): Promise<{ items: TalkTopic[] }> {
+  const params: string[] = [`days=${days}`]
+  if (city) params.push(`city=${encodeURIComponent(city)}`)
+  return api.get<{ items: TalkTopic[] }>(`/api/share/talk-topic/history?${params.join('&')}`)
+}
+
+/** 谈资卡转发埋点（V5.0 M5-04）。 */
+export function trackTalkTopic(topicId: string, channel: string): Promise<{ ok: boolean }> {
+  return api.post<{ ok: boolean }>('/api/share/talk-topic/track', { topicId, channel })
+}
+
+/** 转化漏斗埋点（V5.0 M4-07）：visit / diagnose_start / pay_click / download 等。 */
+export function trackEvent(step: string, source?: string): Promise<{ ok: boolean }> {
+  return api.post<{ ok: boolean }>('/api/events/track', { step, source: source ?? null })
+}
+
+/** 开业喜报（V5.0 M3-06 / M5-02）。 */
+export interface ShareReport {
+  id: string
+  orderId: string | null
+  template: number
+  templateName: string
+  title: string
+  subtitle: string
+  imageUrl: string
+  lines: string[]
+  brand: string
+  slogan: string
+  noPaywall: boolean
+}
+
+export function getReportTemplates(): Promise<{ templates: { id: number; name: string }[] }> {
+  return api.get<{ templates: { id: number; name: string }[] }>('/api/share/report/templates')
+}
+
+export function createReport(orderId: string | null, template: number): Promise<ShareReport> {
+  return api
+    .post<ShareReport>('/api/share/report', { orderId, template })
+    .then((r) => ({ ...r, imageUrl: r.imageUrl?.startsWith('/') ? resolveUrl(r.imageUrl) : r.imageUrl }))
+}
+
+export function getMyReports(): Promise<{ items: ShareReport[] }> {
+  return api.get<{ items: ShareReport[] }>('/api/share/reports')
+}
+
+/** 工具箱权益（V5.0 M8：开业礼包赠 2 个工具 30 天 / 会员全部）。 */
+export interface ToolAccess {
+  scope: 'free' | 'gift' | 'member'
+  plan: string
+  isMember: boolean
+  expireAt: string | null
+  giftUntil: string | null
+  availableTools: string[]
+  availableNames: string[]
+  allTools: { key: string; name: string; unlocked: boolean }[]
+  desc: string
+  isFreeTier: boolean
+}
+
+export function getToolAccess(): Promise<ToolAccess> {
+  return api.get<ToolAccess>('/api/tools/access')
+}
+
 // ---------------- M4 Mock ----------------
 
 // PRD 4.4.1 十件交付物清单：部分交付物同时交付多格式（如 D03 = PDF + Word）。

@@ -8,13 +8,19 @@ import { saveFile } from '@/utils/platform'
 import { useAppStore } from '@/store'
 import {
   createPackage,
+  createReport,
   getMyPackages,
   getPackage,
   getPackageProgress,
+  getReportTemplates,
+  getToolAccess,
   packageItemUrl,
   packageZipUrl,
   regeneratePackage,
-  type PackageProgress
+  trackEvent,
+  type PackageProgress,
+  type ShareReport,
+  type ToolAccess
 } from '@/services/bApi'
 import type { DeliverableFile, DeliverableFormat, PackageResult } from '@/types'
 import './index.scss'
@@ -64,6 +70,23 @@ function fmtLabels(item: DeliverableFile): string[] {
 function canPreview(t: string): boolean {
   return t === 'pdf' || t === 'png' || t === 'svg'
 }
+
+/**
+ * V5.0 需求 3.3「交付峰值体验」：每个文件旁边直接挂配套小工具入口，
+ * 用户拿到文件的那一刻就知道下一步怎么发朋友圈 / 怎么打印 / 怎么改文案 / 怎么做收款码。
+ * 工具随开业礼包赠送使用权（30 天），点击直接跳工具箱对应功能。
+ */
+const TOOL_QUICK: Record<string, { tool: string; label: string }[]> = {
+  D06: [{ tool: 'pdf', label: '合并所有 PDF 一键打印' }],
+  D07: [{ tool: 'copy', label: '一键改写成适合我的版本' }],
+  D08: [
+    { tool: 'image', label: '一键压缩图片发朋友圈' },
+    { tool: 'qrcode', label: '自定义我的收款码' }
+  ]
+}
+
+/** V5.0 需求 3.3：⭐ 标记核心高价值文件（一眼看到最值钱的那件）。 */
+const CORE_CODES = new Set(['D01'])
 
 /** 文件中文命名：生意快启_交付物名称_生成日期（PRD 3.7）；多格式同名不同扩展名区分。 */
 function downloadName(item: DeliverableFile, fmt: DeliverableFormat): string {
@@ -115,6 +138,14 @@ export default function M4Delivery() {
   const [redoBusy, setRedoBusy] = useState(false)
   // M4-04 预览
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null)
+  // V5.0 M3-06 / M5-02 开业喜报
+  const [reportOpen, setReportOpen] = useState(false)
+  const [report, setReport] = useState<ShareReport | null>(null)
+  const [reportBusy, setReportBusy] = useState(false)
+  const [reportTpl, setReportTpl] = useState(1)
+  const [templates, setTemplates] = useState<{ id: number; name: string }[]>([])
+  // V5.0 M8 工具箱权益（开业礼包赠 2 个工具 30 天 / 会员全部）
+  const [toolAccess, setToolAccess] = useState<ToolAccess | null>(null)
   const pollRef = useRef<{ stop: () => void } | null>(null)
   // 同步闸门：createPackage 是异步的（await 期间 pollRef 还没赋值），
   // 开发模式 StrictMode 双挂载 / 重复点击时两次请求都会穿过 pollRef 的幂等判断，
@@ -303,6 +334,40 @@ export default function M4Delivery() {
     }
   }
 
+  // ---------------- V5.0 M3-06 / M5-02 开业喜报 + M8 工具箱权益 ----------------
+  useEffect(() => {
+    getReportTemplates()
+      .then((d) => setTemplates(d.templates || []))
+      .catch(() => {})
+    getToolAccess()
+      .then(setToolAccess)
+      .catch(() => {})
+  }, [])
+
+  const genReport = async (tpl: number) => {
+    if (reportBusy) return
+    setReportBusy(true)
+    setReportTpl(tpl)
+    try {
+      const r = await createReport(orderId || null, tpl)
+      setReport(r)
+      // M5-04 分享埋点
+      trackEvent('share_report', '交付页').catch(() => {})
+      Taro.showToast({ title: '喜报已生成', icon: 'none' })
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '喜报生成失败，请重试', icon: 'none' })
+    } finally {
+      setReportBusy(false)
+    }
+  }
+
+  /** M3-06：喜报 10 秒内产出，可直接保存到手机/电脑。 */
+  const saveReport = () => {
+    if (!report?.imageUrl) return
+    saveFile(report.imageUrl, `生意快启_开业喜报_${report.templateName || '喜报'}.png`)
+    trackEvent('share_report_save', '交付页').catch(() => {})
+  }
+
   const openHistory = (p: PackageResult) => {
     setOrderId(p.orderId)
     setStoreOrderId(p.orderId)
@@ -407,7 +472,10 @@ export default function M4Delivery() {
           {pkg.items.map((it) => (
             <View key={it.code} className='bf-card m4-file'>
               <View className='m4-file__head'>
-                <Text className='m4-file__code'>{it.code}</Text>
+                <Text className='m4-file__code'>
+                  {CORE_CODES.has(it.code) ? '⭐ ' : ''}
+                  {it.code}
+                </Text>
                 <Text className='m4-file__fmt'>{fmtLabels(it).join(' · ')}</Text>
               </View>
               <Text className='m4-file__name'>{it.name}</Text>
@@ -426,30 +494,36 @@ export default function M4Delivery() {
                   </View>
                 ))}
               </View>
+
+              {/* V5.0 需求 3.3：文件旁边直接挂配套小工具入口（随礼包赠使用权） */}
+              {TOOL_QUICK[it.code] && (
+                <View className='m4-file__tools'>
+                  {TOOL_QUICK[it.code].map((t) => (
+                    <View
+                      key={t.tool}
+                      className='m4-file__tool'
+                      onClick={() => Taro.navigateTo({ url: `/pages/m6_tools/index?tool=${t.tool}` })}
+                    >
+                      {t.label} →
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           ))}
         </View>
 
-        {/* M6 设计原则一：工具嵌入主流程，用户做事时顺手可用（C 提供，永久免费） */}
+        {/* V5.0 M8 / 需求 3.3：工具已嵌入上方文件卡片，这里只说明赠送权益与工具箱入口 */}
         <View className='bf-card m4-tools'>
-          <Text className='bf-card__title'>🛠️ 顺手工具（永久免费）</Text>
-          <View className='m4-tools__grid'>
-            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=image' })}>
-              <Text className='m4-tools__ico'>🖼️</Text>
-              <Text className='m4-tools__t'>压缩海报发朋友圈</Text>
-            </View>
-            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=pdf' })}>
-              <Text className='m4-tools__ico'>📄</Text>
-              <Text className='m4-tools__t'>合并流程单打印</Text>
-            </View>
-            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=qrcode' })}>
-              <Text className='m4-tools__ico'>📱</Text>
-              <Text className='m4-tools__t'>生成收款/引流码</Text>
-            </View>
-            <View className='m4-tools__item' onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index?tool=copy' })}>
-              <Text className='m4-tools__ico'>✍️</Text>
-              <Text className='m4-tools__t'>改成适合我的文案</Text>
-            </View>
+          <Text className='bf-card__title'>🛠️ 配套工具已随礼包开通</Text>
+          <Text className='bf-muted m4-tools__sub'>
+            {toolAccess?.desc || '工具已嵌入交付流程，直接点开文件旁的按钮就能用'}
+          </Text>
+          <View
+            className='bf-btn bf-btn--sm bf-btn--ghost m4-tools__all'
+            onClick={() => Taro.navigateTo({ url: '/pages/m6_tools/index' })}
+          >
+            打开工具箱看全部工具
           </View>
         </View>
 
@@ -466,7 +540,7 @@ export default function M4Delivery() {
           </Text>
         </View>
 
-        {/* 终值体验（PRD 5.6.5 / 6.3）：温度文案 + 生成开业喜报 */}
+        {/* 终值体验（V5.0 M3-06 / M5-02）：温度文案 + 生成开业喜报（3 种模板可选） */}
         <View className='m4-end'>
           <Text className='m4-end__text'>
             祝你开业大吉，生意兴隆。
@@ -475,11 +549,86 @@ export default function M4Delivery() {
           </Text>
           <View
             className='bf-btn bf-btn--ghost m4-end__btn'
-            onClick={() => Taro.navigateTo({ url: '/pages/m8_share/index' })}
+            onClick={() => {
+              setReport(null)
+              setReportOpen(true)
+            }}
           >
-            生成我的开业喜报
+            📱 生成我的开业喜报
           </View>
+          <Text className='bf-muted m4-end__tip'>
+            生成一张可发朋友圈的喜报图，带品牌标识、不带硬广，10 秒内出图。
+          </Text>
         </View>
+
+        {/* M3-06 / M5-02 开业喜报弹窗：3 种以上模板可选 */}
+        {reportOpen && (
+          <View className='m4-mask' onClick={() => setReportOpen(false)}>
+            <View className='m4-modal m4-report' onClick={(e) => e.stopPropagation()}>
+              <Text className='m4-modal__title'>生成我的开业喜报</Text>
+
+              {!report ? (
+                <>
+                  <Text className='bf-muted m4-report__tip'>
+                    选一个你喜欢的样式，生成后可直接保存到手机发朋友圈。
+                  </Text>
+                  <View className='m4-report__tpls'>
+                    {(templates.length
+                      ? templates
+                      : [
+                          { id: 1, name: '科技蓝紫' },
+                          { id: 2, name: '开业红金' },
+                          { id: 3, name: '简约白蓝' }
+                        ]
+                    ).map((t) => (
+                      <View
+                        key={t.id}
+                        className={`m4-report__tpl ${reportTpl === t.id ? 'is-active' : ''}`}
+                        onClick={() => setReportTpl(t.id)}
+                      >
+                        <Text>{t.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View
+                    className={`bf-btn m4-modal__btn ${reportBusy ? 'bf-btn--disabled' : ''}`}
+                    onClick={() => !reportBusy && genReport(reportTpl)}
+                  >
+                    {reportBusy ? '正在生成…' : '立即生成喜报'}
+                  </View>
+                </>
+              ) : (
+                <>
+                  {report.imageUrl ? (
+                    <Image className='m4-report__img' src={report.imageUrl} mode='widthFix' />
+                  ) : null}
+                  <Text className='m4-report__title'>{report.title}</Text>
+                  <Text className='m4-report__sub'>{report.subtitle}</Text>
+                  <View className='m4-report__lines'>
+                    {(report.lines || []).map((l, i) => (
+                      <Text key={i} className='m4-report__line'>
+                        · {l}
+                      </Text>
+                    ))}
+                  </View>
+                  <Text className='bf-muted m4-report__brand'>
+                    {report.brand} · {report.slogan}
+                  </Text>
+                  <View className='bf-btn m4-modal__btn' onClick={saveReport}>
+                    保存喜报图片
+                  </View>
+                </>
+              )}
+
+              <View
+                className='bf-btn bf-btn--ghost m4-modal__btn'
+                onClick={() => setReportOpen(false)}
+              >
+                {report ? '完成' : '关闭'}
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* M4-06 重新生成确认弹窗 */}
         {redoOpen && (

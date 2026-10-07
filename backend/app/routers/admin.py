@@ -416,3 +416,39 @@ async def export_data(
 ):
     result = await admin_service.export_data(session, export_type, format, db)
     return ok(result, _rid(request))
+
+
+# ─── V5.0 三块新看板（M4-05 成本监控 / M4-07 转化漏斗 / M4-08 裂变数据） ───
+
+@router.get("/cost-monitor", summary="AI 成本监控（V5.0 M4-05，超 25% 自动告警）")
+async def cost_monitor(
+    request: Request,
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import ai_cost
+
+    return ok(await ai_cost.cost_monitor(db), _rid(request))
+
+
+@router.get("/funnel", summary="转化漏斗（V5.0 M4-07，按日/周/月）")
+async def conversion_funnel(
+    request: Request,
+    period: str = Query("day", description="统计周期: day/week/month"),
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import funnel as funnel_service
+
+    return ok(await funnel_service.funnel(db, period), _rid(request))
+
+
+@router.get("/growth", summary="裂变数据看板（V5.0 M4-08，含 K 因子）")
+async def growth_board(
+    request: Request,
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import share as share_service
+
+    return ok(await share_service.get_share_stats(db), _rid(request))
