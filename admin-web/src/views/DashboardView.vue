@@ -6,13 +6,20 @@ import {
   getAdminUsers,
   getAdminOrders,
   getAdminOpportunities,
+  getDailyReports,
+  generateDailyReport,
+  getAdminAlerts,
+  scanAdminAlerts,
+  readAdminAlerts,
   ORDER_ABNORMAL_LABEL,
   type DashboardKpis,
   type DashboardTrend,
   type TrendGranularity,
   type AdminUser,
   type AdminOrder,
-  type AdminOpportunity
+  type AdminOpportunity,
+  type DailyReport,
+  type AdminAlertItem
 } from '@/api/adminApi'
 
 const router = useRouter()
@@ -25,6 +32,15 @@ const users = ref<AdminUser[]>([])
 const orders = ref<AdminOrder[]>([])
 const opps = ref<AdminOpportunity[]>([])
 const loading = ref(true)
+// V5.0 第 8 章：异常告警 + 昨日数据日报
+const alerts = ref<AdminAlertItem[]>([])
+const unreadAlerts = ref(0)
+const report = ref<DailyReport | null>(null)
+
+const pushStatusText = computed(() => {
+  const s = report.value?.pushStatus
+  return s === 'sent' ? '已推送' : s === 'failed' ? '推送失败' : '待推送'
+})
 
 const load = async (g: TrendGranularity) => {
   loading.value = true
@@ -46,7 +62,37 @@ const load = async (g: TrendGranularity) => {
   }
 }
 
-onMounted(() => load('day'))
+/** 告警与日报独立加载：任一失败不影响主看板（各自降级为空） */
+const loadAutomation = async () => {
+  try {
+    const [al, rp] = await Promise.all([getAdminAlerts(), getDailyReports(1)])
+    alerts.value = al.items
+    unreadAlerts.value = al.unread
+    report.value = rp.items[0] || null
+  } catch {
+    /* 忽略：不阻断主看板 */
+  }
+}
+
+const onScanAlerts = async () => {
+  await scanAdminAlerts()
+  await loadAutomation()
+}
+
+const onReadAllAlerts = async () => {
+  await readAdminAlerts()
+  await loadAutomation()
+}
+
+const onGenerateReport = async () => {
+  report.value = await generateDailyReport()
+  await loadAutomation()
+}
+
+onMounted(() => {
+  load('day')
+  loadAutomation()
+})
 
 // ---- 统计卡（对齐切图 13 页：4 核心 + 5 累计，数据来自 Mock 真实聚合） ----
 const payUsers = computed(() => users.value.filter((u) => u.memberStatus !== 'none').length)
@@ -259,6 +305,95 @@ const orderTagText = (o: AdminOrder) => (o.abnormal ? `⚠️ ${ORDER_ABNORMAL_L
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- V5.0 第 8 章 运营自动化：异常告警 + 昨日数据日报 -->
+    <div class="admin-chart-row">
+      <div class="admin-chart-card">
+        <div class="chart-header">
+          <h3>
+            🚨 异常告警
+            <span v-if="alerts.length" class="tag tag-danger" style="margin-left: 8px">{{ unreadAlerts }} 条未读</span>
+          </h3>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <a style="font-size: 12px; color: var(--bf-primary); cursor: pointer" @click="onScanAlerts">立即巡检</a>
+            <a style="font-size: 12px; color: var(--bf-primary); cursor: pointer" @click="onReadAllAlerts">全部已读</a>
+          </div>
+        </div>
+        <div v-if="!alerts.length" class="bf-muted" style="font-size: 13px; padding: 12px 0">
+          暂无异常订单，交付链路健康（每 5 分钟自动巡检一次）。
+        </div>
+        <div v-else class="alert-list">
+          <div
+            v-for="a in alerts"
+            :key="a.id"
+            class="alert-item"
+            :class="a.level === 'danger' ? 'alert-item--danger' : 'alert-item--warn'"
+          >
+            <div class="alert-title">{{ a.title }}</div>
+            <div class="alert-sub">{{ a.content }}</div>
+            <div class="alert-meta">
+              <span>{{ a.createdAt }}</span>
+              <a
+                v-if="a.relatedType === 'order'"
+                style="color: var(--bf-primary); cursor: pointer"
+                @click="router.push('/orders')"
+              >
+                去处理 →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-chart-card">
+        <div class="chart-header">
+          <h3>📰 昨日数据日报</h3>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <span class="tag" :class="report?.pushStatus === 'sent' ? 'tag-ok' : 'tag-warn'">
+              {{ pushStatusText }}
+            </span>
+            <a style="font-size: 12px; color: var(--bf-primary); cursor: pointer" @click="onGenerateReport">补生成</a>
+          </div>
+        </div>
+        <template v-if="report">
+          <div class="report-grid">
+            <div class="report-cell">
+              <div class="rc-label">营收</div>
+              <div class="rc-value ok">¥{{ report.revenueLabel }}</div>
+            </div>
+            <div class="report-cell">
+              <div class="rc-label">订单</div>
+              <div class="rc-value">{{ report.orderCount }} 单</div>
+            </div>
+            <div class="report-cell">
+              <div class="rc-label">新增用户</div>
+              <div class="rc-value">{{ report.newUsers }} 人</div>
+            </div>
+            <div class="report-cell">
+              <div class="rc-label">退款</div>
+              <div class="rc-value">¥{{ report.refundLabel }}</div>
+            </div>
+            <div class="report-cell">
+              <div class="rc-label">AI 成本</div>
+              <div class="rc-value">{{ report.aiCostLabel }}</div>
+            </div>
+            <div class="report-cell">
+              <div class="rc-label">净现金流</div>
+              <div class="rc-value" :class="report.netCashCents >= 0 ? 'ok' : 'danger'">
+                ¥{{ report.netCashLabel }}
+              </div>
+            </div>
+          </div>
+          <pre class="report-content">{{ report.content }}</pre>
+          <div class="bf-muted" style="font-size: 12px">
+            统计日 {{ report.reportDate }} · 每日 9 点自动生成；未配置推送 webhook 时仅落库不外部推送
+          </div>
+        </template>
+        <div v-else class="bf-muted" style="font-size: 13px; padding: 12px 0">
+          日报尚未生成，点「补生成」立即生成昨日日报。
+        </div>
       </div>
     </div>
 

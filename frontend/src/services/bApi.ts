@@ -170,7 +170,35 @@ export function createReport(orderId: string | null, template: number): Promise<
 }
 
 export function getMyReports(): Promise<{ items: ShareReport[] }> {
-  return api.get<{ items: ShareReport[] }>('/api/share/reports')
+  return api
+    .get<{ items: ShareReport[] }>('/api/share/reports')
+    .then((r) => ({
+      items: (r.items || []).map((it) => ({
+        ...it,
+        imageUrl: it.imageUrl?.startsWith('/') ? resolveUrl(it.imageUrl) : it.imageUrl
+      }))
+    }))
+}
+
+/** V5.0 M10「收藏的商机」：当前用户收藏的商机列表（游客也可收藏）。 */
+export interface FavoriteOpportunity {
+  id: string
+  title: string
+  icon: string
+  category: string
+  summary: string
+  favoritedAt: string
+  fiveElements?: {
+    capital: string
+    payback: string
+    margin: string
+    firstCustomer: string
+    difficulty: string
+  }
+}
+
+export function getFavoriteOpportunities(): Promise<{ items: FavoriteOpportunity[]; total: number }> {
+  return api.get<{ items: FavoriteOpportunity[]; total: number }>('/api/match/favorites')
 }
 
 /** 工具箱权益（V5.0 M8：开业礼包赠 2 个工具 30 天 / 会员全部）。 */

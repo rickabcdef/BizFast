@@ -452,3 +452,84 @@ async def growth_board(
     from app.services import share as share_service
 
     return ok(await share_service.get_share_stats(db), _rid(request))
+
+
+# ─── V5.0 第 8 章 运营自动化：数据日报 / 告警 ───
+
+@router.get("/daily-reports", summary="每日数据日报列表（第 8 章 8.2，每天 9 点自动生成）")
+async def daily_reports(
+    request: Request,
+    limit: int = Query(30, ge=1, le=180),
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import automation
+
+    return ok({"items": await automation.list_daily_reports(db, limit)}, _rid(request))
+
+
+@router.get("/daily-reports/{report_date}", summary="查看指定日期日报（YYYY-MM-DD）")
+async def daily_report_detail(
+    report_date: str,
+    request: Request,
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import automation
+
+    row = await automation.get_daily_report(db, report_date)
+    if row is None:
+        raise BizError(40401, "该日期的日报尚未生成")
+    return ok(row, _rid(request))
+
+
+@router.post("/daily-reports/generate", summary="手动补生成日报（默认昨天）")
+async def generate_daily_report(
+    request: Request,
+    report_date: str | None = Query(None, description="YYYY-MM-DD，留空则统计昨天"),
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import automation
+
+    report = await automation.build_daily_report(db, report_date)
+    status = await automation.push_daily_report(db, report)
+    report["pushStatus"] = status
+    return ok(report, _rid(request))
+
+
+@router.get("/alerts", summary="后台告警列表（M2-04 异常订单 / 成本超限）")
+async def alerts(
+    request: Request,
+    limit: int = Query(50, ge=1, le=200),
+    unread_only: bool = Query(False, alias="unreadOnly"),
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import automation
+
+    return ok(await automation.list_alerts(db, limit, unread_only), _rid(request))
+
+
+@router.post("/alerts/scan", summary="立即执行一次异常扫描（M2-04 一键巡检）")
+async def scan_alerts(
+    request: Request,
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import automation
+
+    return ok(await automation.run_alert_scan_job(db), _rid(request))
+
+
+@router.post("/alerts/read", summary="标记告警已读（不传 id 则全部已读）")
+async def read_alerts(
+    request: Request,
+    alert_id: str | None = Query(None, alias="alertId"),
+    session: dict = Depends(require_perm("dashboard")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import automation
+
+    count = await automation.mark_alert_read(db, alert_id)
+    return ok({"updated": count}, _rid(request))

@@ -589,6 +589,64 @@ export async function getGrowth(): Promise<GrowthData> {
   return request('/api/admin/growth')
 }
 
+// ---------------- V5.0 第 8 章：数据日报 / 告警 ----------------
+
+/** 每日数据日报（每天 9 点自动生成：营收/订单/新增/退款/AI成本/净现金流） */
+export interface DailyReport {
+  id: string
+  reportDate: string
+  revenueCents: number
+  revenueLabel: string
+  orderCount: number
+  newUsers: number
+  refundCents: number
+  refundLabel: string
+  refundCount: number
+  aiCostCents: number
+  aiCostLabel: string
+  channelFeeLabel: string
+  netCashCents: number
+  netCashLabel: string
+  pushStatus: string
+  pushedAt: string | null
+  content: string
+  createdAt: string | null
+}
+
+export interface AdminAlertItem {
+  id: string
+  alertType: string
+  level: string
+  title: string
+  content: string
+  relatedType: string | null
+  relatedId: string | null
+  isRead: boolean
+  createdAt: string
+}
+
+export async function getDailyReports(limit = 30): Promise<{ items: DailyReport[] }> {
+  return request(`/api/admin/daily-reports?limit=${limit}`)
+}
+
+export async function generateDailyReport(reportDate?: string): Promise<DailyReport> {
+  const q = reportDate ? `?reportDate=${reportDate}` : ''
+  return request(`/api/admin/daily-reports/generate${q}`, { method: 'POST' })
+}
+
+export async function getAdminAlerts(unreadOnly = false): Promise<{ items: AdminAlertItem[]; unread: number }> {
+  return request(`/api/admin/alerts?unreadOnly=${unreadOnly}`)
+}
+
+export async function scanAdminAlerts(): Promise<{ orders: number; costs: number }> {
+  return request('/api/admin/alerts/scan', { method: 'POST' })
+}
+
+export async function readAdminAlerts(alertId?: string): Promise<{ updated: number }> {
+  const q = alertId ? `?alertId=${alertId}` : ''
+  return request(`/api/admin/alerts/read${q}`, { method: 'POST' })
+}
+
 // ---------------- CSV 下载工具 ----------------
 
 export function downloadText(fileName: string, content: string): void {

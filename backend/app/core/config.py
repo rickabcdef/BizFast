@@ -107,6 +107,19 @@ class Settings(BaseSettings):
     talk_topic_hour: int = 0  # 今日谈资卡每日 0 点自动生成
     share_report_templates: int = 3  # 喜报模板 ≥ 3 种
 
+    # ---- 第 8 章 运营自动化（一个人也要能跑起来）----
+    # 数据日报：每日早上 9 点推送给创始人（营收/订单/新增/成本/净现金流）
+    admin_daily_report_hour: int = 9
+    # 会员到期提醒：每天 10 点扫描，到期前 3 天 / 1 天各提醒一次（M0-03）
+    admin_renew_remind_hour: int = 10
+    # 异常订单扫描间隔（分钟）：M2-04 要求异常出现 5 分钟内后台可见并推送
+    admin_abnormal_scan_minutes: int = 5
+    # 异常订单判定阈值（小时）：已支付超过该时长仍未交付即视为异常
+    order_abnormal_hours: int = 2
+    # 可选：日报/告警推送 webhook（企业微信机器人 / 飞书机器人等）。
+    # 留空时仅落库 + 站内消息，不外部推送（不阻断任何流程）。
+    admin_alert_webhook: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

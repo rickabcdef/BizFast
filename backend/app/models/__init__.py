@@ -1,8 +1,10 @@
 """Models package：统一导出实体。"""
 from app.models.models import (
+    AdminAlert,
     AiCostLog,
     Coupon,
     CouponRedemption,
+    DailyReport,
     DeliverableFile,
     DiagnosisTask,
     Favorite,
@@ -44,4 +46,6 @@ __all__ = [
     "TalkTopic",
     "ShareReport",
     "FunnelEvent",
+    "DailyReport",
+    "AdminAlert",
 ]

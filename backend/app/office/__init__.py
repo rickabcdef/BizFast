@@ -57,8 +57,9 @@ FILE_EXT: dict[str, str] = {
 }
 
 # V5.0 第 7.2 闸门 3「模板化交付」：10 件交付物中 7 件模板填充、只有 3 件走 AI 实时生成。
-# 这 3 件是内容生成的绝对主力（评分卡 / 获客文案 / 风险清单），其余 7 件仅替换用户变量。
-AI_DELIVERABLES: frozenset[str] = frozenset({"D01", "D07", "D10"})
+# V5.0 需求 3.1 明确这 3 件的名字：**可行性评分（D01）、个性化文案（D07）、物料定制（D08）**。
+# 其余 7 件仅替换用户输入的变量（城市/资金/时间/商机名），把单次成本压在 3.5 元以内。
+AI_DELIVERABLES: frozenset[str] = frozenset({"D01", "D07", "D08"})
 TEMPLATE_DELIVERABLES: frozenset[str] = frozenset(DELIVERABLES) - AI_DELIVERABLES
 
 # 中文字体路径（系统自带，跨平台 fallback）

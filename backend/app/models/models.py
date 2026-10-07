@@ -450,6 +450,59 @@ class ShareReport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class DailyReport(Base):
+    """V5.0 第 8 章 8.2：每日数据日报（每天 9 点自动生成并推送）。
+
+    内容 = 昨日营收 / 订单 / 新增 / 退款 / AI 成本 / 净现金流。落库后
+    后台可查历史，推送失败也不丢数据（先落库、再推送）。
+    """
+
+    __tablename__ = "daily_reports"
+    __table_args__ = (UniqueConstraint("report_date", name="uq_daily_report_date"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    report_date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD（统计日）
+    revenue_cents: Mapped[int] = mapped_column(Integer, default=0)
+    order_count: Mapped[int] = mapped_column(Integer, default=0)
+    new_users: Mapped[int] = mapped_column(Integer, default=0)
+    refund_cents: Mapped[int] = mapped_column(Integer, default=0)
+    refund_count: Mapped[int] = mapped_column(Integer, default=0)
+    ai_cost_cents: Mapped[int] = mapped_column(Integer, default=0)
+    net_cash_cents: Mapped[int] = mapped_column(Integer, default=0)
+    # 推送状态：pending / sent / failed（未配置推送渠道时保持 pending，不阻断日报生成）
+    push_status: Mapped[str] = mapped_column(String(12), default="pending")
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    content: Mapped[str] = mapped_column(Text, default="")  # 推送给创始人的纯文本日报
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class AdminAlert(Base):
+    """V5.0 M2-04：后台告警（异常订单 / 成本超限）。
+
+    异常订单出现后 5 分钟内由后台扫描任务写入并推送；用 fingerprint 去重，
+    避免同一异常每个扫描周期重复刷屏。
+    """
+
+    __tablename__ = "admin_alerts"
+    __table_args__ = (
+        UniqueConstraint("fingerprint", name="uq_admin_alert_fingerprint"),
+        Index("ix_admin_alert_created", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    # order_abnormal / cost_overrun / delivery_failed
+    alert_type: Mapped[str] = mapped_column(String(24), index=True)
+    level: Mapped[str] = mapped_column(String(8), default="danger")  # danger / warning
+    title: Mapped[str] = mapped_column(String(128))
+    content: Mapped[str] = mapped_column(Text, default="")
+    # 关联对象（订单号等），用于后台一键跳转处理
+    related_type: Mapped[str | None] = mapped_column(String(16))
+    related_id: Mapped[str | None] = mapped_column(String(64))
+    fingerprint: Mapped[str] = mapped_column(String(128), index=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class FunnelEvent(Base):
     """V5.0 M4-07 转化漏斗埋点。
 

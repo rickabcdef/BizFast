@@ -655,7 +655,9 @@ async def _do_stage(db, stage_key: str, state: dict, task: DiagnosisTask, tags: 
         )
         # V5.0 闸门 6：预算熔断 —— 触及上限时自动降级模板/规则引擎，不拒绝服务
         budget = await ai_cost.check_budget(db, owner_key, "none", "diagnose")
-        if budget["allow_ai"]:
+        # V5.0 闸门 4：轮数上限（诊断 ≤8 轮）——超限同样降级模板模式，不放出超长智能体任务
+        rounds_gate = ai_cost.check_rounds("diagnose", 1)
+        if budget["allow_ai"] and rounds_gate["allow_ai"]:
             text, degraded = ai_client.try_complete(prompt)
         else:
             text, degraded = None, True
@@ -670,7 +672,7 @@ async def _do_stage(db, stage_key: str, state: dict, task: DiagnosisTask, tags: 
             owner_key=owner_key,
             cache_hit=False,
             template_mode=bool(state.get("template_mode")),
-            rounds=1,
+            rounds=int(rounds_gate["capped_rounds"]),
         )
         await db.flush()
 

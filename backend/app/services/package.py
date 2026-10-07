@@ -217,9 +217,16 @@ async def _generation_once(order_id: str, user_id: str, force: bool) -> bool:
             # V5.0 闸门 6：生成前先做一次预算熔断判定（触及上限则全量降级模板模式）
             owner_key = f"user:{user_id}"
             budget = await ai_cost.check_budget(db, owner_key, order.plan or "none", "package")
-            ai_allowed = bool(budget["allow_ai"])
+            # V5.0 闸门 4：轮数上限（启动包 ≤25 轮）。AI 件每件 3 轮，超限则降级模板模式。
+            rounds_gate = ai_cost.check_rounds("package", 3 * len(AI_DELIVERABLES))
+            ai_allowed = bool(budget["allow_ai"]) and bool(rounds_gate["allow_ai"])
             if not ai_allowed:
-                logger.warning("启动包生成触发预算熔断，降级模板模式：order_id=%s", order_id)
+                logger.warning(
+                    "启动包生成降级模板模式：order_id=%s 预算=%s 轮数=%s",
+                    order_id,
+                    budget["allow_ai"],
+                    rounds_gate["allow_ai"],
+                )
 
             for code in all_codes:
                 name, _primary = DELIVERABLES[code]
@@ -271,7 +278,7 @@ async def _generation_once(order_id: str, user_id: str, force: bool) -> bool:
                             name,  # completion 量级按交付物名称占位，token 由估算函数换算
                             owner_key=owner_key,
                             order_id=order_id,
-                            rounds=3,
+                            rounds=min(3, int(rounds_gate["capped_rounds"])),
                         )
                     else:
                         # 模板填充（含熔断降级的 AI 件）：成本极低，如实入账

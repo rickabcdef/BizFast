@@ -31,6 +31,12 @@ async def list_match(
     return ok(await match_service.get_match_list(db, task), _rid(request))
 
 
+@router.get("/favorites", summary="我的收藏商机（V5.0 M10）")
+async def list_favorites(request: Request, db: AsyncSession = Depends(get_db)):
+    owner = current_owner(request)
+    return ok(await match_service.list_favorites(db, owner), _rid(request))
+
+
 @router.get("/{opportunity_id}", summary="商机详情（锁定商机需已解锁，否则 40301）")
 async def match_detail(
     opportunity_id: str,

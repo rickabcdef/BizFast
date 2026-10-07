@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import Loading from '@/components/Loading'
 import ErrorTip from '@/components/ErrorTip'
+import { saveFile } from '@/utils/platform'
 import {
   getMyPackages,
   getOrders,
@@ -13,6 +14,14 @@ import {
   deleteAccount
 } from '@/services/repo'
 import { cancelSubscription } from '@/services/aApi'
+import {
+  getMyReports,
+  getTalkTopicHistory,
+  getFavoriteOpportunities,
+  type ShareReport,
+  type TalkTopic,
+  type FavoriteOpportunity
+} from '@/services/bApi'
 import { useAppStore } from '@/store'
 import type { PackageResult, OrderView, Membership, InviteInfo } from '@/types'
 import './index.scss'
@@ -48,6 +57,10 @@ export default function M10User() {
   const [orders, setOrders] = useState<OrderView[]>([])
   const [member, setMember] = useState<Membership | null>(null)
   const [invite, setInvite] = useState<InviteInfo | null>(null)
+  // V5.0 M10：我的喜报与素材 / 收藏的商机与谈资
+  const [reports, setReports] = useState<ShareReport[]>([])
+  const [topics, setTopics] = useState<TalkTopic[]>([])
+  const [favorites, setFavorites] = useState<FavoriteOpportunity[]>([])
 
   const load = async () => {
     setLoading(true)
@@ -63,6 +76,16 @@ export default function M10User() {
       setOrders(od)
       setMember(mb)
       setInvite(iv)
+      // 辅助模块失败不影响主信息展示（各自独立降级为空列表）
+      getMyReports()
+        .then((r) => setReports(r.items || []))
+        .catch(() => {})
+      getTalkTopicHistory(7)
+        .then((r) => setTopics(r.items || []))
+        .catch(() => {})
+      getFavoriteOpportunities()
+        .then((r) => setFavorites(r.items || []))
+        .catch(() => {})
     } catch (e: any) {
       setError(e?.message || '加载失败，请重试')
     } finally {
@@ -124,6 +147,13 @@ export default function M10User() {
     } catch (e: any) {
       Taro.showToast({ title: e?.message || '取消失败，请重试', icon: 'none' })
     }
+  }
+
+  /** V5.0 M10-03：保存/分享喜报素材。 */
+  const onSaveReport = (r: ShareReport) => {
+    if (!r.imageUrl) return
+    saveFile(r.imageUrl, `生意快启_开业喜报_${r.templateName || r.template || '喜报'}.png`)
+    Taro.showToast({ title: '喜报已保存', icon: 'none' })
   }
 
   const onDeleteAccount = async () => {
@@ -315,8 +345,119 @@ export default function M10User() {
         </View>
       </View>
 
+      {/* V5.0 M10-03 我的喜报与素材 */}
+      <View className='bf-card'>
+        <View className='bf-row'>
+          <Text className='bf-card__title'>我的喜报与素材</Text>
+          <Text className='bf-muted'>{reports.length} 张</Text>
+        </View>
+        {reports.length === 0 ? (
+          <Text className='bf-muted m10-empty'>
+            还没有喜报。在交付页点「生成我的开业喜报」就能一键出图。
+          </Text>
+        ) : (
+          <View className='m10-reports'>
+            {reports.map((r) => (
+              <View key={r.id} className='m10-report'>
+                <View
+                  className='m10-report__thumb'
+                  onClick={() => r.imageUrl && Taro.previewImage({ urls: [r.imageUrl] })}
+                >
+                  {r.imageUrl ? <Image className='m10-report__img' src={r.imageUrl} mode='aspectFill' /> : null}
+                </View>
+                <Text className='m10-report__t'>{r.title || `模板 ${r.template}`}</Text>
+                <Text className='bf-muted m10-report__s'>{r.templateName || ''}</Text>
+                <View className='bf-row m10-report__acts'>
+                  <Text
+                    className='bf-btn bf-btn--sm'
+                    onClick={() => r.imageUrl && Taro.previewImage({ urls: [r.imageUrl] })}
+                  >
+                    查看
+                  </Text>
+                  <Text
+                    className='bf-btn bf-btn--ghost bf-btn--sm'
+                    onClick={() => onSaveReport(r)}
+                  >
+                    保存
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* V5.0 M10-04 收藏的商机与谈资 */}
+      <View className='bf-card'>
+        <View className='bf-row'>
+          <Text className='bf-card__title'>收藏的商机与谈资</Text>
+          <Text className='bf-muted'>
+            商机 {favorites.length} · 谈资 {topics.length}
+          </Text>
+        </View>
+
+        <Text className='m10-sub'>📌 我收藏的商机</Text>
+        {favorites.length === 0 ? (
+          <Text className='bf-muted m10-empty'>还没有收藏。在商机卡片上点「收藏」即可留在这里。</Text>
+        ) : (
+          <View className='bf-list'>
+            {favorites.map((f) => (
+              <View key={f.id} className='bf-list__item m10-fav'>
+                <View>
+                  <Text>
+                    {f.icon} {f.title}
+                  </Text>
+                  <Text className='bf-muted'>
+                    {' '}
+                    {f.fiveElements
+                      ? `${f.fiveElements.capital} · 回本 ${f.fiveElements.payback} · 毛利 ${f.fiveElements.margin}`
+                      : `收藏于 ${f.favoritedAt}`}
+                  </Text>
+                </View>
+                <Text className='bf-muted'>{f.favoritedAt}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Text className='m10-sub'>📖 今日谈资历史（近 7 天）</Text>
+        {topics.length === 0 ? (
+          <Text className='bf-muted m10-empty'>还没有谈资卡记录。</Text>
+        ) : (
+          <View className='bf-list'>
+            {topics.map((t) => (
+              <View
+                key={t.id}
+                className='bf-list__item'
+                onClick={() => Taro.navigateTo({ url: '/pages/m12_talk_topic/index' })}
+              >
+                <View>
+                  <Text>{t.headline || t.title}</Text>
+                  <Text className='bf-muted'>
+                    {' '}
+                    {t.date} · {t.city}
+                  </Text>
+                </View>
+                <Text className='bf-tag'>查看</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
       <View className='bf-card'>
         <Text className='bf-card__title'>账号安全</Text>
+        {/* V5.0 M10-05 设置：账号与安全 / 隐私设置 / 注销账号（≤3 步可达） */}
+        <View
+          className='bf-list__item m10-privacy'
+          onClick={() => Taro.navigateTo({ url: '/pages/m9_notify/index' })}
+        >
+          <View>
+            <Text>隐私设置</Text>
+            <Text className='bf-muted'> 通知方式、免打扰时段、手机号脱敏展示</Text>
+          </View>
+          <Text className='bf-tag'>设置</Text>
+        </View>
         <Text className='bf-muted'>注销后 15 日内保留数据用于找回，到期自动清除隐私信息。</Text>
         <View className='bf-btn bf-btn--ghost bf-btn--sm m10-delete' onClick={onDeleteAccount}>
           注销账号

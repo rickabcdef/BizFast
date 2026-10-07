@@ -37,6 +37,61 @@ from app.routers import (
 logger = logging.getLogger(__name__)
 
 
+async def _ops_automation_loop() -> None:
+    """V5.0 第 8 章：运营自动化后台任务（一个人也能跑起来）。
+
+    一个循环里跑三件事，全部幂等、单次失败不影响其它：
+    - 每 N 分钟（默认 5）：扫描异常订单 + 成本超限 → 写告警并推送（M2-04）
+    - 每天 9 点：生成并推送昨日数据日报（8.2）
+    - 每天 10 点：会员到期前 3 天 / 1 天提醒续费（M0-03）
+    """
+    from app.core.database import AsyncSessionLocal
+    from app.services import automation
+
+    scan_minutes = max(1, int(getattr(settings, "admin_abnormal_scan_minutes", 5) or 5))
+    report_hour = int(getattr(settings, "admin_daily_report_hour", 9) or 9)
+    remind_hour = int(getattr(settings, "admin_renew_remind_hour", 10) or 10)
+
+    last_report_day: str | None = None
+    last_remind_day: str | None = None
+
+    while True:
+        try:
+            now = datetime.now()
+            today = now.strftime("%Y-%m-%d")
+            async with AsyncSessionLocal() as db:
+                # 1) 异常订单 / 成本告警（高频）
+                try:
+                    await automation.run_alert_scan_job(db)
+                except Exception as exc:
+                    logger.warning("异常扫描任务失败：%s", exc)
+
+                # 2) 数据日报（每天一次，过了设定时间即执行）
+                if now.hour >= report_hour and last_report_day != today:
+                    try:
+                        await automation.run_daily_report_job(db)
+                        last_report_day = today
+                    except Exception as exc:
+                        logger.warning("数据日报任务失败：%s", exc)
+
+                # 3) 会员到期提醒（每天一次）
+                if now.hour >= remind_hour and last_remind_day != today:
+                    try:
+                        await automation.notify_expiring_members(db)
+                        last_remind_day = today
+                    except Exception as exc:
+                        logger.warning("会员到期提醒任务失败：%s", exc)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # 定时任务永不因单次失败退出
+            logger.warning("运营自动化任务异常：%s", exc)
+
+        try:
+            await asyncio.sleep(scan_minutes * 60)
+        except asyncio.CancelledError:
+            raise
+
+
 async def _daily_talk_topic_loop() -> None:
     """V5.0 M5-03：今日谈资卡每日 0 点自动生成（后续访问走幂等命中，零重复成本）。"""
     from app.core.database import AsyncSessionLocal
@@ -88,14 +143,22 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # pragma: no cover
         logger.warning("今日谈资卡预热失败：%s", exc)
 
+    # V5.0 第 8 章：运营自动化（异常告警 / 每日日报 / 会员到期提醒）
+    ops_task: asyncio.Task | None = None
+    try:
+        ops_task = asyncio.create_task(_ops_automation_loop())
+    except Exception as exc:  # pragma: no cover
+        logger.warning("运营自动化任务启动失败：%s", exc)
+
     yield
 
-    if talk_task is not None:
-        talk_task.cancel()
-        try:
-            await talk_task
-        except (asyncio.CancelledError, Exception):
-            pass
+    for task in (talk_task, ops_task):
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
 
 
 app = FastAPI(

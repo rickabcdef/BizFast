@@ -87,6 +87,39 @@ def max_rounds(feature: str) -> int:
     return fn() if fn else settings.ai_max_rounds_package
 
 
+def check_rounds(feature: str, planned_rounds: int) -> dict:
+    """闸门 4：轮数上限。**真正拦截**，不只是配置。
+
+    诊断 ≤8 轮 / 启动包 ≤25 轮 / AI 教练 ≤10 轮（第 7.2）。
+    计划轮数超过上限时返回 allow_ai=False，调用方必须降级到模板模式，
+    而不是把超长智能体任务直接放出去烧钱。
+    """
+    limit = max_rounds(feature)
+    if planned_rounds > limit:
+        logger.warning(
+            "轮数上限闸门触发：feature=%s planned=%s > limit=%s，降级模板模式",
+            feature,
+            planned_rounds,
+            limit,
+        )
+        return {
+            "allow_ai": False,
+            "template_mode": True,
+            "limit": limit,
+            "planned": planned_rounds,
+            "capped_rounds": limit,
+            "reason": f"{feature} 计划轮数 {planned_rounds} 超过上限 {limit}，已降级模板模式",
+        }
+    return {
+        "allow_ai": True,
+        "template_mode": False,
+        "limit": limit,
+        "planned": planned_rounds,
+        "capped_rounds": planned_rounds,
+        "reason": "",
+    }
+
+
 def plan_budget_cents(plan: str) -> int:
     fn = PLAN_BUDGET_CENTS.get(plan or "none")
     return fn() if fn else settings.ai_budget_free_cents

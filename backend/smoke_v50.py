@@ -250,6 +250,66 @@ check("M4-08 裂变数据：转发/新用户/付费用户",
 check("M4-08 K 因子实时显示（K>1 即自增长飞轮）", "kFactor" in sm, sm)
 check("M4-08 单用户裂变获客成本", "fissionCacCents" in sm and "fissionCacLabel" in sm, sm)
 
+# ─────────────── 第 8 章 运营自动化：数据日报 / 异常告警 ───────────────
+s, b = req("GET", "/api/admin/daily-reports", **AH)
+rep = data_of(b)
+items = rep.get("items") or []
+check("第8章 每日数据日报可查（每天 9 点自动生成）", s == 200 and len(items) >= 1, b)
+if items:
+    r0 = items[0]
+    need = {"revenueLabel", "orderCount", "newUsers", "refundLabel",
+            "aiCostLabel", "netCashLabel", "reportDate", "content"}
+    check("第8章 日报含 营收/订单/新增/退款/AI成本/净现金流",
+          need <= set(r0.keys()), sorted(r0.keys()))
+    check("第8章 日报净现金流 = 营收-退款-AI成本-通道费",
+          r0["netCashCents"] == r0["revenueCents"] - r0["refundCents"] - r0["aiCostCents"]
+          - int(round(r0["revenueCents"] * 0.01)), r0)
+
+s, b = req("POST", "/api/admin/daily-reports/generate", **AH)
+gen = data_of(b)
+check("第8章 支持手动补生成日报（幂等按日期）",
+      s == 200 and (gen.get("reportDate") or "").count("-") == 2, b)
+
+s, b = req("GET", "/api/admin/alerts", **AH)
+al = data_of(b)
+check("M2-04 后台告警列表可用（含未读数）",
+      s == 200 and isinstance(al.get("items"), list) and "unread" in al, b)
+
+s, b = req("POST", "/api/admin/alerts/scan", **AH)
+sc = data_of(b)
+check("M2-04 支持一键巡检异常订单", s == 200 and "orders" in sc, b)
+
+# ─────────────── M10 个人中心：喜报素材 / 收藏的商机 ───────────────
+s, b = req("GET", "/api/match/favorites", token=guest_token, guest=GUEST)
+fav = data_of(b)
+check("M10 我的收藏商机列表可用", s == 200 and "items" in fav, b)
+
+s, b = req("GET", "/api/share/reports", token=guest_token, guest=GUEST)
+mine = data_of(b)
+check("M10 我的喜报与素材列表可用", s == 200 and "items" in mine, b)
+
+s, b = req("GET", "/api/share/talk-topic/history?days=7", token=guest_token, guest=GUEST)
+hist = data_of(b)
+check("M10 今日谈资历史可取", s == 200 and isinstance(hist.get("items"), list), b)
+
+# ─────────────── 第 7.2 闸门 4：轮数上限（真正拦截） ───────────────
+from app.services import ai_cost as _ai_cost  # noqa: E402
+
+check("闸门4 轮数上限未超限时放行",
+      _ai_cost.check_rounds("diagnose", 1)["allow_ai"] is True, None)
+over = _ai_cost.check_rounds("package", _ai_cost.max_rounds("package") + 5)
+check("闸门4 轮数超限时降级模板模式（不拒绝服务）",
+      over["allow_ai"] is False and over["template_mode"] is True
+      and over["capped_rounds"] == _ai_cost.max_rounds("package"), over)
+
+# ─────────────── 闸门3：AI 三件口径 = D01/D07/D08（需求 3.1） ───────────────
+from app.office import AI_DELIVERABLES, TEMPLATE_DELIVERABLES  # noqa: E402
+
+check("闸门3 AI 实时生成的 3 件 = D01/D07/D08（可行性评分/个性化文案/物料定制）",
+      AI_DELIVERABLES == frozenset({"D01", "D07", "D08"}), sorted(AI_DELIVERABLES))
+check("闸门3 模板填充的 7 件数量正确",
+      len(TEMPLATE_DELIVERABLES) == 7, sorted(TEMPLATE_DELIVERABLES))
+
 # ─────────────── 结果 ───────────────
 print("-" * 78)
 print(f"结果：PASS={PASS}  FAIL={FAIL}")

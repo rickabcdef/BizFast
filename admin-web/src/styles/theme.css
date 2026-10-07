@@ -995,3 +995,96 @@ html.dark .el-switch.is-checked .el-switch__core {
   .admin-stats { grid-template-columns: repeat(2, 1fr); }
   .admin-chart-row { grid-template-columns: 1fr; }
 }
+
+/* ================= V5.0 第 8 章：异常告警 + 数据日报（DashboardView） ================= */
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.alert-item {
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+.alert-item--danger {
+  border-color: rgba(245, 63, 63, 0.5);
+  background: rgba(245, 63, 63, 0.1);
+}
+.alert-item--warn {
+  border-color: rgba(255, 125, 0, 0.5);
+  background: rgba(255, 125, 0, 0.1);
+}
+.alert-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.alert-sub {
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 6px;
+}
+.alert-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+.report-cell {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.rc-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 6px;
+}
+.rc-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+.rc-value.ok {
+  color: #00b42a;
+}
+.rc-value.danger {
+  color: #f53f3f;
+}
+.report-content {
+  font-size: 12px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+.tag-ok {
+  background: rgba(0, 180, 42, 0.18);
+  color: #00b42a;
+}
+.tag-danger {
+  background: rgba(245, 63, 63, 0.18);
+  color: #f53f3f;
+}
+.tag-warn {
+  background: rgba(255, 125, 0, 0.18);
+  color: #ff7d00;
+}

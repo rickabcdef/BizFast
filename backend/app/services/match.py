@@ -209,6 +209,30 @@ async def get_detail(db, owner: OwnerContext, opportunity_id: str, task_id: str 
 
 
 # ---------------------------------------------------------------- 收藏（M3-06）
+async def list_favorites(db, owner: OwnerContext) -> dict:
+    """V5.0 M10「收藏的商机」：返回当前用户收藏的商机列表（游客亦可）。
+
+    收藏关系按 owner_key 存储（user_id 或 guest_token），故游客收藏也能看到。
+    """
+    rows = (
+        await db.execute(
+            select(Favorite)
+            .where(Favorite.owner_key == owner.owner_key)
+            .order_by(Favorite.created_at.desc())
+        )
+    ).scalars().all()
+
+    items = []
+    for row in rows:
+        op = opp_data.get_opportunity(row.opportunity_id)
+        if op is None:
+            continue  # 商机已下架则不展示，避免空卡片
+        card = to_out(op, 0, False)
+        card["favoritedAt"] = row.created_at.strftime("%Y-%m-%d") if row.created_at else ""
+        items.append(card)
+    return {"items": items, "total": len(items)}
+
+
 async def toggle_favorite(db, owner: OwnerContext, opportunity_id: str) -> dict:
     if opp_data.get_opportunity(opportunity_id) is None:
         raise BizError(40401, "未找到该商机，请重新诊断")
