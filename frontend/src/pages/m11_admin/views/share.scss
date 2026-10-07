@@ -1,0 +1,106 @@
+/* V5.0 后台 · 分享转化与裂变 | 对齐 UI 切图 V5.0 第 19 页 */
+.m11-share {
+  color: var(--text, #fff);
+}
+
+.m11-share__h {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #fff;
+}
+.m11-share__sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* KPI 卡片 */
+.m11-share__kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+.m11-kpi {
+  padding: 28rpx 24rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+.m11-kpi__label {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.55);
+}
+.m11-kpi__val {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 48rpx;
+  font-weight: 800;
+  background: linear-gradient(90deg, #165dff 0%, #7b61ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.m11-kpi__val--ok {
+  background: none;
+  -webkit-text-fill-color: #00b42a;
+  color: #00b42a;
+}
+
+/* 明细卡片 */
+.m11-card {
+  margin-top: 28rpx;
+  padding: 28rpx 26rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+.m11-card__h {
+  display: block;
+  margin-bottom: 20rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* 表格 */
+.m11-table {
+  display: flex;
+  flex-direction: column;
+}
+.m11-tr {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 8rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+.m11-tr:first-child {
+  border-top: none;
+}
+.m11-tr--head {
+  padding: 12rpx 8rpx;
+}
+.m11-th {
+  flex: 1;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.45);
+}
+.m11-th--num {
+  flex: none;
+  width: 160rpx;
+  text-align: right;
+}
+.m11-td {
+  flex: 1;
+  font-size: 26rpx;
+  color: #fff;
+}
+.m11-td--num {
+  flex: none;
+  width: 160rpx;
+  text-align: right;
+}

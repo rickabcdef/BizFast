@@ -4,8 +4,9 @@ import Loading from '@/components/Loading'
 import ErrorTip from '@/components/ErrorTip'
 import { getShareStats } from '@/services/repo'
 import type { ShareStats } from '@/types'
+import './share.scss'
 
-// M8-04 分享数据回收（按渠道转化）| 负责人: D | 在运营后台呈现
+// M5-04 分享转化与裂变（后台呈现）| 负责人: D | 对齐 UI 切图 V5.0 第 19 页
 export default function ShareView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -29,27 +30,64 @@ export default function ShareView() {
 
   const summary = stats?.summary
   const rows = stats?.rows || []
+  const totalClicks = rows.reduce((n, r) => n + (r.clicks || 0), 0)
+  const shareRate = Math.round((summary?.shareRate ?? 0) * 100)
 
   return (
-    <View>
-      <Text className='m11-modal__h'>分享转化概览（M8-04 · 负责人 D）</Text>
+    <View className='m11-share'>
+      <Text className='m11-share__h'>📈 分享转化与裂变</Text>
+      <Text className='m11-share__sub'>看转化率，不看打开次数 · 数据延迟 ≤ 5 分钟（M5-04 · 负责人 D）</Text>
+
       {loading && <Loading />}
       {error && <ErrorTip message={error} onRetry={load} />}
+
       {!loading && !error && (
-        <View className='bf-card'>
-          <View className='bf-row m11-sum'>
-            <Text>分享 {summary?.shares ?? 0}</Text>
-            <Text>注册 {summary?.registers ?? 0}</Text>
-            <Text>付费 {summary?.pays ?? 0}</Text>
-            <Text>分享率 {Math.round((summary?.shareRate ?? 0) * 100)}%</Text>
+        <View>
+          {/* 4 个核心 KPI */}
+          <View className='m11-share__kpis'>
+            <View className='m11-kpi'>
+              <Text className='m11-kpi__label'>分享次数</Text>
+              <Text className='m11-kpi__val'>{summary?.shares ?? 0}</Text>
+            </View>
+            <View className='m11-kpi'>
+              <Text className='m11-kpi__label'>带来注册</Text>
+              <Text className='m11-kpi__val'>{summary?.registers ?? 0}</Text>
+            </View>
+            <View className='m11-kpi'>
+              <Text className='m11-kpi__label'>带来付费</Text>
+              <Text className='m11-kpi__val m11-kpi__val--ok'>{summary?.pays ?? 0}</Text>
+            </View>
+            <View className='m11-kpi'>
+              <Text className='m11-kpi__label'>分享率</Text>
+              <Text className='m11-kpi__val'>{shareRate}%</Text>
+            </View>
           </View>
-          <View className='bf-list'>
-            {rows.map((r) => (
-              <View key={r.channel} className='bf-list__item'>
-                <Text>{r.channel}</Text>
-                <Text className='bf-muted'>点击 {r.clicks}</Text>
+
+          {/* 各渠道转发明细 */}
+          <View className='m11-card'>
+            <Text className='m11-card__h'>各渠道转发明细</Text>
+            <View className='m11-table'>
+              <View className='m11-tr m11-tr--head'>
+                <Text className='m11-th'>渠道</Text>
+                <Text className='m11-th m11-th--num'>点击</Text>
+                <Text className='m11-th m11-th--num'>占比</Text>
               </View>
-            ))}
+              {rows.length === 0 ? (
+                <View className='m11-tr'>
+                  <Text className='m11-td' style='width:100%'>暂无分享数据</Text>
+                </View>
+              ) : (
+                rows.map((r) => (
+                  <View key={r.channel} className='m11-tr'>
+                    <Text className='m11-td'>{r.channel}</Text>
+                    <Text className='m11-td m11-td--num'>{r.clicks}</Text>
+                    <Text className='m11-td m11-td--num'>
+                      {totalClicks ? Math.round(((r.clicks || 0) / totalClicks) * 100) : 0}%
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
         </View>
       )}

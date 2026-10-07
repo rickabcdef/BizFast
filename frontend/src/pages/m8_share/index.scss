@@ -1,6 +1,64 @@
+/* V5.0 分享与裂变 | 对齐 UI 切图 V5.0（结果页/交付页分享态）
+   设计令牌：深空蓝渐变底 + 毛玻璃卡片 + 品牌渐变 #165DFF→#7B61FF */
 .m8-share {
-  padding: 32rpx;
+  min-height: 100vh;
+  padding: 32rpx 28rpx 60rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(700rpx 460rpx at 12% 0%, rgba(123, 97, 255, 0.2), transparent),
+    radial-gradient(820rpx 520rpx at 100% 8%, rgba(22, 93, 255, 0.18), transparent),
+    linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background-attachment: fixed;
+  color: #fff;
+
+  /* 统一卡片视觉 */
+  .bf-card {
+    display: block;
+    margin-top: 24rpx;
+    padding: 28rpx 26rpx;
+    border-radius: 32rpx;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1rpx solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+  }
+  .bf-card__title {
+    display: block;
+    margin-bottom: 18rpx;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: #fff;
+  }
+  .bf-muted {
+    display: block;
+    font-size: 24rpx;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .bf-seg {
+    display: grid;
+    gap: 16rpx;
+  }
+  .bf-seg__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22rpx 8rpx;
+    font-size: 26rpx;
+    border-radius: 24rpx;
+    border: 1rpx solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
+    transition: all 0.2s ease;
+  }
+  .bf-seg__item--active {
+    border-color: #165dff;
+    background: rgba(22, 93, 255, 0.14);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 0 20rpx rgba(22, 93, 255, 0.35);
+  }
 }
+
 .m8-mt {
-  margin-top: 24rpx;
+  margin-top: 32rpx;
 }

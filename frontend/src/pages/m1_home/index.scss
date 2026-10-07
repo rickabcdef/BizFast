@@ -1,116 +1,233 @@
-.m1-home {
-  padding: 32rpx;
+/* V5.0 首屏 | 对齐 UI 切图 V5.0 第 2 页
+   设计令牌：深空蓝 #0F172A→#1E293B 渐变底；毛玻璃卡片；品牌渐变 #165DFF→#7B61FF */
+.m1 {
+  min-height: 100vh;
+  padding: 32rpx 28rpx 60rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(700rpx 460rpx at 12% 0%, rgba(123, 97, 255, 0.2), transparent),
+    radial-gradient(820rpx 520rpx at 100% 8%, rgba(22, 93, 255, 0.18), transparent),
+    linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background-attachment: fixed;
+  color: #fff;
+
+  /* 统一卡片视觉（覆盖全局 bf-card 的旧皮肤） */
+  .bf-card {
+    display: block;
+    margin-top: 24rpx;
+    padding: 28rpx 26rpx;
+    border-radius: 32rpx;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1rpx solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+  }
+  .bf-card__title {
+    display: block;
+    margin-bottom: 18rpx;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: #fff;
+  }
+  .bf-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .bf-muted {
+    color: rgba(255, 255, 255, 0.45);
+  }
+  .bf-tag {
+    display: inline-block;
+    padding: 4rpx 18rpx;
+    font-size: 22rpx;
+    border-radius: 28rpx;
+    border: 1rpx solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .bf-tag--accent {
+    border-color: rgba(22, 93, 255, 0.5);
+    background: rgba(22, 93, 255, 0.18);
+    color: #93b4ff;
+  }
 }
-.m1-hero {
-  padding: 24rpx 8rpx 8rpx;
+
+.m1__header {
+  padding: 12rpx 6rpx 8rpx;
 }
-.m1-title {
-  font-size: 48rpx;
+.m1__title {
+  display: block;
+  font-size: 52rpx;
   font-weight: 800;
   line-height: 1.3;
-  color: #e8ecff;
+  color: #fff;
 }
-.m1-guest {
+.m1__sub {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* 城市网格 / 经验网格 */
+.m1__citygrid,
+.m1__expgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+}
+.m1__opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 22rpx 8rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease;
+}
+.m1__opt.is-active {
+  border-color: #165dff;
+  background: rgba(22, 93, 255, 0.14);
+  box-shadow: 0 0 20rpx rgba(22, 93, 255, 0.35);
+}
+.m1__emoji {
+  font-size: 40rpx;
+  line-height: 1;
+}
+.m1__optlabel {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+.m1__opt.is-active .m1__optlabel {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 滑块 */
+.m1__sliderhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 28rpx;
+  color: #fff;
+  margin-bottom: 6rpx;
+}
+.m1__val {
+  font-size: 26rpx;
+  font-weight: 700;
+  background: linear-gradient(90deg, #165dff 0%, #7b61ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.m1__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10rpx;
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 补充问答 */
+.m1__extra__head {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  margin-top: 16rpx;
 }
-.m1-submit {
-  margin: 32rpx 8rpx;
-}
-
-/* ---------- M3-08：重新诊断的预填提示 ---------- */
-.m1-redo {
-  margin: 16rpx 8rpx 0;
-  padding: 18rpx 22rpx;
-  border-radius: 16rpx;
-  background: rgba(155, 92, 255, 0.14);
-  border: 2rpx solid rgba(155, 92, 255, 0.4);
-}
-.m1-redo__text {
-  font-size: 22rpx;
-  line-height: 1.6;
-  color: #d9ccff;
-}
-
-/* ---------- M2-07：补充问答（可选，可整体跳过） ---------- */
-.m1-extra__head {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-.m1-extra__badge {
+.m1__extra__badge {
   flex: none;
 }
-.m1-extra__toggle {
+.m1__extra__toggle {
   font-size: 24rpx;
   flex: none;
 }
-.m1-extra__tip {
+.m1__extra__tip {
   display: block;
   font-size: 22rpx;
   line-height: 1.6;
-  margin-top: 8rpx;
+  margin-top: 10rpx;
 }
-.m1-extra__body {
+.m1__extra__body {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
-  margin-top: 16rpx;
+  margin-top: 18rpx;
 }
-.m1-extra__q {
+.m1__extra__q {
   display: flex;
   flex-direction: column;
   gap: 12rpx;
 }
-.m1-extra__label {
+.m1__extra__label {
   font-size: 26rpx;
-  color: #e8ecff;
+  color: #fff;
 }
-.m1-extra__opts {
+.m1__extra__opts {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
 }
-.m1-extra__opt {
+.m1__extra__opt {
   padding: 12rpx 24rpx;
   font-size: 24rpx;
-  border: 2rpx solid transparent;
+  border: 1rpx solid transparent;
 }
-.m1-extra__opt.is-active {
-  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+.m1__extra__opt.is-active {
+  background: linear-gradient(135deg, #165dff 0%, #7b61ff 100%);
   color: #fff;
   font-weight: 600;
 }
-.m1-extra__foot {
-  align-items: flex-start;
+
+/* 主按钮 */
+.m1__submit {
+  margin: 36rpx 6rpx 0;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #165dff 0%, #7b61ff 100%);
+  box-shadow: 0 0 36rpx rgba(22, 93, 255, 0.45);
+  transition: transform 0.15s ease, opacity 0.2s ease;
 }
-.m1-extra__hint {
-  font-size: 20rpx;
-  line-height: 1.6;
-  flex: 1;
+.m1__submit:active {
+  transform: scale(0.98);
 }
-.m1-extra__clear {
-  font-size: 22rpx;
-  color: #ff5c7c;
-  flex: none;
+.m1__submit--disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+.m1__submit__txt {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #fff;
+}
+.m1__note {
+  display: block;
+  margin: 16rpx 6rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.45);
 }
 
-/* ---------- V5.0 M5-03 今日谈资卡入口 ---------- */
-.m1-talk {
+/* 今日谈资入口 */
+.m1__talk {
   margin-top: 24rpx;
 }
-.m1-talk__sub {
+.m1__talk__sub {
   display: block;
   font-size: 24rpx;
   line-height: 1.7;
   margin-top: 10rpx;
 }
-.m1-talk__more {
+.m1__talk__more {
   display: block;
   margin-top: 14rpx;
   font-size: 24rpx;
   font-weight: 600;
-  color: #9b5cff;
+  color: #7b61ff;
 }

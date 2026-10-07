@@ -97,6 +97,11 @@ export default function M10User() {
     if (token) load()
   }, [token])
 
+  // V5.0 第 11 页：资料头 + 三宫格统计
+  const displayName = user?.phone ? '微信用户' : '我的'
+  const maskedPhone = (user?.phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') || '未绑定手机'
+  const generatedCount = packages.reduce((n, p) => n + p.items.length, 0)
+
   const doPhoneLogin = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       Taro.showToast({ title: '请输入正确的手机号', icon: 'none' })
@@ -208,13 +213,36 @@ export default function M10User() {
 
   return (
     <View className='page m10-user'>
-      <View className='bf-card'>
-        <View className='bf-row'>
-          <Text className='m10-name'>{user?.phone || (user?.isGuest ? '游客' : '我的')}</Text>
-          <Text className='bf-tag'>{PLAN_LABEL[user?.plan || 'none']}</Text>
+      <View className='m10-profile'>
+        <View className='m10-profile__top'>
+          <View className='m10-avatar'>👨‍💼</View>
+          <View className='m10-profile__info'>
+            <Text className='m10-name'>{displayName}</Text>
+            <Text className='m10-phone'>{maskedPhone}</Text>
+          </View>
+          <View className='m10-logout' onClick={onLogout}>
+            <Text className='m10-logout__txt'>退出</Text>
+          </View>
         </View>
-        <View className='bf-btn bf-btn--ghost m10-logout' onClick={onLogout}>
-          退出登录
+        {member && (
+          <View className='m10-vip'>
+            👑 {PLAN_LABEL[member.plan]} · 有效期至 {member.expireAt}
+          </View>
+        )}
+      </View>
+
+      <View className='m10-stats'>
+        <View className='m10-stat'>
+          <Text className='m10-stat__num'>{packages.length}</Text>
+          <Text className='m10-stat__label'>我的启动包</Text>
+        </View>
+        <View className='m10-stat'>
+          <Text className='m10-stat__num'>{generatedCount}</Text>
+          <Text className='m10-stat__label'>已生成商机</Text>
+        </View>
+        <View className='m10-stat'>
+          <Text className='m10-stat__num'>{favorites.length + topics.length}</Text>
+          <Text className='m10-stat__label'>收藏工具</Text>
         </View>
       </View>
 
