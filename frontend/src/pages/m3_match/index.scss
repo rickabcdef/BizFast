@@ -79,14 +79,23 @@
 
 /* ---------- 五要素数字卡（M3-02） ---------- */
 .m3-five {
+  margin-top: 8rpx;
+}
+.m3-five.is-blurred .m3-five__value,
+.m3-five.is-blurred .m3-five__text {
+  filter: blur(10rpx);
+  opacity: 0.55;
+}
+.m3-five__nums {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12rpx;
-  margin-top: 8rpx;
 }
-.m3-five.is-blurred .m3-five__value {
-  filter: blur(10rpx);
-  opacity: 0.55;
+.m3-five__texts {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-top: 12rpx;
 }
 .m3-five__cell {
   background: rgba(139, 147, 184, 0.1);
@@ -96,6 +105,18 @@
   flex-direction: column;
   gap: 8rpx;
   animation: m3-rise 0.45s ease both;
+}
+.m3-five__row {
+  background: rgba(139, 147, 184, 0.08);
+  border-radius: 14rpx;
+  padding: 12rpx 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  animation: m3-rise 0.45s ease both;
+}
+.m3-five__row .m3-five__label {
+  white-space: nowrap;
 }
 @keyframes m3-rise {
   from {
@@ -112,10 +133,46 @@
   color: #8b93b8;
 }
 .m3-five__value {
+  /* M1-03 验收：5 个关键数字必须是「大字」并主色高亮，一眼能扫到 */
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #9b5cff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+.m3-five__unit {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #8b93b8;
+  margin-left: 4rpx;
+}
+.m3-five__text {
   font-size: 24rpx;
   font-weight: 600;
   color: #e8ecff;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+/* ---------- 核心风险点（M1-03 验收：卡片上必须可见，橙色标注） ---------- */
+.m3-card__risk {
+  margin-top: 16rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 14rpx;
+  background: rgba(255, 149, 0, 0.1);
+  border-left: 6rpx solid #ff9500;
+}
+.m3-card__risk-tag {
+  display: block;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #ff9500;
+  margin-bottom: 6rpx;
+}
+.m3-card__risk-text {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #ffc06b;
 }
 
 /* ---------- 锁定条 ---------- */

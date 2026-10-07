@@ -108,7 +108,9 @@ export interface OrderView {
 }
 
 export interface Membership {
-  plan: Exclude<Plan, 'none'>
+  // M0-03（V5.0）：未付费用户必须是 'none'。
+  // 曾把 'none' 硬编码映射成 'single' 以绕开类型约束，导致未付费用户被显示成会员，已修正。
+  plan: Plan
   expireAt: string
   autoRenew: boolean
   // M0-02（V5.0）用户画像

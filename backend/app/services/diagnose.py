@@ -37,9 +37,11 @@ from app.storage import get_storage
 logger = logging.getLogger(__name__)
 
 # ---- 阶段定义（M2-02「说人话」的进度文案，与 UI 等待页 5 步一致）----
+# 案例数必须来自真实案例库（opp_data.CASE_COUNT），PRD 反复强调「数字必须真实，
+# 绝不虚假宣传」；此前这里写死 1247，而真实案例只有几十条，属于虚假宣传。
 STAGES: list[tuple[str, str]] = [
     ("scan", "正在扫描你所在城市的热门赛道"),
-    ("match", "正在比对 1247 个小生意案例"),
+    ("match", f"正在比对 {opp_data.CASE_COUNT} 个真实小生意案例"),
     ("payback", "正在计算回本周期与毛利率"),
     ("cases", "正在筛选真实成功案例"),
     ("heatmap", "正在生成你所在城市的机会热度图"),

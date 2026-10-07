@@ -1,5 +1,6 @@
 // 数据层（D 端）：封装 api 调用，并在无后端时提供 Mock 数据，便于网页端联调与演示。
 // 真实接口路径严格对齐 docs/api-contract.md；USE_MOCK 由构建常量控制（开发默认开，生产设 false）。
+import Taro from '@tarojs/taro'
 import { api } from '@/services/api'
 import type {
   StartupInput,
@@ -98,7 +99,7 @@ export async function getMembership(): Promise<Membership> {
   // 会员信息包含在 /api/user/me 中（M10 3.1 账号体系）
   const me = await api.get<UserProfile>('/api/user/me')
   return {
-    plan: me.plan === 'none' ? 'single' : (me.plan as Membership['plan']),
+    plan: (me.plan as Membership['plan']) || 'none',
     expireAt: me.expireAt || '',
     autoRenew: !!me.autoRenew,
     // M0-02（V5.0）用户画像
@@ -142,13 +143,44 @@ export async function phoneLogin(phone: string, code: string, inviterCode?: stri
   return api.post<AuthResult>('/api/auth/login', { phone, code, inviterCode })
 }
 
+/** M0-01：发送手机号验证码（真实调用后端，不再只弹一个假提示）。 */
+export async function sendSmsCode(phone: string): Promise<{ message: string; code?: string | null }> {
+  if (USE_MOCK) {
+    await delay(300)
+    return { message: '验证码已发送（演示环境固定 123456）', code: '123456' }
+  }
+  return api.post<{ message: string; code?: string | null }>('/api/auth/sms/send', { phone })
+}
+
+/**
+ * M0-01：网页端「微信一键登录」的设备标识。
+ *
+ * 网页端没有真实微信 SDK，只能拿占位 unionid；但**必须持久化**，
+ * 否则每次点击都会生成新 unionid → 后端每次建新账号 → 用户的订单与会员全丢。
+ * 真实接入微信开放平台后，这里换成 OAuth 回调拿到的真实 unionid 即可。
+ */
+const WX_UNIONID_KEY = 'bf_wx_unionid'
+
+function deviceUnionid(): string {
+  try {
+    let v = Taro.getStorageSync(WX_UNIONID_KEY)
+    if (!v) {
+      v = `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+      Taro.setStorageSync(WX_UNIONID_KEY, v)
+    }
+    return v
+  } catch {
+    return `web-${Date.now().toString(36)}`
+  }
+}
+
 export async function wechatLogin(unionid?: string): Promise<AuthResult> {
   if (USE_MOCK) {
     await delay(500)
     return { token: 'mock-token', user: { isGuest: false, plan: 'month', inviteCode: 'BF-7Q2X9' } }
   }
-  // M10 3.1 微信 unionid 登录（网页端无真实微信 SDK，dev 用占位 unionid）
-  return api.post<AuthResult>('/api/auth/wechat', { unionid: unionid || `web-${Date.now()}` })
+  // M10 3.1 微信 unionid 登录（网页端用**持久化**的设备占位 unionid，保证同一设备同一账号）
+  return api.post<AuthResult>('/api/auth/wechat', { unionid: unionid || deviceUnionid() })
 }
 
 export async function deleteAccount(): Promise<{ deletedAt: string; purgeAt: string }> {

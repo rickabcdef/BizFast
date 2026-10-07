@@ -245,7 +245,7 @@ export default function M1Home() {
       >
         <Text className='m1__submit__txt'>{loading ? '正在为你诊断…' : '🔮 帮我找生意'}</Text>
       </View>
-      <Text className='m1__note'>预计 3 分钟出结果，完全免费</Text>
+      <Text className='m1__note'>预计 1 分钟内出结果，完全免费</Text>
 
       {/* V5.0 M5-03：今日谈资卡入口（UI 切图第 17 页；免费、可转发，做社交裂变触点） */}
       <View

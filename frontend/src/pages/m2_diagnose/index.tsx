@@ -69,9 +69,11 @@ export default function M2Diagnose() {
   }, [taskId, run])
 
   const doneCount = progress?.doneStages?.length ?? 0
+  // 首帧兜底文案：真实阶段文案由后端 progress.stages 下发（含真实案例数），
+  // 这里只做「轮询还没回来」时的占位，因此**不写任何具体数字**（避免虚假宣传）。
   const stages = progress?.stages ?? [
     '正在扫描你所在城市的热门赛道',
-    '正在比对 1247 个小生意案例',
+    '正在比对你的条件与真实小生意案例',
     '正在计算回本周期与毛利率',
     '正在筛选真实成功案例',
     '正在生成你所在城市的机会热度图'

@@ -456,6 +456,15 @@ function OpportunityCardView({
 
       <FiveElementsGrid card={card} blurred={locked} />
 
+      {/* M1-03 验收：核心风险点必须**在卡片上**可见，橙色标注（诚实但不吓人）。
+          锁定卡属于付费内容，不在免费卡片上提前泄露。 */}
+      {!locked && card.risks && card.risks.length > 0 && (
+        <View className='m3-card__risk'>
+          <Text className='m3-card__risk-tag'>核心风险点</Text>
+          <Text className='m3-card__risk-text'>{card.risks[0]}</Text>
+        </View>
+      )}
+
       <View className='m3-card__foot bf-row'>
         <View className='m3-card__tags'>
           {card.tags.slice(0, 3).map((t) => (
@@ -479,7 +488,8 @@ function OpportunityCardView({
   )
 }
 
-/** 五要素数字卡（M3-02）：数字滚动 + 逐格浮现，全部说人话。 */
+/** 五要素数字卡（M3-02）：数字滚动 + 逐格浮现，全部说人话。
+ *  M1-03 验收：前 3 项必须是「大字数字」并主色高亮，后 2 项为文本项单独一行。 */
 function FiveElementsGrid({ card, blurred }: { card: OpportunityCard; blurred: boolean }) {
   const m = card.metrics
   // 万元保留 1 位小数 → 以「千元」为整数单位做滚动，避免浮点抖动
@@ -489,22 +499,38 @@ function FiveElementsGrid({ card, blurred }: { card: OpportunityCard; blurred: b
   const stars = useCountUp(m.difficultyStars, 360)
   const difficultyText = card.fiveElements.difficulty.replace(/^[⭐\s]+/, '')
 
-  const cells = [
-    { label: '启动资金', value: `${(capWanX10 / 10).toFixed(1)} 万元左右` },
-    { label: '回本周期', value: `${payback} 个月` },
-    { label: '毛利率', value: `${margin}%` },
+  // 5 个关键数字：前 3 个是纯数字（大字高亮），后 2 个是「去哪找客户 / 好不好上手」
+  const numbers = [
+    { label: '启动资金', value: `${(capWanX10 / 10).toFixed(1)}`, unit: '万元' },
+    { label: '回本周期', value: `${payback}`, unit: '个月' },
+    { label: '毛利率', value: `${margin}`, unit: '%' }
+  ]
+  const texts = [
     { label: '第一个客户', value: card.fiveElements.firstCustomer },
     { label: '上手难度', value: `${'⭐'.repeat(Math.max(1, stars))} ${difficultyText}` }
   ]
 
   return (
     <View className={`m3-five ${blurred ? 'is-blurred' : ''}`}>
-      {cells.map((c, i) => (
-        <View key={c.label} className='m3-five__cell' style={{ animationDelay: `${i * 90}ms` }}>
-          <Text className='m3-five__label'>{c.label}</Text>
-          <Text className='m3-five__value'>{c.value}</Text>
-        </View>
-      ))}
+      <View className='m3-five__nums'>
+        {numbers.map((c, i) => (
+          <View key={c.label} className='m3-five__cell' style={{ animationDelay: `${i * 90}ms` }}>
+            <Text className='m3-five__label'>{c.label}</Text>
+            <Text className='m3-five__value'>
+              {c.value}
+              <Text className='m3-five__unit'>{c.unit}</Text>
+            </Text>
+          </View>
+        ))}
+      </View>
+      <View className='m3-five__texts'>
+        {texts.map((c, i) => (
+          <View key={c.label} className='m3-five__row' style={{ animationDelay: `${(i + 3) * 90}ms` }}>
+            <Text className='m3-five__label'>{c.label}</Text>
+            <Text className='m3-five__text'>{c.value}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   )
 }

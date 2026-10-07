@@ -91,3 +91,28 @@ def drain():
         await await_background(timeout)
 
     return _drain
+
+
+@pytest.fixture
+def login():
+    """M0-01（V5.0）：把测试客户端换成「已登录用户」。
+
+    PRD 要求「免费诊断免登录，付费前才触发登录」，因此 `/api/payment/create`
+    对游客返回 40101。凡是要下单的用例，先调用本夹具完成一次真实短信登录，
+    客户端会就地带上 Authorization 头（游客头保留，便于验证游客数据归集）。
+    """
+    from app.core.cache import get_cache
+
+    async def _login(c: AsyncClient, phone: str | None = None) -> str:
+        ph = phone or f"139{uuid.uuid4().int % 10**8:08d}"
+        sent = (await c.post("/api/auth/sms/send", json={"phone": ph})).json()
+        assert sent.get("code") == 0, f"发送验证码失败：{sent}"
+        # test 环境不回传验证码（防泄露），按真实前端拿不到码的场景手动注入
+        await get_cache().set(f"sms:code:{ph}", "123456", ttl=300)
+        res = (await c.post("/api/auth/login", json={"phone": ph, "code": "123456"})).json()
+        assert res.get("code") == 0, f"登录失败：{res}"
+        token = res["data"]["token"]
+        c.headers["Authorization"] = f"Bearer {token}"
+        return token
+
+    return _login

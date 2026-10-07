@@ -367,6 +367,61 @@ async def sync_profile_from_task(db: AsyncSession, user: User, guest_token: str 
     return changed
 
 
+async def claim_guest_data(db: AsyncSession, guest_token: str | None, user: User) -> dict:
+    """M0-01（V5.0）：把游客身份下的数据归到登录账号名下。
+
+    产品流程是「游客免登录诊断 → 付费时才要求登录」。既然登录发生在流程中途，
+    游客此前产生的诊断记录 / 收藏 / 站内消息就绝不能丢 —— 否则用户一登录就发现
+    「我的收藏空了、消息没了」，等于用登录动作惩罚用户。
+
+    幂等：重复登录不会重复搬运（第二次已无 guest 归属的数据）。
+    """
+    from app.models import DiagnosisTask, Favorite, Notification
+
+    if not guest_token:
+        return {"claimed": 0}
+    owner_key = f"guest:{guest_token}"
+    target_key = f"user:{user.id}"
+    claimed = 0
+
+    # 1) 诊断任务：补记 user_id（guest_token 保留，避免影响按 token 的画像回填）
+    tasks = (
+        await db.execute(select(DiagnosisTask).where(DiagnosisTask.guest_token == guest_token))
+    ).scalars().all()
+    for task in tasks:
+        task.user_id = user.id
+        claimed += 1
+
+    # 2) 收藏：同一商机若账号下已存在，则删掉游客那条，避免撞唯一约束
+    existing = set(
+        (await db.execute(select(Favorite.opportunity_id).where(Favorite.owner_key == target_key)))
+        .scalars()
+        .all()
+    )
+    favorites = (
+        await db.execute(select(Favorite).where(Favorite.owner_key == owner_key))
+    ).scalars().all()
+    for fav in favorites:
+        if fav.opportunity_id in existing:
+            await db.delete(fav)
+        else:
+            fav.owner_key = target_key
+            existing.add(fav.opportunity_id)
+        claimed += 1
+
+    # 3) 站内消息：直接改归属键
+    notifications = (
+        await db.execute(select(Notification).where(Notification.owner_key == owner_key))
+    ).scalars().all()
+    for note in notifications:
+        note.owner_key = target_key
+        claimed += 1
+
+    if claimed:
+        await db.commit()
+    return {"claimed": claimed}
+
+
 async def update_profile(db: AsyncSession, user_id: str, body: "ProfileUpdateBody") -> dict:
     """M0-02（V5.0）：更新用户画像（全部单选 / 滑块，不强制真实姓名）。"""
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()

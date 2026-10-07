@@ -71,6 +71,20 @@ async def _capture_profile(db: AsyncSession, request: Request, user) -> None:
         pass
 
 
+async def _claim_guest(db: AsyncSession, request: Request, user) -> None:
+    """M0-01（V5.0）：登录时把游客期间的诊断 / 收藏 / 消息归到账号名下。
+
+    与 `_capture_profile` 配套，顺序不能反：画像回填要先按 guest_token 找到游客的诊断任务。
+    """
+    if user is None:
+        return
+    try:
+        owner = current_owner(request)
+        await auth_service.claim_guest_data(db, owner.guest_token, user)
+    except Exception:  # 归集失败不阻断登录主流程
+        pass
+
+
 async def _auth_result(db: AsyncSession, login: dict) -> dict:
     """统一成前端 AuthResult 结构：{token, user}（见 types/index.ts）。"""
     profile = await auth_service.get_user_profile(db, login["user_id"])
@@ -189,6 +203,7 @@ async def login(
     if user is not None:
         await _bind_inviter(db, user, body.inviterCode)
         await _capture_profile(db, request, user)
+        await _claim_guest(db, request, user)
     return ok(await _auth_result(db, login_info), _rid(request))
 
 
@@ -209,6 +224,7 @@ async def wechat_login(
         # M0-04：分享卡片 → 微信登录同样要绑定邀请关系（裂变主路径）
         await _bind_inviter(db, user, body.inviterCode)
         await _capture_profile(db, request, user)
+        await _claim_guest(db, request, user)
     return ok(await _auth_result(db, login_info), _rid(request))
 
 

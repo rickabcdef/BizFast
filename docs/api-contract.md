@@ -63,6 +63,13 @@
 - `GET /api/user/orders` · `POST /api/user/logout` · `DELETE /api/user/account`（注销，15 日清隐私）。
 - M0-02 采集时机：注册 / 登录时自动把**首屏已选过的**条件回写画像，不重复问用户（只填空字段，不覆盖手动修改）。
 - M0-03 到期提醒：到期前 **3 天 / 1 天各提醒一次**，不要求用户已开启自动续费（`user.renew_stage` 去重）。
+- **M0-01 付费前强制登录（V5.0）**：`GET /api/diagnose*`、`GET /api/match*` 等诊断链路**不要求登录**（游客可完整走完免费诊断）；
+  但 `POST /api/payment/create` 对游客返回 `40101 请先登录后再支付`。
+  - 原因：若允许游客下单，订单会挂在游客行上；用户随后一登录就换成新账号，已购权益与订单全部丢失（真实客诉级问题）。
+  - 前端在 `pages/m5_pay` 做同样的闸门（未登录先渲染登录表单，登录成功后原地继续支付）。
+- **M0-01 登录时游客数据归集**：`POST /api/auth/login` / `/api/auth/wechat` 会读取请求头 `X-Guest-Token`，
+  把游客身份下的**诊断记录 / 收藏 / 站内消息**归到登录账号名下（幂等；收藏撞唯一约束时删除游客那条）。
+  否则用户「免费诊断 → 登录 → 发现收藏没了」，等于用登录动作惩罚用户。
 - **M0-04 邀请关系绑定（V5.0）**：分享链接形如 `https://<host>/?inviter=BF-7Q2X9`。
   - 落地即暂存：前端冷启动读取 `inviter` 参数落本地存储（被邀请人可能逛很久才登录，不落地就会丢单）；
   - 登录自动携带：`POST /api/auth/login` 与 `POST /api/auth/wechat` 的 `inviterCode` 字段由请求层自动补齐，
@@ -74,6 +81,15 @@
 - `POST /api/diagnose` body:{capital, dailyHours, city, extra?} → {taskId}
   - `extra`（M2-07 补充问答，可整体跳过）：`{experience:'none|some|pro', mode:'offline|online|both', priority:'cost|profit|balance'}`
   - **注意**：城市必须是后端城市库认得的名字（含 `中国香港` / `中国澳门` / `中国台湾`），否则 40002。
+- **城市口径（前后端必须一致）**：后端 `app/data/cities.py::CITIES_BY_PROVINCE`（346 城）是唯一权威来源，
+  前端 `constants/cities.ts::CITIES` **由它生成**，两边逐字一致。
+  - 一律**不带「市」后缀**（`杭州` 而非 `杭州市`）：后端入库、画像回显、前端展示全用同一形态，
+    否则个人中心画像里已选城市无法高亮匹配。
+  - 有契约测试 `test_frontend_city_options_are_all_supported` 锁住「前端提供的每一项后端都认得」。
+- **M1-03 卡片验收**：3 张免费卡必须**在卡片上**渲染「核心风险点」（橙色标注，诚实但不吓人），
+  且前 3 项为**大字数字 + 主色高亮**（启动资金 / 回本周期 / 毛利率）；锁定卡属付费内容，不提前泄露风险。
+- `GET /api/home/config` 首屏档位（资金 4 档 / 时间 3 档 = 2h·4h·8h）必须与前端滑块一致；
+  `cityVersion` 取自 `settings.city_list_version`。
 - `GET /api/diagnose/{taskId}/progress` → {stage, percent, message}（真实进度，不造假）
 - `GET /api/diagnose/{taskId}/result` → {tags, heatmapUrl, cached:bool}
 - `GET /api/diagnose/heatmap/{taskId}` 下载/预览热度图（≤30 秒生成）。
@@ -142,10 +158,21 @@
   - **M0-04 来源渠道**：出参 `source` ∈ `邀请注册`｜埋点渠道值｜`自然流量`；邀请注册时附 `inviterPhone`（同样脱敏）。
     `source` 筛选参数**真实生效**（此前被接收却从不生效，属已修复的契约断裂）。
 - 订单管理：`GET /api/admin/orders?page=&pageSize=&status=&keyword=&abnormal=&channel=`；`PUT /api/admin/orders/{orderId}/refund` body:{action:'approve|reject', reason}
-  - 异常订单包含 `refund_review`（退款待审核）、`paid_no_delivery`（已支付未交付超 2 小时）、`callback_missing`（渠道回调缺失）三类，红色高亮；
+  - 异常订单包含 `refund_review`（退款待审核）、`duplicate_payment`（疑似重复支付）、`paid_no_delivery`（已支付未交付超 2 小时）、`callback_missing`（渠道回调缺失）四类，红色高亮；
     出参带 `downloaded` / `refundRequested` / `refundReason` / `abnormal` / `abnormalType` / `abnormalHandled`。
+    判定优先级：退款待审核 > 疑似重复支付 > 已支付未交付 > 支付回调缺失；`duplicate_payment` 的窗口口径与
+    巡检 `duplicate_payment_window_minutes` **共用同一配置**（避免「告警里有、订单列表标不出来」）。
   - **M2-03 手动标记已处理**：`POST /api/admin/orders/{orderId}/resolve` body:{note?}
     写订单事件（可追溯处理人与时间）+ 关闭该订单的未读告警；标记后 `abnormal=false`、`abnormalHandled=true`，不再红色高亮。
+  - **M2-04 一键处理异常**：`POST /api/admin/orders/resolve-abnormal` body:{note?} → {handled, orderIds, message}
+    **真实批量处理**当前全部异常订单（此前前台按钮只是把列表切到「仅异常」筛选，一笔都没处理）。
+  - **M2-03 一键补单**：`POST /api/admin/orders/{orderId}/resend` → {orderId, status, delivered, message}
+    渠道已扣款但回调丢失时主动查单补单；渠道未确认支付则**不擅自发货**（fail-safe，留人工核对）。
+  - **M2-03 后台主动退款**：`PUT /api/admin/orders/{orderId}/refund` 的 `approve` 支持**用户未申请**的订单
+    （重复支付 / 客诉补偿），走与审核通过相同的完整链路（状态流转 + 权益回收 + 券额度释放 + 通知）。
+    `reject` 只对「存在待审核申请」的订单有效，否则返回 `40901`；`approve` 审核用户申请时同样要求 `refund_review=='pending'`（防越权直退）。
+  - **M0-03 会员额度**：用户列表与详情出参含 `expireAt` / `expireDaysLeft` / `purchasedCount` /
+    `usedPackageCount` / `quotaTotal` / `quotaRemaining` / `quotaUnlimited`，口径与 `GET /api/user/me` 完全一致。
 - 商机库管理（P0）：`GET /api/admin/opportunities?page=&pageSize=&status=&keyword=`；`POST /api/admin/opportunities/import` body:{items[]}；`POST /api/admin/opportunities/{id}/review` body:{action:'approve|reject', reason}
 - 提示词配置：`GET /api/admin/prompts`；`PUT /api/admin/prompts/{promptKey}` body:{content, model}（改后无需发版生效）
 - 内容审核：`GET /api/admin/reviews?page=&pageSize=&status=&keyword=`；`POST /api/admin/reviews/{id}/action` body:{action:'pass|reject', reason}

@@ -5,6 +5,8 @@ import {
   getAdminOrders,
   processRefund,
   resolveAdminOrder,
+  resolveAllAbnormalOrders,
+  resendAdminOrder,
   exportCsv,
   ORDER_ABNORMAL_LABEL,
   type AdminOrder,
@@ -121,6 +123,52 @@ const doResolve = async (o: AdminOrder) => {
   }
 }
 
+// M2-04（V5.0）：一键处理异常 —— 真正批量处理，不再是「只切筛选」的假按钮
+const doResolveAll = async () => {
+  if (abnormalCount.value === 0) {
+    ElMessage.info('当前没有待处理的异常订单')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确认批量处理当前 ${abnormalCount.value} 笔异常订单？处理后不再红色高亮，相关告警同步关闭。`,
+      '一键处理异常',
+      { type: 'warning', confirmButtonText: '确认处理', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const r = await resolveAllAbnormalOrders('后台一键批量处理异常')
+    ElMessage.success(r.message)
+    onlyAbnormal.value = false
+    void load()
+  } catch (e: any) {
+    if (e?.message) ElMessage.error(e.message)
+  }
+}
+
+// M2-03（V5.0）：一键补单 —— 渠道已扣款但回调丢失时，主动查单把货补给用户
+const doResend = async (o: AdminOrder) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认对订单 ${o.id} 补单？将主动向支付渠道查单，渠道确认已扣款才补发。`,
+      '一键补单',
+      { type: 'info', confirmButtonText: '确认补单', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const r = await resendAdminOrder(o.id)
+    if (r.delivered || r.status !== 'pending') ElMessage.success(r.message)
+    else ElMessage.warning(r.message)
+    void load()
+  } catch (e: any) {
+    if (e?.message) ElMessage.error(e.message)
+  }
+}
+
 // 渠道 tag
 const channelTag = (o: AdminOrder) => (o.channel === '微信支付' ? 'tag-green' : 'tag-blue')
 const channelText = (o: AdminOrder) => (o.channel === '微信支付' ? '微信' : o.channel === '支付宝' ? '支付宝' : o.channel)
@@ -149,7 +197,7 @@ const deliveryText = (o: AdminOrder) => {
         <strong>异常订单告警：</strong>
         发现 <strong>{{ abnormalCount }} 笔已支付未交付 / 支付回调缺失</strong>订单，
         请立即处理以避免用户投诉！
-        <el-button size="small" style="margin-left: 12px" type="danger" plain @click="onlyAbnormal = true; status = ''; page = 1; void load()">一键处理异常</el-button>
+        <el-button size="small" style="margin-left: 12px" type="danger" plain @click="doResolveAll">一键处理异常</el-button>
       </div>
     </div>
 
@@ -240,14 +288,26 @@ const deliveryText = (o: AdminOrder) => {
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
+            <!-- M2-03：用户申请退款 → 同意 / 驳回 -->
             <template v-if="row.refundRequested && ['paid', 'generating', 'delivered'].includes(row.status)">
               <a class="action-link" style="color: var(--bf-ok)" @click="doRefund(row, 'approve')">同意退款</a>
               <a class="action-link danger" @click="doRefund(row, 'reject')">驳回</a>
             </template>
+            <!-- M2-03：「支持手动退款」= 后台可主动退款（重复支付 / 客诉补偿，用户未申请） -->
+            <a
+              v-else-if="['paid', 'generating', 'delivered'].includes(row.status)"
+              class="action-link danger"
+              @click="doRefund(row, 'approve')"
+            >主动退款</a>
+            <!-- M2-03 / M2-04：待支付订单可一键补单（渠道已扣款但回调丢失） -->
+            <a v-if="row.status === 'pending'" class="action-link" style="color: var(--bf-info)" @click="doResend(row)">补单</a>
             <a v-if="row.abnormal && !row.abnormalHandled" class="action-link" style="color: var(--bf-warn)" @click="doResolve(row)">标记已处理</a>
-            <span v-if="!row.refundRequested && !(row.abnormal && !row.abnormalHandled)" class="bf-muted">—</span>
+            <span
+              v-if="!row.refundRequested && !(row.abnormal && !row.abnormalHandled) && row.status !== 'pending' && !['paid', 'generating', 'delivered'].includes(row.status)"
+              class="bf-muted"
+            >—</span>
           </template>
         </el-table-column>
       </el-table>

@@ -33,8 +33,9 @@ async def _admin_token(client) -> dict:
     return {"Authorization": f"Bearer {step2['data']['token']}"}
 
 
-async def _new_order(client, plan="single") -> str:
-    """只创建订单（不支付），返回 orderId。"""
+async def _new_order(client, login, plan="single") -> str:
+    """只创建订单（不支付），返回 orderId。M0-01：下单前必须登录。"""
+    await login(client)
     task_id = (await client.post("/api/diagnose", json=CONDITIONS)).json()["data"]["taskId"]
     await client.get("/api/match", params={"taskId": task_id})
     created = (
@@ -156,11 +157,11 @@ async def test_wechat_login_also_binds_inviter(client, _tables):
 
 
 # ---------------------------------------------------------------- M2-01 主动查单兜底
-async def test_query_order_recovers_when_callback_lost(client, drain):
+async def test_query_order_recovers_when_callback_lost(client, drain, login):
     """回调丢失（渠道已扣款、本地仍待支付）时，主动查单必须补单，不能让用户白付钱。"""
     from app.services import payment as payment_service
 
-    order_id = await _new_order(client)
+    order_id = await _new_order(client, login)
     before = (await client.get(f"/api/payment/order/{order_id}")).json()["data"]
     assert before["status"] == "pending"
 
@@ -174,7 +175,7 @@ async def test_query_order_recovers_when_callback_lost(client, drain):
 
 
 # ---------------------------------------------------------------- M2-04 回调缺失告警
-async def test_callback_missing_raises_admin_alert(client, _tables):
+async def test_callback_missing_raises_admin_alert(client, _tables, login):
     """待支付订单长时间收不到渠道回调 → 生成后台告警，交人工核对（不静默丢单）。"""
     from sqlalchemy import select
 
@@ -182,7 +183,7 @@ async def test_callback_missing_raises_admin_alert(client, _tables):
     from app.models import AdminAlert, Order
     from app.services import automation
 
-    order_id = await _new_order(client)
+    order_id = await _new_order(client, login)
 
     async with AsyncSessionLocal() as db:
         order = await db.get(Order, order_id)
@@ -204,7 +205,7 @@ async def test_callback_missing_raises_admin_alert(client, _tables):
 
 
 # ---------------------------------------------------------------- M2-03 标记已处理
-async def test_admin_can_resolve_abnormal_order(client, _tables):
+async def test_admin_can_resolve_abnormal_order(client, _tables, login):
     """后台一键「标记已处理」：不再是异常高亮，且关联告警被关闭、动作可追溯。"""
     from sqlalchemy import select
 
@@ -212,7 +213,7 @@ async def test_admin_can_resolve_abnormal_order(client, _tables):
     from app.models import Order
     from app.services import automation
 
-    order_id = await _new_order(client)
+    order_id = await _new_order(client, login)
     # 制造「已支付未交付超 2 小时」异常
     await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
     async with AsyncSessionLocal() as db:
@@ -251,3 +252,174 @@ async def test_admin_login_two_step_contract(client, _tables):
     dash = (await client.get("/api/admin/dashboard", headers=headers)).json()
     assert dash["code"] == 0, dash
     assert "kpis" in dash["data"]
+
+
+# ════════════════════════════════════════════════════════════════════
+#  第三轮核查补齐（M0-01 付费前登录 / M2 后台订单能力 / M0-03 后台额度）
+# ════════════════════════════════════════════════════════════════════
+
+async def test_guest_cannot_create_order(client):
+    """M0-01：免费诊断免登录，但**付款这一步**必须登录。
+
+    否则游客付款后一登录就换成新账号，已购权益 / 订单全部丢失（真实客诉级问题）。
+    """
+    body = (
+        await client.post("/api/payment/create", json={"plan": "single", "platform": "web"})
+    ).json()
+    assert body["code"] == 40101, body
+    assert "登录" in body["message"]
+
+
+async def test_guest_data_claimed_on_login(client, login):
+    """M0-01：游客期间产生的收藏，登录后必须归到账号名下，不能一登录就没了。"""
+    from app.models import Favorite
+
+    task_id = (await client.post("/api/diagnose", json=CONDITIONS)).json()["data"]["taskId"]
+    await client.get("/api/match", params={"taskId": task_id})
+    opp_id = (await client.get("/api/match", params={"taskId": task_id})).json()["data"]["free"][0]["id"]
+    await client.post(f"/api/match/{opp_id}/favorite")
+
+    guest_favs = (await client.get("/api/match/favorites")).json()["data"]
+    assert any(i["id"] == opp_id for i in guest_favs["items"]), guest_favs
+
+    await login(client)  # 就地登录（客户端仍带 X-Guest-Token → 触发归集）
+
+    claimed = (await client.get("/api/match/favorites")).json()["data"]
+    assert any(i["id"] == opp_id for i in claimed["items"]), claimed
+
+    from sqlalchemy import select
+
+    from app.core.database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        rows = (await db.execute(select(Favorite).where(Favorite.opportunity_id == opp_id))).scalars().all()
+        assert not any(r.owner_key.startswith("guest:") for r in rows)
+
+
+async def test_admin_manual_refund_without_user_request(client, login):
+    """M2-03：后台可对**用户未申请**的订单主动退款（重复支付 / 客诉补偿）。"""
+    order_id = await _new_order(client, login)
+    await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
+    headers = await _admin_token(client)
+
+    listed = (await client.get("/api/admin/orders", params={"keyword": order_id}, headers=headers)).json()["data"]
+    row = next((o for o in listed["items"] if o["id"] == order_id), None)
+    assert row is not None and row["refundRequested"] is False
+
+    res = (
+        await client.put(
+            f"/api/admin/orders/{order_id}/refund",
+            json={"action": "approve", "reason": "疑似重复支付，主动退款"},
+            headers=headers,
+        )
+    ).json()
+    assert res["code"] == 0, res
+    assert res["data"]["status"] == "refunded"
+    assert "主动退款" in res["data"]["message"]
+
+
+async def test_reject_without_pending_review_is_blocked(client, login):
+    """M2-05：没有待审核申请的订单不允许「驳回」（防止后台越权空操作）。"""
+    order_id = await _new_order(client, login)
+    await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
+    headers = await _admin_token(client)
+    res = (
+        await client.put(
+            f"/api/admin/orders/{order_id}/refund",
+            json={"action": "reject", "reason": "误操作"},
+            headers=headers,
+        )
+    ).json()
+    assert res["code"] == 40901, res
+
+
+async def test_admin_resend_order_recovers_missing_callback(client, login):
+    """M2-03：一键补单 —— 渠道已扣款但回调丢失时，后台可主动补单发货。"""
+    from app.services import payment as payment_service
+
+    order_id = await _new_order(client, login)
+    await payment_service.mark_mock_channel_paid(order_id)  # 渠道已扣款，回调未到
+
+    headers = await _admin_token(client)
+    res = (await client.post(f"/api/admin/orders/{order_id}/resend", headers=headers)).json()
+    assert res["code"] == 0, res
+    assert res["data"]["status"] in ("paid", "generating", "delivered"), res
+
+
+async def test_admin_resend_refuses_when_channel_not_paid(client, login):
+    """M2-04：渠道未确认支付时绝不擅自发货（fail-safe）。"""
+    order_id = await _new_order(client, login)
+    headers = await _admin_token(client)
+    res = (await client.post(f"/api/admin/orders/{order_id}/resend", headers=headers)).json()
+    assert res["code"] == 0, res
+    assert res["data"]["delivered"] is False
+    assert "未查询到" in res["data"]["message"] or "无需补单" in res["data"]["message"]
+
+
+async def test_duplicate_payment_flagged_and_batch_resolved(client, login):
+    """M2-04：重复支付必须能在后台标红，且「一键处理异常」要真的批量处理。"""
+    await login(client)
+    first = (await client.post("/api/payment/create", json={"plan": "month", "platform": "web"})).json()["data"]["orderId"]
+    second = (await client.post("/api/payment/create", json={"plan": "year", "platform": "web"})).json()["data"]["orderId"]
+    for oid in (first, second):
+        await client.post("/api/payment/callback/alipay", json={"order_id": oid, "result": "success"})
+
+    headers = await _admin_token(client)
+    listed = (await client.get("/api/admin/orders", params={"pageSize": 100}, headers=headers)).json()["data"]
+    drows = {o["id"]: o for o in listed["items"]}
+    assert drows[first]["abnormal"] is True, drows.get(first)
+    assert drows[first]["abnormalType"] == "duplicate_payment", drows.get(first)
+    assert drows[second]["abnormalType"] == "duplicate_payment", drows.get(second)
+
+    batch = (await client.post("/api/admin/orders/resolve-abnormal", json={"note": "批量核对"}, headers=headers)).json()
+    assert batch["code"] == 0 and batch["data"]["handled"] >= 2, batch
+
+    after = (await client.get("/api/admin/orders", params={"keyword": first}, headers=headers)).json()["data"]
+    row = next((o for o in after["items"] if o["id"] == first), None)
+    assert row["abnormal"] is False and row["abnormalHandled"] is True, row
+
+
+async def test_admin_user_detail_exposes_member_quota(client, login):
+    """M0-03：后台必须能查到会员到期剩余天数 / 已购次数 / 已用启动包数 / 额度剩余。"""
+    from app.core.security import ACCESS_TOKEN_TYPE, decode_token
+
+    token = await login(client)
+    uid = decode_token(token, ACCESS_TOKEN_TYPE)
+    order_id = (
+        await client.post("/api/payment/create", json={"plan": "single", "platform": "web"})
+    ).json()["data"]["orderId"]
+    await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
+
+    headers = await _admin_token(client)
+    users = (await client.get("/api/admin/users", params={"pageSize": 100}, headers=headers)).json()["data"]
+    row = next((u for u in users["items"] if u["id"] == uid), None)
+    assert row is not None, "新建用户应出现在后台用户列表"
+    for key in ("expireAt", "expireDaysLeft", "purchasedCount", "usedPackageCount",
+                "quotaTotal", "quotaRemaining", "quotaUnlimited"):
+        assert key in row, f"后台用户列表缺字段 {key}"
+
+    detail = (await client.get(f"/api/admin/users/{uid}", headers=headers)).json()["data"]
+    u = detail["user"]
+    assert "quotaRemaining" in u and "expireDaysLeft" in u, u
+    assert u["purchasedCount"] >= 1, u
+    assert detail["orders"], "详情应包含订单"
+    for key in ("downloaded", "refundRequested", "abnormal"):
+        assert key in detail["orders"][0], f"详情订单缺字段 {key}"
+
+
+async def test_home_config_tiers_match_frontend(client):
+    """M1-01：首屏档位接口必须与前端滑块一致（此前后端 2 档 / 前端 3 档，属于契约漂移）。"""
+    data = (await client.get("/api/home/config")).json()["data"]
+    assert [h["value"] for h in data["dailyHours"]] == [2, 4, 8], data["dailyHours"]
+    assert len(data["capitals"]) == 4, data["capitals"]
+    assert data["cityVersion"], data
+
+
+async def test_diagnose_progress_uses_real_case_count(client, drain):
+    """M1-02 / 第 1.1 节：进度文案里的案例数必须来自真实案例库，不允许虚假宣传。"""
+    from app.data import opportunities as opp_data
+    from app.services import diagnose as diagnose_service
+
+    labels = [label for _, label in diagnose_service.STAGES]
+    assert any(str(opp_data.CASE_COUNT) in label for label in labels), labels
+    assert all("1247" not in label for label in labels), labels

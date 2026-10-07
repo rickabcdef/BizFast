@@ -22,6 +22,14 @@ export interface AdminUser {
   riskFlag: boolean
   source: string // 来源渠道（邀请注册 / 埋点渠道 / 自然流量）
   inviterPhone: string // M0-04：邀请人手机号（已脱敏），非邀请注册为空
+  // M0-03（V5.0）：后台必须能查到会员「剩余天数 / 已购次数 / 已用启动包数 / 额度剩余」
+  expireAt: string
+  expireDaysLeft: number | null
+  purchasedCount: number
+  usedPackageCount: number
+  quotaTotal: number
+  quotaRemaining: number
+  quotaUnlimited: boolean
 }
 
 export interface AdminOrder {
@@ -312,6 +320,21 @@ export async function resolveAdminOrder(orderId: string, note?: string): Promise
   return request(`/api/admin/orders/${encodeURIComponent(orderId)}/resolve`, {
     method: 'POST',
     body: JSON.stringify({ note })
+  })
+}
+
+// M2-04（V5.0）：一键处理全部异常订单（真正批量处理，不是只做筛选）
+export async function resolveAllAbnormalOrders(note?: string): Promise<{ handled: number; orderIds: string[]; message: string }> {
+  return request('/api/admin/orders/resolve-abnormal', {
+    method: 'POST',
+    body: JSON.stringify({ note })
+  })
+}
+
+// M2-03（V5.0）：一键补单（渠道已扣款但回调丢失 → 主动查单补单）
+export async function resendAdminOrder(orderId: string): Promise<{ orderId: string; status: OrderStatus; delivered: boolean; message: string }> {
+  return request(`/api/admin/orders/${encodeURIComponent(orderId)}/resend`, {
+    method: 'POST'
   })
 }
 

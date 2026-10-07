@@ -68,6 +68,14 @@ class AdminUserOut(CamelModel):
     source: str = ""
     # M0-04（V5.0）：后台可查任意用户的邀请来源（邀请人手机号，已脱敏）
     inviter_phone: str = ""
+    # M0-03（V5.0）：后台必须能查到「剩余天数 / 已购次数 / 已用启动包数 / 额度剩余」
+    expire_at: str = ""
+    expire_days_left: Optional[int] = None
+    purchased_count: int = 0
+    used_package_count: int = 0
+    quota_total: int = 0
+    quota_remaining: int = 0
+    quota_unlimited: bool = False
 
 class AdminUserDetailOut(CamelModel):
     user: AdminUserOut

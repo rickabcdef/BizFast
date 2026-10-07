@@ -9,7 +9,9 @@ import pytest
 CONDITIONS = {"capital": 30000, "dailyHours": 2, "city": "杭州市"}
 
 
-async def _prepared_order(client, drain, plan="single", platform="web"):
+async def _prepared_order(client, drain, login, plan="single", platform="web"):
+    # M0-01：免费诊断可游客走，下单必须登录
+    await login(client)
     task_id = (
         await client.post("/api/diagnose", json=CONDITIONS)
     ).json()["data"]["taskId"]
@@ -23,6 +25,15 @@ async def _prepared_order(client, drain, plan="single", platform="web"):
         )
     ).json()["data"]
     return task_id, locked_id, created
+
+
+async def test_guest_cannot_pay_before_login(client):
+    """M0-01 验收：免费诊断不拦登录，**付款这一步**必须要求登录。"""
+    body = (
+        await client.post("/api/payment/create", json={"plan": "single", "platform": "web"})
+    ).json()
+    assert body["code"] == 40101
+    assert "登录" in body["message"]
 
 
 async def test_three_price_tiers(client):
@@ -40,14 +51,14 @@ async def test_three_price_tiers(client):
     "platform,channel",
     [("web", "alipay"), ("weapp", "wechat"), ("android", "wechat"), ("ios", "apple"), ("harmony", "huawei")],
 )
-async def test_channel_adaptation(client, drain, platform, channel):
-    _, _, created = await _prepared_order(client, drain, platform=platform)
+async def test_channel_adaptation(client, drain, login, platform, channel):
+    _, _, created = await _prepared_order(client, drain, login, platform=platform)
     assert created["channel"] == channel
     assert created["payParams"]["channel"] == channel
 
 
-async def test_order_state_machine_and_idempotent_callback(client, drain):
-    _, locked_id, created = await _prepared_order(client, drain)
+async def test_order_state_machine_and_idempotent_callback(client, drain, login):
+    _, locked_id, created = await _prepared_order(client, drain, login)
     order_id = created["orderId"]
     assert created["status"] == "pending"
     assert created["reused"] is False
@@ -89,8 +100,8 @@ async def test_order_state_machine_and_idempotent_callback(client, drain):
     assert detail["code"] == 0, detail
 
 
-async def test_callback_channel_mismatch_rejected(client, drain):
-    _, _, created = await _prepared_order(client, drain, platform="web")
+async def test_callback_channel_mismatch_rejected(client, drain, login):
+    _, _, created = await _prepared_order(client, drain, login, platform="web")
     body = (
         await client.post(
             "/api/payment/callback/wechat",
@@ -100,8 +111,8 @@ async def test_callback_channel_mismatch_rejected(client, drain):
     assert body["code"] == 60001
 
 
-async def test_refund_within_7_days_and_duplicate_rejected(client, drain):
-    _, _, created = await _prepared_order(client, drain)
+async def test_refund_within_7_days_and_duplicate_rejected(client, drain, login):
+    _, _, created = await _prepared_order(client, drain, login)
     order_id = created["orderId"]
     await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
 
@@ -118,16 +129,16 @@ async def test_refund_within_7_days_and_duplicate_rejected(client, drain):
     assert dup["code"] == 40301
 
 
-async def test_refund_before_payment_rejected(client, drain):
-    _, _, created = await _prepared_order(client, drain)
+async def test_refund_before_payment_rejected(client, drain, login):
+    _, _, created = await _prepared_order(client, drain, login)
     body = (
         await client.post("/api/payment/refund", json={"order_id": created["orderId"]})
     ).json()
     assert body["code"] == 60001
 
 
-async def test_membership_grants_entitlement(client, drain):
-    _, locked_id, created = await _prepared_order(client, drain, plan="year")
+async def test_membership_grants_entitlement(client, drain, login):
+    _, locked_id, created = await _prepared_order(client, drain, login, plan="year")
     order_id = created["orderId"]
     assert created["amountCents"] == 59900
     await client.post("/api/payment/callback/alipay", json={"order_id": order_id, "result": "success"})
@@ -136,7 +147,8 @@ async def test_membership_grants_entitlement(client, drain):
     assert detail["code"] == 0, detail
 
 
-async def test_idempotency_key_returns_same_order(client, drain):
+async def test_idempotency_key_returns_same_order(client, drain, login):
+    await login(client)
     payload = {
         "plan": "month",
         "platform": "web",
@@ -154,7 +166,8 @@ async def test_unknown_order_returns_40401(client):
     assert body["code"] == 40401
 
 
-async def test_invalid_plan_rejected(client):
+async def test_invalid_plan_rejected(client, login):
+    await login(client)
     body = (
         await client.post("/api/payment/create", json={"plan": "lifetime", "platform": "web"})
     ).json()

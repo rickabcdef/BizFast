@@ -9,7 +9,9 @@ import pytest
 CONDITIONS = {"capital": 30000, "dailyHours": 2, "city": "杭州市"}
 
 
-async def _pay_something(client, drain):
+async def _pay_something(client, drain, login):
+    # M0-01：付款前必须登录（游客下单会被 40101 拦）
+    await login(client)
     task_id = (await client.post("/api/diagnose", json=CONDITIONS)).json()["data"]["taskId"]
     await drain()
     locked_id = (await client.get("/api/match", params={"taskId": task_id})).json()["data"]["locked"]["id"]
@@ -25,8 +27,8 @@ async def _pay_something(client, drain):
     return created["orderId"]
 
 
-async def test_message_center_and_unread(client, drain):
-    order_id = await _pay_something(client, drain)
+async def test_message_center_and_unread(client, drain, login):
+    order_id = await _pay_something(client, drain, login)
 
     data = (await client.get("/api/notify/messages")).json()["data"]
     assert data["total"] >= 1
@@ -48,8 +50,8 @@ async def test_message_center_and_unread(client, drain):
     assert (await client.get("/api/notify/unread")).json()["data"]["unread"] == 0
 
 
-async def test_mark_single_message_read(client, drain):
-    await _pay_something(client, drain)
+async def test_mark_single_message_read(client, drain, login):
+    await _pay_something(client, drain, login)
     items = (await client.get("/api/notify/messages")).json()["data"]["items"]
     target = items[0]["id"]
     data = (await client.post("/api/notify/read", params={"id": target})).json()["data"]
@@ -60,8 +62,8 @@ async def test_mark_single_message_read(client, drain):
     assert target in read_ids
 
 
-async def test_category_filter_and_paging(client, drain):
-    await _pay_something(client, drain)
+async def test_category_filter_and_paging(client, drain, login):
+    await _pay_something(client, drain, login)
     only_activity = (
         await client.get("/api/notify/messages", params={"category": "activity"})
     ).json()["data"]

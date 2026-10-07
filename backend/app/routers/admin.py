@@ -123,6 +123,18 @@ async def get_orders(
     return ok(result, _rid(request))
 
 
+@router.post("/orders/resolve-abnormal", summary="一键处理全部异常订单（M2-04）")
+async def resolve_abnormal_orders(
+    body: schemas.OrderResolveIn,
+    request: Request,
+    session: dict = Depends(require_perm("orders")),
+    db: AsyncSession = Depends(get_db),
+):
+    """M2-04 验收「支持一键处理异常」：真正批量处理，而不是只做筛选。"""
+    result = await admin_service.resolve_abnormal_orders(db, session, body.note)
+    return ok(result, _rid(request))
+
+
 @router.put("/orders/{order_id}/refund", summary="处理退款（同意 / 驳回）")
 async def process_refund(
     order_id: str,
@@ -144,6 +156,18 @@ async def resolve_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await admin_service.resolve_order(db, session, order_id, body.note)
+    return ok(result, _rid(request))
+
+
+@router.post("/orders/{order_id}/resend", summary="一键补单（M2-03 / M2-04）")
+async def resend_order(
+    order_id: str,
+    request: Request,
+    session: dict = Depends(require_perm("orders")),
+    db: AsyncSession = Depends(get_db),
+):
+    """渠道已扣款但回调丢失时主动查单补单；渠道未确认支付则绝不擅自发货。"""
+    result = await admin_service.resend_order(db, session, order_id)
     return ok(result, _rid(request))
 
 

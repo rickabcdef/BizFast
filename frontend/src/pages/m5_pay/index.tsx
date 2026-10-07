@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import ErrorTip from '@/components/ErrorTip'
 import Loading from '@/components/Loading'
 import NotifyEntry from '@/components/NotifyEntry'
+import PhoneLoginForm from '@/components/PhoneLoginForm'
 import { getPlatform, payChannelFor } from '@/utils/platform'
 import { getPageParams } from '@/utils/query'
 import { useAppStore } from '@/store'
@@ -59,6 +60,11 @@ function isSubscriptionPlan(plan: Plan): boolean {
 
 export default function M5Pay() {
   const setOrderId = useAppStore((s) => s.setOrderId)
+  // M0-01（V5.0）：付费前强制登录 —— 免费诊断与商机浏览不拦，付款这一步必须登录，
+  // 否则订单会挂在游客身份下，用户一登录就换账号、已购权益全丢。
+  const token = useAppStore((s) => s.token)
+  const setToken = useAppStore((s) => s.setToken)
+  const setUser = useAppStore((s) => s.setUser)
   const [platform] = useState(() => getPlatform())
   const [plans, setPlans] = useState<PlanOption[]>([])
   // V5.0 档位 5：增值加购包（成本高，按需单买，不并入标准套餐）
@@ -292,6 +298,35 @@ export default function M5Pay() {
     } finally {
       setSubBusy(false)
     }
+  }
+
+  // M0-01（V5.0）：付费前强制登录。放在所有 Hook 之后、主渲染之前，
+  // 登录成功后 token 变化会重新渲染本页，用户无感继续支付。
+  if (!token) {
+    return (
+      <View className='page m5-pay'>
+        <View className='bf-row m5-head'>
+          <View>
+            <Text className='m5-head__title'>登录后即可支付</Text>
+            <Text className='bf-muted m5-head__sub'>免费诊断与商机浏览无需登录</Text>
+          </View>
+        </View>
+        <View className='bf-card m5-login-gate'>
+          <Text className='bf-card__title'>先登录，再支付</Text>
+          <Text className='bf-muted'>
+            登录后订单与 10 件交付物会永久保存在你的账号里，换设备也能随时重新下载。
+          </Text>
+          <PhoneLoginForm
+            successText='登录成功，请继续支付'
+            tip=''
+            onSuccess={(res) => {
+              setToken(res.token)
+              setUser(res.user)
+            }}
+          />
+        </View>
+      </View>
+    )
   }
 
   return (

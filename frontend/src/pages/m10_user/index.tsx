@@ -3,14 +3,13 @@ import { View, Text, Input, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import Loading from '@/components/Loading'
 import ErrorTip from '@/components/ErrorTip'
+import PhoneLoginForm from '@/components/PhoneLoginForm'
 import { saveFile } from '@/utils/platform'
 import {
   getMyPackages,
   getOrders,
   getMembership,
   getInviteInfo,
-  phoneLogin,
-  wechatLogin,
   deleteAccount
 } from '@/services/repo'
 import { cancelSubscription, updateUserProfile } from '@/services/aApi'
@@ -49,15 +48,17 @@ const CAPITAL_BANDS = ['3 万以内', '3–10 万', '10–30 万', '30 万以上
 const HOURS_BANDS = ['2 小时以内', '2–4 小时', '4–8 小时', '8 小时以上']
 const EXPERIENCE_OPTS = ['零经验起步', '有相关经验', '做过同样的生意']
 // 常用城市置顶，避免每次都在 300+ 项里翻找；「全选城市」展开完整列表
+// 注意：城市名一律**不带「市」后缀**——后端入库与画像回显都是「北京」这种形态，
+// 带「市」会让画像里已选城市无法高亮匹配（此前就是这样，切回去就找不到当前城市）。
 const HOT_CITIES = [
-  '北京市',
-  '上海市',
-  '广州市',
-  '深圳市',
-  '杭州市',
-  '成都市',
-  '武汉市',
-  '西安市',
+  '北京',
+  '上海',
+  '广州',
+  '深圳',
+  '杭州',
+  '成都',
+  '武汉',
+  '西安',
   '南京市',
   '重庆市',
   '长沙市',
@@ -73,8 +74,6 @@ export default function M10User() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
   const [packages, setPackages] = useState<PackageResult[]>([])
   const [orders, setOrders] = useState<OrderView[]>([])
   const [member, setMember] = useState<Membership | null>(null)
@@ -170,42 +169,6 @@ export default function M10User() {
   const maskedPhone = (user?.phone || '').replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') || '未绑定手机'
   const generatedCount = packages.reduce((n, p) => n + p.items.length, 0)
 
-  const doPhoneLogin = async () => {
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' })
-      return
-    }
-    if (!code) {
-      Taro.showToast({ title: '请输入验证码', icon: 'none' })
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await phoneLogin(phone, code)
-      setToken(res.token)
-      setUser(res.user)
-      Taro.showToast({ title: '登录成功', icon: 'success' })
-    } catch (e: any) {
-      setError(e?.message || '登录失败，请重试')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const doWechat = async () => {
-    setLoading(true)
-    try {
-      const res = await wechatLogin()
-      setToken(res.token)
-      setUser(res.user)
-      Taro.showToast({ title: '登录成功', icon: 'success' })
-    } catch (e: any) {
-      setError(e?.message || '登录失败，请重试')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const onLogout = () => {
     logout()
     Taro.showToast({ title: '已退出（15日内清除隐私数据）', icon: 'none' })
@@ -244,36 +207,13 @@ export default function M10User() {
       <View className='page m10-user'>
         <View className='bf-card'>
           <Text className='bf-card__title'>账号登录</Text>
-          <Text className='bf-muted'>登录后可查看「我的启动包」与订单（游客可先体验首屏与诊断）</Text>
-          <View className='m10-login'>
-            <Input
-              className='bf-input'
-              placeholder='手机号'
-              value={phone}
-              onInput={(e) => setPhone(e.detail.value)}
-            />
-            <View className='bf-row m10-code'>
-              <Input
-                className='bf-input'
-                placeholder='验证码'
-                value={code}
-                onInput={(e) => setCode(e.detail.value)}
-              />
-              <View
-                className='bf-btn bf-btn--sm'
-                onClick={() => Taro.showToast({ title: '验证码已发送', icon: 'none' })}
-              >
-                获取
-              </View>
-            </View>
-            <View className='bf-btn' onClick={doPhoneLogin}>
-              手机号登录
-            </View>
-            <View className='bf-btn bf-btn--ghost' onClick={doWechat}>
-              微信一键登录
-            </View>
-            <Text className='bf-muted m10-note'>iOS 端额外支持 Apple ID 登录；网页端暂仅支持手机号登录。</Text>
-          </View>
+          {/* M0-01：登录表单抽成公共组件，付费页（m5_pay）共用同一份实现 */}
+          <PhoneLoginForm
+            onSuccess={(res) => {
+              setToken(res.token)
+              setUser(res.user)
+            }}
+          />
         </View>
       </View>
     )
@@ -292,9 +232,9 @@ export default function M10User() {
             <Text className='m10-logout__txt'>退出</Text>
           </View>
         </View>
-        {member && (
+        {member && member.plan !== 'none' && (
           <View className='m10-vip'>
-            👑 {PLAN_LABEL[member.plan]} · 有效期至 {member.expireAt}
+            👑 {PLAN_LABEL[member.plan]} · 有效期至 {member.expireAt || '—'}
           </View>
         )}
       </View>
@@ -377,12 +317,13 @@ export default function M10User() {
         </View>
       </View>
 
-      {member && (
+      {/* M0-03：非会员不显示「会员卡」，避免未付费用户被误显示为会员 */}
+      {member && member.plan !== 'none' && (
         <View className='bf-card'>
           <Text className='bf-card__title'>会员</Text>
           <View className='bf-row'>
             <Text>
-              {PLAN_LABEL[member.plan]} · 有效期至 {member.expireAt}
+              {PLAN_LABEL[member.plan]} · 有效期至 {member.expireAt || '—'}
             </Text>
             <Text className='bf-muted'>{member.autoRenew ? '自动续费中' : '已关闭续费'}</Text>
           </View>

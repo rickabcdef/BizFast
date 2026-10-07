@@ -192,6 +192,15 @@ const statusLabel = (u: AdminUser) => (u.riskFlag ? '风控中' : '正常')
           </div>
           <div v-if="detail.user.inviterPhone" class="bf-muted">邀请人（已脱敏）：{{ detail.user.inviterPhone }}</div>
           <div class="bf-muted">订单 {{ detail.user.orderCount }} 单 · 累计消费 ¥{{ detail.user.totalSpendYuan }} · 注册 {{ detail.user.createdAt }}</div>
+          <!-- M0-03（V5.0）：后台可查会员到期剩余天数 / 已购次数 / 已用启动包数 / 额度剩余 -->
+          <div class="bf-muted" style="margin-top: 4px">
+            会员到期：{{ detail.user.expireAt || '—' }}
+            <template v-if="detail.user.expireDaysLeft !== null && detail.user.expireDaysLeft !== undefined">
+              （剩余 {{ detail.user.expireDaysLeft }} 天）
+            </template>
+            · 已购 {{ detail.user.purchasedCount }} 次 · 已用启动包 {{ detail.user.usedPackageCount }} 个 ·
+            额度剩余 {{ detail.user.quotaUnlimited ? '不限次（会员）' : `${detail.user.quotaRemaining} 次` }}
+          </div>
           <el-tag v-if="detail.user.riskFlag" type="danger" size="small" style="margin-top: 6px">命中风控标记，已转人工审核</el-tag>
         </div>
 

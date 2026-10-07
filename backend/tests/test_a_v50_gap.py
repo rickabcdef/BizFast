@@ -22,8 +22,10 @@ CONDITIONS = {"capital": 30000, "dailyHours": 2, "city": "杭州市"}
 
 
 # ---------------------------------------------------------------- 工具
-async def _paid_order(client, drain, plan="single"):
+async def _paid_order(client, drain, login, plan="single"):
     """走完「诊断 → 商机 → 下单 → 支付成功」，返回 (taskId, matchId, orderId)。"""
+    # M0-01：诊断可游客走，付款必须登录（后端对游客下单返回 40101）
+    await login(client)
     task_id = (await client.post("/api/diagnose", json=CONDITIONS)).json()["data"]["taskId"]
     await drain()
     match = (await client.get("/api/match", params={"taskId": task_id})).json()["data"]
@@ -53,9 +55,9 @@ async def _wait_delivered(client, drain, order_id, tries=60):
 
 
 # ---------------------------------------------------------------- M2-05 退款规则（V5.0）
-async def test_refund_before_download_is_self_service(client, drain):
+async def test_refund_before_download_is_self_service(client, drain, login):
     """未下载 → 自助全额退款即时生效，且不进入人工审核。"""
-    _, _, order_id = await _paid_order(client, drain)
+    _, _, order_id = await _paid_order(client, drain, login)
 
     order = (await client.get(f"/api/payment/order/{order_id}")).json()["data"]
     assert order["downloaded"] is False
@@ -72,9 +74,9 @@ async def test_refund_before_download_is_self_service(client, drain):
     assert refund["data"]["reviewRequired"] is False
 
 
-async def test_refund_after_download_needs_manual_review(client, drain):
+async def test_refund_after_download_needs_manual_review(client, drain, login):
     """已下载 → 退款不即时生效，转人工审核；后台订单列表可见该待审核申请。"""
-    _, locked_id, order_id = await _paid_order(client, drain)
+    _, locked_id, order_id = await _paid_order(client, drain, login)
 
     created = (
         await client.post("/api/package/create", json={"orderId": order_id, "matchId": locked_id})
@@ -166,7 +168,8 @@ async def test_refund_revokes_membership_rights(client, drain):
 
 
 # ---------------------------------------------------------------- 第 2.3 节「今日限制」
-async def test_today_quota_is_real_and_grows_with_orders(client, drain):
+async def test_today_quota_is_real_and_grows_with_orders(client, drain, login):
+    await login(client)
     task_id = (await client.post("/api/diagnose", json=CONDITIONS)).json()["data"]["taskId"]
     await drain()
     match = (await client.get("/api/match", params={"taskId": task_id})).json()["data"]

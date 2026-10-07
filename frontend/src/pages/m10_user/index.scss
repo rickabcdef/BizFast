@@ -212,6 +212,16 @@
   margin-top: 8rpx;
   font-size: 22rpx;
 }
+/* M0-01：登录表单的错误提示与禁用态（共用组件 PhoneLoginForm） */
+.m10-login__err {
+  display: block;
+  font-size: 22rpx;
+  color: #ff5c7c;
+}
+.m10-login .bf-btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
 
 /* 启动包 / 列表 */
 .m10-pkg {

@@ -87,8 +87,8 @@ async def main() -> int:
             str(home)[:180],
         )
         check(
-            "M1-01 时间档位为「兼职2h / 全职8h」两档",
-            [h["value"] for h in home["dailyHours"]] == [2, 8],
+            "M1-01 时间档位与前端滑块一致（兼职2h / 半天4h / 全职8h 三档）",
+            [h["value"] for h in home["dailyHours"]] == [2, 4, 8],
             str(home["dailyHours"]),
         )
 
@@ -161,6 +161,13 @@ async def main() -> int:
 
         phone = f"135{uuid.uuid4().int % 10**8:08d}"
 
+        # M0-01（V5.0）：付费前**免登录**，所以游客期间的收藏不能因为登录而丢
+        await c.post(f"/api/match/{locked['id']}/favorite")
+        guest_favs = (await c.get("/api/match/favorites")).json()["data"]
+        check("M0-01 游客可免登录收藏商机",
+              any(f.get("id") == locked["id"] for f in (guest_favs.get("items") or [])),
+              str(guest_favs)[:200])
+
         # M0-01 发送验证码
         sent = (await c.post("/api/auth/sms/send", json={"phone": phone})).json()
         check("M0-01 发送验证码", sent.get("code") == 0, str(sent)[:160])
@@ -172,6 +179,12 @@ async def main() -> int:
               str(login)[:200])
         token = login["data"]["token"]
         h = {"Authorization": f"Bearer {token}"}
+
+        # M0-01：登录成功后，游客期间的收藏必须归到账号名下（否则「一登录东西就没了」）
+        claimed_favs = (await c.get("/api/match/favorites", headers=h)).json()["data"]
+        check("M0-01 登录后游客收藏自动归到账号名下（不丢数据）",
+              any(f.get("id") == locked["id"] for f in (claimed_favs.get("items") or [])),
+              str(claimed_favs)[:200])
 
         # M0-01 微信授权登录（网页端占位 unionid）
         wx = (await c.post("/api/auth/wechat", json={"unionid": f"wx-{uuid.uuid4().hex[:10]}"})).json()
@@ -217,6 +230,14 @@ async def main() -> int:
 
         # ══════════════ M2 支付与订单 ══════════════
         print("\n== M2 支付与订单 ==", flush=True)
+
+        # M0-01（V5.0）：免费诊断不拦登录，**付款这一步**必须要求登录
+        guest_pay = (
+            await c.post("/api/payment/create", json={"plan": "single", "platform": "web"})
+        ).json()
+        check("M0-01 游客下单被拦（提示先登录，40101）",
+              guest_pay.get("code") == 40101 and "登录" in (guest_pay.get("message") or ""),
+              str(guest_pay)[:200])
 
         # M2-02 三档支付入口
         plans = (await c.get("/api/payment/plans")).json()["data"]
@@ -463,6 +484,88 @@ async def main() -> int:
               ocrow2 is not None and ocrow2.get("abnormal") is False
               and ocrow2.get("abnormalHandled") is True,
               str(ocrow2)[:240] if ocrow2 else "未找到订单")
+
+        # ══════════════ 第三轮核查补齐的能力 ══════════════
+        print("\n== 第三轮核查补齐（重复支付 / 一键处理 / 补单 / 主动退款 / 后台额度） ==", flush=True)
+
+        # M2-04：同一用户短窗口内两笔已支付 → 疑似重复支付，两条都必须标红
+        dup_a = (
+            await c.post("/api/payment/create", json={"plan": "month", "platform": "web"}, headers=h)
+        ).json()["data"]["orderId"]
+        dup_b = (
+            await c.post("/api/payment/create", json={"plan": "year", "platform": "web"}, headers=h)
+        ).json()["data"]["orderId"]
+        for oid in (dup_a, dup_b):
+            await c.post("/api/payment/callback/alipay",
+                         json={"order_id": oid, "result": "success"}, headers=h)
+
+        dl = (await c.get("/api/admin/orders", params={"pageSize": 100}, headers=ah)).json()["data"]
+        drows = {o["id"]: o for o in (dl.get("items") or [])}
+        check("M2-04 疑似重复支付在后台标红（此前该类型从不产出）",
+              drows.get(dup_a, {}).get("abnormalType") == "duplicate_payment"
+              and drows.get(dup_b, {}).get("abnormalType") == "duplicate_payment",
+              f"{drows.get(dup_a, {}).get('abnormalType')} / {drows.get(dup_b, {}).get('abnormalType')}")
+
+        # M2-04：一键处理异常必须**真的处理**（此前只是把列表切到「仅异常」筛选）
+        rb = (await c.post("/api/admin/orders/resolve-abnormal",
+                           json={"note": "批量核对完成"}, headers=ah)).json()
+        check("M2-04 一键处理异常真实批量处理（不再只是切换筛选）",
+              rb.get("code") == 0 and rb["data"].get("handled", 0) >= 1,
+              str(rb)[:220])
+
+        d_after = (await c.get("/api/admin/orders", params={"keyword": dup_a}, headers=ah)).json()["data"]
+        da = next((o for o in (d_after.get("items") or []) if o["id"] == dup_a), None)
+        check("M2-04 批量处理后重复支付不再标红",
+              da is not None and da.get("abnormal") is False and da.get("abnormalHandled") is True,
+              str(da)[:220])
+
+        # M2-03：后台**主动退款**（用户没申请也能退，走完整权益回收链路）
+        mref = (await c.put(f"/api/admin/orders/{dup_b}/refund",
+                            json={"action": "approve", "reason": "疑似重复支付，主动退款"},
+                            headers=ah)).json()
+        check("M2-03 后台主动退款（用户未申请 → 支持手动退款）",
+              mref.get("code") == 0 and mref["data"].get("status") == "refunded",
+              str(mref)[:220])
+
+        # M2-03：一键补单 —— 渠道已扣款但回调丢失
+        task_r = (await c.post("/api/diagnose",
+                               json={"capital": 30000, "dailyHours": 2, "city": "杭州市",
+                                     "extra": {"experience": "none"}})).json()["data"]["taskId"]
+        await await_background()
+        order_r = (await c.post("/api/payment/create",
+                                json={"plan": "month", "platform": "web"},
+                                headers=h)).json()["data"]["orderId"]
+        await payment_service.mark_mock_channel_paid(order_r)  # 渠道已扣款，回调丢了
+        rs = (await c.post(f"/api/admin/orders/{order_r}/resend", headers=ah)).json()
+        check("M2-03 后台一键补单（渠道已扣款 → 补单成功）",
+              rs.get("code") == 0
+              and rs["data"].get("status") in ("paid", "generating", "delivered"),
+              str(rs)[:220])
+
+        # M0-03：后台用户详情必须能查到会员到期/已购/已用/额度剩余
+        det = (await c.get(f"/api/admin/users/{target_uid}", headers=ah)).json()["data"]
+        u = det.get("user") or {}
+        check("M0-03 后台用户详情含会员到期 / 已购次数 / 已用启动包 / 额度剩余",
+              all(k in u for k in ("expireAt", "expireDaysLeft", "purchasedCount",
+                                   "usedPackageCount", "quotaTotal", "quotaRemaining",
+                                   "quotaUnlimited")),
+              str({k: u.get(k) for k in ("expireAt", "expireDaysLeft", "purchasedCount",
+                                         "usedPackageCount", "quotaRemaining", "quotaUnlimited")}))
+        d_orders = det.get("orders") or []
+        check("M0-03 后台用户详情订单含真实「已下载 / 退款申请 / 异常」字段",
+              bool(d_orders) and all(k in d_orders[0] for k in ("downloaded", "refundRequested", "abnormal")),
+              str(d_orders[0])[:220] if d_orders else "无订单")
+
+        # M2-05：驳回一个「没有待审核申请」的订单必须被拦（越权空操作防护）
+        bad_reject = (await c.put(f"/api/admin/orders/{order_r}/refund",
+                                  json={"action": "reject", "reason": "误操作"}, headers=ah)).json()
+        check("M2-05 驳回无待审核申请的订单被拦（40901）",
+              bad_reject.get("code") == 40901, str(bad_reject)[:200])
+
+        # M1-03：免费卡片必须带「核心风险点」（此前只在付费详情页才有）
+        free_risks = [bool(card.get("risks")) for card in free]
+        check("M1-03 三张免费卡片全部带风险点（前端卡片可渲染）",
+              all(free_risks), f"risks 齐备情况={free_risks}")
 
     await engine.dispose()
     print(f"\n===== 冒烟结果：{len(PASS)} 通过 / {len(FAIL)} 失败 =====", flush=True)

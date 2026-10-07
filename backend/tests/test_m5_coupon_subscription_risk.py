@@ -12,6 +12,16 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.fixture(autouse=True)
+async def _must_login(client, login):
+    """M0-01（V5.0）：本模块全部用例都走付费链路，统一先完成登录。
+
+    `/api/payment/create` 对游客返回 40101（免费诊断不拦，付款必须登录），
+    所以这里在每条用例开始前先做一次真实短信登录。
+    """
+    await login(client)
+
+
 async def _create_order(client, **overrides):
     payload = {"plan": "single", "platform": "web"}
     payload.update(overrides)

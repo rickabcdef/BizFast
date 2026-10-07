@@ -19,6 +19,32 @@
   margin-top: 6rpx;
 }
 
+/* ---------- M0-01 付费前强制登录闸门 ---------- */
+.m5-login-gate {
+  margin-top: 16rpx;
+}
+.m5-login-gate .m10-login {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.m5-login-gate .m10-code {
+  margin: 8rpx 0;
+}
+.m5-login-gate .m10-note {
+  font-size: 22rpx;
+}
+.m5-login-gate .m10-login__err {
+  display: block;
+  font-size: 22rpx;
+  color: #ff5c7c;
+}
+.m5-login-gate .bf-btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 /* ---------- 三档价格（M5-03） ---------- */
 .m5-plans {
   display: grid;

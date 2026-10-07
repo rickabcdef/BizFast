@@ -935,19 +935,35 @@ async def refund_order(db, owner: OwnerContext, order_id: str, reason: str | Non
     }
 
 
-async def approve_refund_review(db, order_id: str) -> dict:
-    """后台审核通过已下载订单的退款（M2-05 + M4-03 一键处理）。"""
+async def approve_refund_review(db, order_id: str, *, manual: bool = False) -> dict:
+    """后台审核通过已下载订单的退款（M2-05 + M4-03 一键处理）。
+
+    `manual=True`：后台**主动**发起的退款（用户没申请，如疑似重复支付 / 客诉补偿）——
+    这是 PRD M2-03「支持手动退款」要求的路径，不做「待审核」前置校验。
+    `manual=False`：审核用户提交的退款申请，必须有待审核记录，否则视为越权直退（资损风险）。
+    """
     order = (await db.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
     if order is None:
         raise BizError(40401, "订单不存在")
     if order.status == "refunded":
         return {"order_id": order.id, "status": "refunded", "revoked": False}
+    if not manual and order.refund_review != "pending":
+        raise BizError(40901, "该订单没有待审核的退款申请，无法审核通过")
+    if order.status not in ("paid", "generating", "delivered"):
+        raise BizError(40901, "该订单当前状态不支持退款")
 
     await _transition(db, order, "refunded")
     order.refund_review = "approved"
     revoked = await _revoke_plan(db, order)
     await coupon_service.release_on_refund(db, order.id)
-    _record(db, order.id, order.channel, "refund", "refunded", {"reason": "后台审核通过"})
+    _record(
+        db,
+        order.id,
+        order.channel,
+        "refund",
+        "refunded",
+        {"reason": "后台主动退款" if manual else "后台审核通过"},
+    )
     await notify_service.create_notification_for_user(
         db,
         order.user_id,

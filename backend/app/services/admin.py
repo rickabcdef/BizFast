@@ -358,6 +358,7 @@ async def get_users(
             risk_flag=False,
             source=_source_of(u.id, index),
             inviter_phone=inviter_phones.get(inviter_id, "") if inviter_id else "",
+            **(await _quota_fields(db, u)),
         ))
     
     return {
@@ -365,6 +366,26 @@ async def get_users(
         "total": total,
         "page": page,
         "page_size": page_size,
+    }
+
+
+async def _quota_fields(db: AsyncSession, user: User) -> dict:
+    """M0-03（V5.0）：后台要能查到「剩余天数 / 已购次数 / 已用启动包数 / 额度剩余」。
+
+    口径与用户端 `/api/user/me` 完全一致（同一份 `payment.membership_quota`），
+    否则客服看到的额度和用户看到的对不上，会变成互相扯皮。
+    """
+    from app.services import payment as payment_service
+
+    quota = await payment_service.membership_quota(db, user)
+    expire = user.plan_expire_at
+    days_left: Optional[int] = None
+    if expire is not None:
+        days_left = int((_aware(expire) - datetime.now(timezone.utc)).days)
+    return {
+        "expire_at": expire.strftime("%Y-%m-%d") if expire else "",
+        "expire_days_left": days_left,
+        **quota,
     }
 
 
@@ -411,11 +432,15 @@ async def get_user_detail(db: AsyncSession, user_id: str) -> dict:
         created_at=user.created_at.strftime("%Y-%m-%d %H:%M") if user.created_at else "",
         source=_source_of(user_id, index),
         inviter_phone=inviter_phone,
+        **(await _quota_fields(db, user)),
     )
     
-    # 构建订单列表
+    # 构建订单列表（口径与订单列表页一致：退款申请 / 已下载 / 异常均真实反映）
+    handled_ids = await _handled_order_ids(db, [o.id for o in orders])
+    dup_ids = frozenset(_duplicate_payment_ids(list(orders)))
     orders_out = []
     for o in orders:
+        flag, atype = _abnormal_flag(o, handled_ids, dup_ids)
         orders_out.append({
             "id": o.id,
             "userId": o.user_id,
@@ -428,10 +453,11 @@ async def get_user_detail(db: AsyncSession, user_id: str) -> dict:
             "channel": o.channel or "",
             "createdAt": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
             "paidAt": o.paid_at.strftime("%Y-%m-%d %H:%M") if o.paid_at else None,
-            "refundRequested": False,
-            "refundReason": None,
-            "abnormal": False,
-            "abnormalType": None,
+            "downloaded": o.downloaded_at is not None,
+            "refundRequested": o.refund_review == "pending",
+            "refundReason": o.refund_reason,
+            "abnormal": flag,
+            "abnormalType": atype,
         })
     
     # 构建启动包列表
@@ -469,25 +495,60 @@ async def _handled_order_ids(db: AsyncSession, order_ids: list[str]) -> set[str]
     return {r[0] for r in rows}
 
 
-def _abnormal_flag(order: Order, handled_ids: set[str]) -> tuple[bool, str | None]:
-    """统一的异常判定（列表展示与「仅看异常」筛选共用同一条口径）。"""
+def _aware(dt: datetime) -> datetime:
+    """SQLite 下读回的时间可能没有 tzinfo，统一按 UTC 处理后再比较。"""
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+# 视为「已完成支付」的状态（与 payment 的 PAID_STATUSES 语义一致）
+_PAID_LIKE_STATUSES = ("paid", "generating", "delivered")
+
+
+def _duplicate_payment_ids(orders: list[Order]) -> set[str]:
+    """M2-04：同一用户在一个短窗口内出现 ≥2 笔已支付订单 → 全部标记「疑似重复支付」。
+
+    口径必须与自动化巡检 `automation.detect_payment_anomalies` 使用同一配置项
+    （`duplicate_payment_window_minutes`），否则会出现「告警里有、订单列表里搜不到红标」
+    —— 后台拿到告警却定位不到订单，等于无法处理。
+    """
+    window = int(getattr(settings, "duplicate_payment_window_minutes", 10) or 10) * 60
+    by_user: dict[str, list[Order]] = {}
+    for order in orders:
+        if order.status in _PAID_LIKE_STATUSES and order.paid_at:
+            by_user.setdefault(order.user_id, []).append(order)
+
+    dup: set[str] = set()
+    for rows in by_user.values():
+        if len(rows) < 2:
+            continue
+        rows.sort(key=lambda r: _aware(r.paid_at))
+        for prev, cur in zip(rows, rows[1:]):
+            if (_aware(cur.paid_at) - _aware(prev.paid_at)).total_seconds() <= window:
+                dup.add(prev.id)
+                dup.add(cur.id)
+    return dup
+
+
+def _abnormal_flag(
+    order: Order, handled_ids: set[str], dup_ids: frozenset[str] = frozenset()
+) -> tuple[bool, str | None]:
+    """统一的异常判定（列表展示与「仅看异常」筛选共用同一条口径）。
+
+    优先级：退款待审核 > 疑似重复支付 > 已支付未交付 > 支付回调缺失。
+    """
     atype: str | None = None
     # M2-05（V5.0）：交付物已下载的退款申请需人工审核 → 红色高亮提醒处理
     if order.refund_review == "pending":
         atype = "refund_review"
-    if order.status == "paid" and order.paid_at:
-        paid_at = order.paid_at
-        if paid_at.tzinfo is None:
-            paid_at = paid_at.replace(tzinfo=timezone.utc)
-        if (datetime.now(timezone.utc) - paid_at).total_seconds() > 7200:  # 2 小时
+    # M2-04（V5.0）：同一用户短时间内多笔已支付 → 疑似重复支付
+    elif order.id in dup_ids:
+        atype = "duplicate_payment"
+    elif order.status == "paid" and order.paid_at:
+        if (_aware(order.paid_at) - datetime.now(timezone.utc)).total_seconds() < -7200:  # 超 2 小时
             atype = "paid_no_delivery"
-    # M2-04（V5.0）：待支付订单长时间收不到渠道回调 → 回调缺失
-    if order.status == "pending" and order.created_at:
-        created_at = order.created_at
-        if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
+    elif order.status == "pending" and order.created_at:
         miss_minutes = int(getattr(settings, "order_callback_missing_minutes", 15) or 15)
-        age_minutes = (datetime.now(timezone.utc) - created_at).total_seconds() / 60
+        age_minutes = (datetime.now(timezone.utc) - _aware(order.created_at)).total_seconds() / 60
         if miss_minutes <= age_minutes < 30:  # 超过阈值但尚未超时关单
             atype = "callback_missing"
     # M2-03（V5.0）：人工标记已处理后不再红色高亮
@@ -523,10 +584,11 @@ async def get_orders(
     orders = list((await db.execute(query)).scalars().all())
 
     handled_ids = await _handled_order_ids(db, [o.id for o in orders])
+    dup_ids = frozenset(_duplicate_payment_ids(orders))
 
     filtered: list[tuple[Order, bool, str | None]] = []
     for o in orders:
-        flag, atype = _abnormal_flag(o, handled_ids)
+        flag, atype = _abnormal_flag(o, handled_ids, dup_ids)
         if abnormal is not None and flag != abnormal:
             continue
         filtered.append((o, flag, atype))
@@ -588,15 +650,25 @@ async def process_refund(
     from app.services import payment as payment_service
 
     if action == "approve":
-        result = await payment_service.approve_refund_review(db, order_id)
-        write_audit_log(session, "同意退款", order_id, reason or "")
+        # M2-03：后台既能审核用户申请，也能**主动退款**（重复支付 / 客诉补偿等，
+        # 用户没提交申请的场景）。两种路径都走 payment 的完整退款链路（含权益回收）。
+        manual = order.refund_review != "pending"
+        result = await payment_service.approve_refund_review(db, order_id, manual=manual)
+        write_audit_log(session, "主动退款" if manual else "同意退款", order_id, reason or "")
         return {
             "order_id": order_id,
             "status": "refunded",
             "revoked": bool(result.get("revoked")),
-            "message": "已同意退款，24小时内原路到账，会员权益已回收",
+            "message": (
+                "已主动退款，24小时内原路到账，会员权益已回收"
+                if manual
+                else "已同意退款，24小时内原路到账，会员权益已回收"
+            ),
         }
 
+    # 驳回只对「用户已提交的待审核申请」有意义，否则是无意义的空操作
+    if order.refund_review != "pending":
+        raise BizError(40901, "该订单没有待审核的退款申请，无法驳回")
     await payment_service.reject_refund_review(db, order_id, reason)
     write_audit_log(session, "驳回退款", order_id, reason or "")
     return {
@@ -621,7 +693,6 @@ async def resolve_order(
     if not order:
         raise BizError(40401, "订单不存在")
 
-    from app.models import AdminAlert
     from app.services import payment as payment_service
 
     # 1) 写订单事件（幂等：重复标记不重复写入）
@@ -644,10 +715,24 @@ async def resolve_order(
         )
 
     # 2) 关闭该订单的相关告警（异常订单 / 回调缺失）
+    closed = await _close_order_alerts(db, order_id)
+
+    await db.commit()
+    write_audit_log(session, "标记已处理", order_id, note or "")
+    return {
+        "order_id": order_id,
+        "handled": True,
+        "message": f"已标记处理完成，同时关闭 {closed} 条相关告警",
+    }
+
+
+async def _close_order_alerts(db: AsyncSession, order_id: str) -> int:
+    """关闭某订单关联的未读告警（异常订单 / 回调缺失 / 重复支付）。"""
+    from app.models import AdminAlert
+
     alerts = (
         await db.execute(
             select(AdminAlert).where(
-                AdminAlert.related_type == "order",
                 AdminAlert.related_id == order_id,
                 AdminAlert.is_read.is_(False),
             )
@@ -655,13 +740,73 @@ async def resolve_order(
     ).scalars().all()
     for alert in alerts:
         alert.is_read = True
+    return len(alerts)
 
+
+async def resolve_abnormal_orders(
+    db: AsyncSession, session: dict, note: Optional[str] = None
+) -> dict:
+    """M2-04（V5.0）：**一键处理异常**。
+
+    PRD 验收写的是「支持一键处理异常」。此前前台那个红色按钮只是把列表切到
+    「仅异常」筛选，一笔订单都没处理 —— 属于名不副实的按钮，这里改成真正批量处理。
+    """
+    listing = await get_orders(db, page=1, page_size=10000, abnormal=True)
+    order_ids = [item.id for item in listing["items"]]
+    if not order_ids:
+        return {"handled": 0, "order_ids": [], "message": "当前没有待处理的异常订单"}
+
+    for order_id in order_ids:
+        await resolve_order(db, session, order_id, note or "一键批量处理异常")
+    return {
+        "handled": len(order_ids),
+        "order_ids": order_ids,
+        "message": f"已批量标记处理 {len(order_ids)} 笔异常订单，相关告警已同步关闭",
+    }
+
+
+async def resend_order(db: AsyncSession, session: dict, order_id: str) -> dict:
+    """M2-03 / M2-04（V5.0）：**一键补单**。
+
+    覆盖真实场景：渠道已扣款但回调丢失（本地仍待支付）→ 主动查单补单，让用户拿到货。
+    渠道未确认支付时**绝不擅自发货**（fail-safe），只留人工核对 —— 与
+    `payment.channel_query` 的「查不到一律 unknown」口径一致。
+    """
+    from app.services import payment as payment_service
+
+    order = await db.get(Order, order_id)
+    if not order:
+        raise BizError(40401, "订单不存在")
+
+    if order.status != "pending":
+        write_audit_log(session, "一键补单", order_id, f"订单状态为 {order.status}，无需补单")
+        return {
+            "order_id": order_id,
+            "status": order.status,
+            "delivered": order.status in ("generating", "delivered"),
+            "message": f"该订单当前状态为「{ORDER_STATUS_LABELS.get(order.status, order.status)}」，无需补单",
+        }
+
+    recovered = await payment_service.recover_pending_order(db, order)
+    await db.refresh(order)
+
+    if not recovered:
+        write_audit_log(session, "一键补单", order_id, "渠道未确认支付，未发货")
+        return {
+            "order_id": order_id,
+            "status": order.status,
+            "delivered": False,
+            "message": "渠道侧未查询到该笔支付，已留待人工核对（不擅自发货）",
+        }
+
+    await _close_order_alerts(db, order_id)
     await db.commit()
-    write_audit_log(session, "标记已处理", order_id, note or "")
+    write_audit_log(session, "一键补单", order_id, "主动查单补单成功")
     return {
         "order_id": order_id,
-        "handled": True,
-        "message": f"已标记处理完成，同时关闭 {len(alerts)} 条相关告警",
+        "status": order.status,
+        "delivered": order.status in ("generating", "delivered"),
+        "message": "补单成功：订单已转为已支付，用户可正常下载交付物",
     }
 
 

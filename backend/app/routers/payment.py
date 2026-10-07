@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.context import current_owner
 from app.core.database import get_db
+from app.core.errors import BizError
 from app.schemas.common import ok
 from app.schemas.payment import CouponValidateIn, PaymentCreate, RefundCreate, SubscriptionUpdate
 from app.services import coupon as coupon_service
@@ -47,6 +48,11 @@ async def create_payment(
     payload: PaymentCreate, request: Request, db: AsyncSession = Depends(get_db)
 ):
     owner = current_owner(request)
+    # M0-01（V5.0）：免费诊断不拦登录，**只有付款这一步**要求登录。
+    # 若允许游客下单，订单会挂在游客行上；用户随后一登录就换成新账号，
+    # 已购权益 / 订单全部找不到（真实客诉级问题），所以必须在此拦截。
+    if owner.is_guest:
+        raise BizError(code=40101, message="请先登录后再支付")
     return ok(
         await payment_service.create_order(db, owner, payload, client_ip=_client_ip(request)),
         _rid(request),
