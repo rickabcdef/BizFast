@@ -1746,7 +1746,13 @@ async def get_ops_slots() -> dict:
         ]
         _save_json("ops_slots.json", ops)
     
-    return {"items": ops, "notice": "配置后实时生效（M11-10，P2）"}
+    return {
+        "items": ops,
+        "notice": (
+            "运营位为后台内部配置，当前仅用于运营留档；"
+            "用户端首屏按需求约定「无广告无弹窗」，不读取这里的内容（M11-09）"
+        ),
+    }
 
 
 async def save_ops_slot(
