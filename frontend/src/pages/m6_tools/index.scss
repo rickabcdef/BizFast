@@ -287,3 +287,34 @@
 .m6-games__label {
   font-size: 26rpx;
 }
+
+// V5.0 权益锁定态
+.m6-list__item.is-locked {
+  opacity: 0.72;
+}
+.m6-locked {
+  text-align: center;
+  padding: 48rpx 32rpx;
+}
+.m6-locked__ico {
+  display: block;
+  font-size: 64rpx;
+  margin-bottom: 16rpx;
+}
+.m6-locked__title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #e8ecff;
+  margin-bottom: 12rpx;
+}
+.m6-locked__desc {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: rgba(232, 236, 255, 0.7);
+  margin-bottom: 28rpx;
+}
+.m6-locked__btn {
+  display: inline-block;
+}

@@ -1,8 +1,8 @@
-"""M7 解压小游戏路由
+"""M9 解压小游戏路由（V5.0：原创命名，禁「2048」「消消乐」商标/换皮名称）
 
 提供 2 款内置小游戏：
-1. 消消乐 (match3) - 经典消除游戏
-2. 2048 - 数字合并游戏
+1. bubble - 指尖解压（捏泡泡）
+2. merge - 数字合成（原创 4x4 合并玩法）
 
 功能：
 - 提交游戏分数
@@ -28,7 +28,7 @@ from app.services import games as games_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/games", tags=["M7 解压小游戏"])
+router = APIRouter(prefix="/api/games", tags=["M9 解压小游戏"])
 
 
 def _rid(request: Request) -> str:
@@ -38,7 +38,7 @@ def _rid(request: Request) -> str:
 @router.post("/score", summary="提交游戏分数")
 async def submit_score(
     request: Request,
-    game_type: Annotated[str, Body(description="游戏类型 (match3/2048)")],
+    game_type: Annotated[str, Body(description="游戏类型 (bubble/merge)")],
     score: Annotated[int, Body(description="游戏得分", ge=0)],
     duration_seconds: Annotated[Optional[int], Body(description="游戏时长（秒）")] = None,
     extra_data: Annotated[Optional[dict], Body(description="额外数据")] = None,
@@ -48,8 +48,8 @@ async def submit_score(
     """提交游戏分数。
 
     支持的游戏类型：
-    - `match3`: 消消乐
-    - `2048`: 数字合并
+    - `bubble`: 指尖解压
+    - `merge`: 数字合成
 
     返回排名和是否打破个人记录。
     """

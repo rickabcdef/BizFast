@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { View, Text, Input, Slider, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { compressImage, formatBytes, type ImageFormat } from '@/utils/tools/image'
@@ -7,11 +7,20 @@ import { generateQR } from '@/utils/tools/qrcode'
 import { generateCopy, countChars, rewriteTone, type CopyInput } from '@/utils/tools/copywriter'
 import { saveFile, copyText } from '@/utils/platform'
 import ErrorTip from '@/components/ErrorTip'
+import { getToolAccess, type ToolAccess } from '@/services/bApi'
 import './index.scss'
 
-// M6 工具箱 | 负责人: C | 优先级: P1
-// M6-01 图片压缩 / M6-02 PDF合并拆分 / M6-03 二维码 / M6-04 文案助手；全部永久免费、本地处理
+// M8 工具箱 | 负责人: C | 优先级: P1
+// V5.0 免费层：图片压缩/二维码 随 29.9 开业礼包赠 30 天；会员全部可用；未授权工具拦截并引导购买
 type ToolKey = 'image' | 'pdf' | 'qrcode' | 'copy'
+
+// 前端工具键 → 后端权益键（后端 copywriting）
+const BACKEND_KEY: Record<ToolKey, string> = {
+  image: 'image',
+  pdf: 'pdf',
+  qrcode: 'qrcode',
+  copy: 'copywriting'
+}
 
 const TOOLS: { key: ToolKey; icon: string; title: string; desc: string }[] = [
   { key: 'image', icon: '🖼️', title: '图片压缩与格式转换', desc: 'JPG/PNG/WebP 互转，本地处理不上传' },
@@ -42,41 +51,84 @@ export default function M6Tools() {
   const paramTool = (router.params.tool as ToolKey) || ''
   const validTool: ToolKey = ['image', 'pdf', 'qrcode', 'copy'].includes(paramTool) ? paramTool : 'image'
   const [tool, setTool] = useState<ToolKey>(validTool)
+  const [toolAccess, setToolAccess] = useState<ToolAccess | null>(null)
+
+  useEffect(() => {
+    getToolAccess()
+      .then(setToolAccess)
+      .catch(() => {}) // 后端不可用时降级：不强制拦截，保证页面可用
+  }, [])
+
+  // 权益未加载完成前视为可用（降级）；加载后按后端 available_tools 判定
+  const isUnlocked = (key: ToolKey): boolean => {
+    if (!toolAccess) return true
+    return toolAccess.availableTools.includes(BACKEND_KEY[key])
+  }
+  const toolMeta = (key: ToolKey) => TOOLS.find((t) => t.key === key)!
 
   return (
     <View className='page m6-tools'>
       <View className='m6-head'>
         <Text className='m6-title'>🛠️ 实用工具箱</Text>
-        <Text className='m6-sub'>做生意常用小工具，全部永久免费</Text>
+        <Text className='m6-sub'>
+          {toolAccess?.desc || '购买开业礼包即赠工具使用权，做生意常用小工具随取随用'}
+        </Text>
       </View>
 
       <View className='m6-list'>
-        {TOOLS.map((t) => (
-          <View
-            key={t.key}
-            className={`m6-list__item ${tool === t.key ? 'is-active' : ''}`}
-            onClick={() => setTool(t.key)}
-          >
-            <Text className='m6-list__icon'>{t.icon}</Text>
-            <View className='m6-list__body'>
-              <Text className='m6-list__title'>{t.title}</Text>
-              <Text className='m6-list__desc'>{t.desc}</Text>
+        {TOOLS.map((t) => {
+          const unlocked = isUnlocked(t.key)
+          return (
+            <View
+              key={t.key}
+              className={`m6-list__item ${tool === t.key ? 'is-active' : ''} ${unlocked ? '' : 'is-locked'}`}
+              onClick={() => setTool(t.key)}
+            >
+              <Text className='m6-list__icon'>{t.icon}</Text>
+              <View className='m6-list__body'>
+                <Text className='m6-list__title'>{t.title}</Text>
+                <Text className='m6-list__desc'>{t.desc}</Text>
+              </View>
+              <Text className='m6-list__arrow'>{unlocked ? (tool === t.key ? '︿' : '﹀') : '🔒'}</Text>
             </View>
-            <Text className='m6-list__arrow'>{tool === t.key ? '︿' : '﹀'}</Text>
-          </View>
-        ))}
+          )
+        })}
       </View>
 
-      {tool === 'image' && <ImageTool />}
-      {tool === 'pdf' && <PdfTool />}
-      {tool === 'qrcode' && <QrTool />}
-      {tool === 'copy' && <CopyTool />}
+      {isUnlocked(tool) ? (
+        <>
+          {tool === 'image' && <ImageTool />}
+          {tool === 'pdf' && <PdfTool />}
+          {tool === 'qrcode' && <QrTool />}
+          {tool === 'copy' && <CopyTool />}
+        </>
+      ) : (
+        <View className='m6-panel bf-card m6-locked'>
+          <Text className='m6-locked__ico'>🔒</Text>
+          <Text className='m6-locked__title'>「{toolMeta(tool).title}」暂未开通</Text>
+          <Text className='m6-locked__desc'>
+            {toolAccess?.isFreeTier
+              ? '免费层可体验诊断与商机；购买 29.9 开业礼包即赠图片压缩、二维码 2 个工具 30 天使用权，会员全部工具不限次。'
+              : toolAccess?.desc || '开通后即可使用本工具。'}
+          </Text>
+          <View
+            className='bf-btn m6-locked__btn'
+            onClick={() => Taro.navigateTo({ url: '/pages/m5_pay/index' })}
+          >
+            去开通权益
+          </View>
+        </View>
+      )}
 
       <View className='m6-free'>
         <Text className='m6-free__icon'>🎁</Text>
         <View>
-          <Text className='m6-free__title'>全部工具永久免费</Text>
-          <Text className='m6-free__desc'>无广告、无次数限制、本地处理不上传隐私</Text>
+          <Text className='m6-free__title'>
+            {toolAccess?.scope === 'member' ? '会员权益：全部工具不限次' : toolAccess?.scope === 'gift' ? '礼包赠送工具使用权' : '工具随开业礼包赠送'}
+          </Text>
+          <Text className='m6-free__desc'>
+            {toolAccess?.desc || '本地处理不上传隐私，无广告'}
+          </Text>
         </View>
       </View>
 

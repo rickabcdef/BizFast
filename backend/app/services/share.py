@@ -100,7 +100,7 @@ async def track_event(db, owner, card_id: str | None, channel: str) -> dict:
 
 
 async def bind_invite(db, inviter_code: str | None, invitee_user: User) -> dict:
-    """M8-03 绑定邀请人（老邀新）。幂等：已绑定则直接返回。双方各发一张邀请券，实时可见。"""
+    """M5-05 绑定邀请人（老邀新）。幂等：已绑定则直接返回。V5.0 P0 仅落邀请关系，不发奖励（V1.1 开放）。"""
     code = (inviter_code or "").strip().upper()
     if not code:
         raise BizError(40001, "邀请码不能为空")
@@ -141,38 +141,11 @@ async def bind_invite(db, inviter_code: str | None, invitee_user: User) -> dict:
 
 
 async def _issue_invite_coupons(db, inviter: User, invitee: User, rel: InviteRelation) -> None:
-    """双方各得一张 ¥10 邀请券（kind=invite，不与优惠码叠加规则冲突，独立券种）。"""
-    inv_code = "INV-" + uuid.uuid4().hex[:6].upper()
-    inv_code2 = "INV-" + uuid.uuid4().hex[:6].upper()
-    db.add(
-        Coupon(
-            code=inv_code,
-            kind="invite",
-            title="邀请好友得 ¥10 券（你）",
-            discount_type="amount",
-            value=1000,
-            plan_scope="",
-            min_amount=0,
-            total_quota=0,
-            per_user_limit=1,
-            active=True,
-        )
-    )
-    db.add(
-        Coupon(
-            code=inv_code2,
-            kind="invite",
-            title="受邀新人 ¥10 券",
-            discount_type="amount",
-            value=1000,
-            plan_scope="",
-            min_amount=0,
-            total_quota=0,
-            per_user_limit=1,
-            active=True,
-        )
-    )
-    rel.coupon_code = inv_code2
+    """V5.0 M5-05：P0 阶段只绑定邀请关系，不提前发放奖励（奖励于 V1.1 开放）。
+
+    保留函数签名与调用点，便于 V1.1 在此处补发券/权益，避免改动 bind_invite 主流程。
+    """
+    rel.coupon_code = None
 
 
 async def invite_info(db, owner) -> dict:
@@ -185,8 +158,9 @@ async def invite_info(db, owner) -> dict:
     return {
         "code": code,
         "link": f"{_base_url()}/?inviter={code}",
-        "coupon": "新人立减 ¥10 券",
-        "free_generations": 1,
+        # V5.0 M5-05：P0 仅绑定邀请关系，奖励活动于 V1.1 开放，此处不承诺具体券面
+        "coupon": "奖励活动 V1.1 开放",
+        "free_generations": 0,
     }
 
 

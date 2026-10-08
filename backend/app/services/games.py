@@ -1,8 +1,8 @@
-"""M7 解压小游戏服务
+"""M9 解压小游戏服务（V5.0：原创命名，禁「2048」「消消乐」等商标/换皮名称）
 
 提供 2 款内置小游戏：
-1. 消消乐 - 经典消除游戏
-2. 2048 - 数字合并游戏
+1. bubble - 指尖解压（捏泡泡）
+2. merge - 数字合成（原创 4x4 合并玩法）
 
 功能：
 - 记录玩家分数和排名
@@ -24,11 +24,12 @@ from app.models import GameScore
 
 logger = logging.getLogger(__name__)
 
-# 游戏类型
+# 游戏类型（V5.0 原创命名，禁商标名与换皮名）
 GAME_TYPES = {
-    "match3": "消消乐",
-    "2048": "2048",
+    "bubble": "指尖解压",
+    "merge": "数字合成",
 }
+ALLOWED_GAME_TYPES = set(GAME_TYPES.keys())
 
 
 def _now() -> datetime:
@@ -47,7 +48,7 @@ async def submit_score(
 
     Args:
         user_id: 用户 ID
-        game_type: 游戏类型 (match3/2048)
+        game_type: 游戏类型 (bubble/merge)
         score: 游戏得分
         duration_seconds: 游戏时长（秒）
         extra_data: 额外数据（如关卡数、最大合并数字等）
@@ -144,8 +145,8 @@ async def get_leaderboard(
 
     Returns:
         {
-            "game_type": "2048",
-            "game_name": "2048",
+            "game_type": "merge",
+            "game_name": "数字合成",
             "total_players": 1234,
             "leaderboard": [
                 {
@@ -305,8 +306,8 @@ async def get_personal_best(
 
     Returns:
         {
-            "game_type": "2048",
-            "game_name": "2048",
+            "game_type": "merge",
+            "game_name": "数字合成",
             "best_score": 12345,
             "best_rank": 10,
             "total_games": 50,
