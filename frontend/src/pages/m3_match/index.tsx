@@ -718,9 +718,9 @@ function PaywallModal({
           这份方案与你的三个条件匹配度最高（{card.recommendScore} 分），包含 10 件可直接使用的文件。
         </Text>
         <View className='m3-modal__list'>
-          <Text className='m3-modal__li'>· 专属商机可行性评分卡 + 回本测算表</Text>
-          <Text className='m3-modal__li'>· 客户画像、供应商线索、定价与开业活动方案</Text>
-          <Text className='m3-modal__li'>· 30 天行动日历 + 获客文案 + 开业物料包 + 风险止损线</Text>
+          <Text className='m3-modal__li'>· 专属商机可行性评分卡 + 回本测算 Excel 表</Text>
+          <Text className='m3-modal__li'>· 精准客户画像、本地供应商线索、定价 + 开业活动方案</Text>
+          <Text className='m3-modal__li'>· 30 天逐日行动日历 + 首月获客文案 + 开业物料包 + 风险止损线</Text>
         </View>
         <View className='bf-btn m3-modal__btn' onClick={onSingle}>
           29.9 元，立刻拿到 10 件开干交付物 ★

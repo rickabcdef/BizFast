@@ -8,5 +8,9 @@ export default {
   // 开发态关闭 prebundle（仅影响本地 watch 编译速度，不影响产物与生产构建）。
   prebundle: { enable: false },
   mini: {},
-  h5: {}
+  h5: {
+    devServer: {
+      client: { overlay: false }
+    }
+  }
 }

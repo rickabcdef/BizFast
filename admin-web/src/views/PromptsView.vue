@@ -5,6 +5,7 @@ import {
   getAdminPrompts,
   saveAdminPrompt,
   rollbackPrompt,
+  testAdminPrompt,
   type PromptItem,
   type AdminSession
 } from '@/api/adminApi'
@@ -88,6 +89,25 @@ const doRollback = async (v: { version: number }) => {
     if (e?.message) ElMessage.error(e.message)
   }
 }
+
+// V5.0 M4-06 一键测试（不产生真实费用，返回示例输出）
+const testingKey = ref<string | null>(null)
+const testResult = ref<{ key: string; sample: string; latencyMs: number } | null>(null)
+
+const doTest = async (p: PromptItem) => {
+  if (testingKey.value) return
+  testingKey.value = p.key
+  testResult.value = null
+  try {
+    const r = await testAdminPrompt(auth.session as AdminSession, p.key)
+    testResult.value = { key: p.key, sample: r.sample, latencyMs: r.latencyMs }
+    ElMessage.success(r.ok ? '测试通过' : '测试异常')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '测试失败')
+  } finally {
+    testingKey.value = null
+  }
+}
 </script>
 
 <template>
@@ -134,14 +154,24 @@ const doRollback = async (v: { version: number }) => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="170" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <a class="action-link" @click="openEdit(row)">编辑</a>
+            <a class="action-link" style="color: var(--bf-primary)" @click="doTest(row)">{{ testingKey === row.key ? '测试中…' : '一键测试' }}</a>
             <a class="action-link" @click="openVersions(row)">版本历史</a>
             <a class="action-link" style="color: var(--bf-warn)" @click="openVersions(row)">回滚</a>
           </template>
         </el-table-column>
       </el-table>
+    </div>
+
+    <!-- V5.0 M4-06 一键测试结果 -->
+    <div v-if="testResult" class="admin-chart-card" style="margin-top: 12px">
+      <div class="bf-row" style="justify-content: space-between">
+        <strong>一键测试结果（{{ testResult.key }} · {{ testResult.latencyMs }}ms）</strong>
+        <a class="action-link" @click="testResult = null">关闭</a>
+      </div>
+      <div class="bf-muted" style="margin-top: 8px; line-height: 1.6">{{ testResult.sample }}</div>
     </div>
 
     <div class="bf-note bf-muted">{{ notice }}</div>

@@ -215,6 +215,83 @@
   color: #9df3c4;
 }
 
+// ---------- V5.0 M4-03 异常订单红色高亮 ----------
+.m11-row--abnormal {
+  border: 2rpx solid rgba(255, 94, 104, 0.45);
+  background: rgba(255, 94, 104, 0.07);
+  border-radius: 16rpx;
+}
+.m11-tag-danger {
+  display: inline-block;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: rgba(255, 94, 104, 0.16);
+  border: 2rpx solid rgba(255, 94, 104, 0.5);
+  color: #ff9aa3;
+  vertical-align: middle;
+}
+.m11-tag-ok {
+  display: inline-block;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: rgba(57, 217, 138, 0.14);
+  border: 2rpx solid rgba(57, 217, 138, 0.45);
+  color: #9df3c4;
+  vertical-align: middle;
+}
+.m11-seg--danger.is-active {
+  background: linear-gradient(90deg, #e8554d, #ff7a45);
+  color: #fff;
+  border-color: transparent;
+}
+.bf-btn--danger {
+  background: rgba(255, 94, 104, 0.14);
+  border: 2rpx solid rgba(255, 94, 104, 0.5);
+  color: #ff9aa3;
+}
+.bf-btn--warn {
+  background: rgba(255, 180, 84, 0.14);
+  border: 2rpx solid rgba(255, 180, 84, 0.5);
+  color: #ffd29b;
+}
+
+// ---------- V5.0 M4-04 / M4-06 版本历史弹窗 ----------
+.m11-ver-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid rgba(255, 255, 255, 0.06);
+}
+.m11-ver-row:last-child {
+  border-bottom: none;
+}
+.m11-ver-row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+// ---------- V5.0 M4-06 一键测试结果 ----------
+.m11-test-box {
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  background: rgba(22, 93, 255, 0.08);
+  border: 2rpx solid rgba(22, 93, 255, 0.3);
+  width: 100%;
+}
+.m11-test-box__title {
+  display: block;
+  font-size: 22rpx;
+  color: #8ab4ff;
+  margin-bottom: 8rpx;
+}
+
 // ---------- 分页 ----------
 .m11-pager {
   margin-top: 24rpx;

@@ -182,6 +182,10 @@ class OpportunityReviewIn(BaseModel):
     action: str  # approve / reject
     reason: Optional[str] = None
 
+class OpportunityRollbackIn(BaseModel):
+    """商机一键回滚（V5.0 M4-04）：回到指定历史版本。"""
+    version: int
+
 
 # ─── 提示词配置 ───
 

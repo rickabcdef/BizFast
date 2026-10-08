@@ -18,15 +18,15 @@ from xml.sax.saxutils import escape as _xml_escape
 
 # 交付物清单（与 docs/module-ownership.md 一致）：code -> (名称, 主格式)
 DELIVERABLES: dict[str, tuple[str, str]] = {
-    "D01": ("可行性评分卡", "pdf"),
-    "D02": ("回本测算表", "excel"),
-    "D03": ("客户画像与获客清单", "pdf"),
-    "D04": ("供应商线索与询价话术", "pdf"),
-    "D05": ("定价与开业活动", "pdf"),
-    "D06": ("开店流程清单", "pdf"),
-    "D07": ("获客文案10条", "word"),
-    "D08": ("店名与物料", "png"),
-    "D09": ("30天行动日历", "excel"),
+    "D01": ("专属商机可行性评分卡", "pdf"),
+    "D02": ("回本测算 Excel 表", "excel"),
+    "D03": ("精准客户画像 + 首月获客清单", "pdf"),
+    "D04": ("本地一手供应商线索 + 询价话术", "pdf"),
+    "D05": ("定价建议 + 3 套开业活动方案", "pdf"),
+    "D06": ("全流程开店清单", "pdf"),
+    "D07": ("首月获客文案 10 条", "word"),
+    "D08": ("开业宣传物料包（海报+二维码+门头效果图）", "png"),
+    "D09": ("30 天逐日行动日历", "excel"),
     "D10": ("风险清单与止损线", "pdf"),
 }
 
@@ -474,27 +474,46 @@ def _make_poster_png(path: Path, ctx: dict) -> str:
 
 
 def _make_poster_svg(path: Path, ctx: dict) -> str:
-    """同款海报的矢量版（SVG 无字体依赖，任何环境都可渲染中文标题）。"""
+    """门头效果图（V5.0 需求 3.2 第 8 件：开业宣传物料包 = 海报 + 二维码 + 门头效果图）。
+
+    与 PNG 海报互补：PNG 输出宣传海报（含二维码），SVG 输出门头效果图——
+    一张可直接照着做店招的横版门头示意（渐变招牌 + 店名 + 副标 + 玻璃门面）。
+    """
     f = _poster_fields(ctx)
     e = _xml_escape
     svg = f"""<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="sign" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#165DFF"/>
-      <stop offset="100%" stop-color="#16172A"/>
+      <stop offset="100%" stop-color="#7B61FF"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="1200" fill="#0F172A"/>
-  <rect width="800" height="400" fill="url(#bg)"/>
-  <text x="400" y="150" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="56" font-weight="bold" fill="#FFFFFF">{e(f['shop_name'])}</text>
-  <text x="400" y="215" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="28" fill="#E6EBFF">{e(f['subtitle'])}</text>
-  <rect x="300" y="280" width="200" height="200" rx="12" fill="#FFFFFF" stroke="#7B61FF" stroke-width="3"/>
-  <text x="400" y="388" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#165DFF">QR</text>
-  <text x="400" y="510" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" fill="#FFFFFF">{e(f['qr_text'])}</text>
-  <text x="400" y="580" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" fill="#FFFFFF">{e(f['summary'])}</text>
-  <text x="400" y="620" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" fill="#E6EBFF">{e(f['footer'])}</text>
-  <text x="400" y="1140" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#8B93B8">生意快启 · 开店前 3 分钟拿到可执行的启动包</text>
+  <!-- 门头效果图（招牌）背景：夜色街景 -->
+  <rect width="800" height="500" fill="url(#sky)"/>
+  <circle cx="680" cy="70" r="26" fill="#E6EBFF" opacity="0.5"/>
+  <text x="680" y="78" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#0F172A">☽</text>
+  <text x="120" y="60" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="16" fill="#8B93B8">门头效果图 · 参考示意</text>
+
+  <!-- 横版招牌（渐变蓝紫底 + 白字店名 + 副标） -->
+  <rect x="80" y="90" width="640" height="130" rx="14" fill="url(#sign)"/>
+  <rect x="80" y="90" width="640" height="130" rx="14" fill="none" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="2"/>
+  <text x="400" y="150" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="52" font-weight="bold" fill="#FFFFFF">{e(f['shop_name'])}</text>
+  <text x="400" y="192" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" fill="#E6EBFF">{e(f['subtitle'])}</text>
+
+  <!-- 门面：玻璃门 + 门框 + 地台线 -->
+  <rect x="180" y="300" width="440" height="150" rx="4" fill="#111A2E" stroke="#334155" stroke-width="3"/>
+  <line x1="400" y1="300" x2="400" y2="450" stroke="#334155" stroke-width="3"/>
+  <rect x="186" y="306" width="208" height="138" rx="2" fill="#1E293B" opacity="0.9"/>
+  <rect x="406" y="306" width="208" height="138" rx="2" fill="#1E293B" opacity="0.9"/>
+  <text x="290" y="380" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="16" fill="#475569">欢迎光临</text>
+  <text x="510" y="380" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="16" fill="#475569">营业中</text>
+  <line x1="140" y1="452" x2="660" y2="452" stroke="#334155" stroke-width="4"/>
+  <text x="400" y="478" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#8B93B8">{e(f['footer'])}</text>
 </svg>
 """
     path.write_text(svg, encoding="utf-8")

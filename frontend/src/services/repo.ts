@@ -21,15 +21,15 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // ---------------- Mock 数据 ----------------
 const D01_D10: DeliverableFile[] = [
-  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '/mock/D01.pdf' },
-  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '/mock/D02.xlsx' },
-  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '/mock/D03.pdf' },
-  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '/mock/D04.pdf' },
-  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '/mock/D05.pdf' },
-  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '/mock/D06.pdf' },
-  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '/mock/D07.docx' },
-  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '/mock/D08.png' },
-  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '/mock/D09.pdf' },
+  { code: 'D01', name: '专属商机可行性评分卡', fileType: 'pdf', url: '/mock/D01.pdf' },
+  { code: 'D02', name: '回本测算 Excel 表', fileType: 'excel', url: '/mock/D02.xlsx' },
+  { code: 'D03', name: '精准客户画像 + 首月获客清单', fileType: 'pdf', url: '/mock/D03.pdf' },
+  { code: 'D04', name: '本地一手供应商线索 + 询价话术', fileType: 'pdf', url: '/mock/D04.pdf' },
+  { code: 'D05', name: '定价建议 + 3 套开业活动方案', fileType: 'pdf', url: '/mock/D05.pdf' },
+  { code: 'D06', name: '全流程开店清单', fileType: 'pdf', url: '/mock/D06.pdf' },
+  { code: 'D07', name: '首月获客文案 10 条', fileType: 'word', url: '/mock/D07.docx' },
+  { code: 'D08', name: '开业宣传物料包（海报+二维码+门头效果图）', fileType: 'png', url: '/mock/D08.png' },
+  { code: 'D09', name: '30 天逐日行动日历', fileType: 'pdf', url: '/mock/D09.pdf' },
   { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '/mock/D10.pdf' }
 ]
 
@@ -38,8 +38,8 @@ const MOCK_PACKAGES: PackageResult[] = [
 ]
 
 const MOCK_ORDERS: OrderView[] = [
-  { orderId: 'ORD-2026-0001', title: '兼职副业·社区团购启动包', status: 'delivered', amount: 39, createdAt: '2026-10-01 20:14' },
-  { orderId: 'ORD-2026-0002', title: '月度会员', status: 'paid', amount: 39, createdAt: '2026-10-02 09:30' }
+  { orderId: 'ORD-2026-0001', title: '兼职副业·社区团购启动包', status: 'delivered', amount: 29.9, createdAt: '2026-10-01 20:14' },
+  { orderId: 'ORD-2026-0002', title: 'AI 合伙人月卡', status: 'paid', amount: 99, createdAt: '2026-10-02 09:30' }
 ]
 
 const MOCK_MEMBERSHIP: Membership = {

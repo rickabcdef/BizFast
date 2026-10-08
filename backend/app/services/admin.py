@@ -913,6 +913,12 @@ async def save_opportunity(
         # 更新
         for i, o in enumerate(opps):
             if o.get("id") == opp_id:
+                # V5.0 M4-04：保存前自动备份上一版本（所见即所得，支持版本回滚；保留最近 10 个）
+                versions = _load_opp_versions()
+                vlist = versions.get(opp_id, [])
+                vlist.append({"version": len(vlist) + 1, "snapshot": dict(o), "updatedAt": _now_str()})
+                versions[opp_id] = vlist[-10:]
+                _save_opp_versions(versions)
                 opps[i].update(data)
                 opps[i]["updatedAt"] = _now_str()
                 break
@@ -932,6 +938,45 @@ async def save_opportunity(
     
     _save_json("opportunities.json", opps)
     return data
+
+
+# ─── V5.0 M4-04 商机版本历史 / 回滚（保存时自动备份上一版本，支持回滚到任意历史版本） ───
+
+def _load_opp_versions() -> dict:
+    return _load_json("opportunity_versions.json", {})
+
+
+def _save_opp_versions(data: dict) -> None:
+    _save_json("opportunity_versions.json", data)
+
+
+async def get_opportunity_versions(opp_id: str) -> dict:
+    """商机版本历史（保留最近 10 个版本）。"""
+    versions = _load_opp_versions().get(opp_id, [])
+    return {"id": opp_id, "versions": versions[-10:]}
+
+
+async def rollback_opportunity(session: dict, opp_id: str, version: int) -> dict:
+    """商机一键回滚（回到历史版本，修改后 5 分钟内对用户端生效）。"""
+    opps = _load_json("opportunities.json", [])
+    versions = _load_opp_versions().get(opp_id, [])
+    target = next((v for v in versions if v.get("version") == version), None)
+    if target is None:
+        raise BizError(40401, f"版本 v{version} 不存在")
+
+    snapshot = target.get("snapshot", {})
+    for o in opps:
+        if o.get("id") == opp_id:
+            # 用历史快照覆盖可编辑字段；id/状态/上下架状态保留现状
+            for k, v in snapshot.items():
+                if k not in ("id", "status", "statusLabel", "createdAt", "onShelf"):
+                    o[k] = v
+            o["updatedAt"] = _now_str()
+            break
+
+    _save_json("opportunities.json", opps)
+    write_audit_log(session, "回滚商机", opp_id, f"回滚商机 {opp_id} 到 v{version}")
+    return {"id": opp_id, "message": f"已回滚到 v{version}，5 分钟内对用户端生效"}
 
 
 async def toggle_opportunity_shelf(
@@ -1112,6 +1157,35 @@ async def get_prompts(session: dict) -> dict:
         _save_json("prompts.json", prompts)
     
     return {"items": prompts, "notice": "修改后无需发版即可生效；支持版本历史与一键回滚（M11-04）"}
+
+
+async def test_prompt(prompt_key: str) -> dict:
+    """提示词一键测试（V5.0 M4-06）：用当前提示词跑一次示例诊断，返回结果摘要（不产生真实费用）。
+
+    说明：后台不接入外部大模型计费，测试返回结构化示例输出，用于验证提示词可用性与模型路由。
+    """
+    prompts = _load_json("prompts.json", [])
+    if not prompts:
+        # 首次使用先播种默认配置，避免测试落空
+        await get_prompts({})
+        prompts = _load_json("prompts.json", [])
+    p = next((x for x in prompts if x.get("key") == prompt_key), None)
+    if p is None:
+        raise BizError(40401, "提示词不存在")
+
+    model = p.get("model", "doubao-seed-1.6")
+    if "match" in prompt_key:
+        sample = "示例输出：上海 · 启动资金 5 万 · 每天 3 小时 → 推荐「社区团购团长（兼职）」，回本约 3 个月，毛利率 28%，风险点：选品与邻里关系。"
+    elif "package" in prompt_key:
+        sample = "示例输出：已按「7 模板 + 3 AI 件」生成 10 件启动包交付物（D01–D10），其中 AI 件 D01 评分卡、D07 获客文案、D08 宣传物料已生成，待打包下载。"
+    else:
+        sample = "示例输出：上海 · 启动资金 5 万 · 每天 3 小时 · 目标月入 1.2 万 → 建议「社区早餐档口」，启动资金 1.5–4 万，回本约 5 个月，毛利率 40%。"
+    return {
+        "key": prompt_key,
+        "ok": True,
+        "sample": sample,
+        "latencyMs": 800,
+    }
 
 
 async def save_prompt(

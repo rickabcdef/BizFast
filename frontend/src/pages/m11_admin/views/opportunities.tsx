@@ -5,8 +5,10 @@ import Loading from '@/components/Loading'
 import ErrorTip from '@/components/ErrorTip'
 import {
   getAdminOpportunities,
+  getAdminOpportunityVersions,
   importOpportunities,
   reviewOpportunity,
+  rollbackOpportunity,
   type AdminOpportunity
 } from '@/services/bApi'
 
@@ -71,6 +73,11 @@ export default function OpportunitiesView() {
   const [importText, setImportText] = useState('')
   const [importBusy, setImportBusy] = useState(false)
   const [importResult, setImportResult] = useState('')
+  // V5.0 M4-04 版本历史 / 回滚（保存时自动备份上一版本，所见即所得）
+  const [versionOpen, setVersionOpen] = useState(false)
+  const [versionItem, setVersionItem] = useState<AdminOpportunity | null>(null)
+  const [versions, setVersions] = useState<{ version: number; title: string; updatedAt: string }[]>([])
+  const [versionBusy, setVersionBusy] = useState(false)
 
   const load = useCallback(
     async (p = page, kw = keyword, st = status) => {
@@ -129,6 +136,35 @@ export default function OpportunitiesView() {
       void load()
     } catch (e: any) {
       Taro.showToast({ title: e?.message || '审核操作失败，请重试', icon: 'none' })
+    }
+  }
+
+  // V5.0 M4-04：打开版本历史（保存时自动备份上一版本）
+  const doOpenVersions = async (item: AdminOpportunity) => {
+    setVersionItem(item)
+    setVersionOpen(true)
+    try {
+      const d = await getAdminOpportunityVersions(item.id)
+      setVersions(d.versions)
+    } catch (e: any) {
+      setVersions([])
+      Taro.showToast({ title: e?.message || '版本历史加载失败', icon: 'none' })
+    }
+  }
+
+  // V5.0 M4-04：一键回滚（回到历史版本，修改后 5 分钟内对用户端生效）
+  const doRollback = async (ver: number) => {
+    if (!versionItem || versionBusy) return
+    setVersionBusy(true)
+    try {
+      const r = await rollbackOpportunity(versionItem.id, ver)
+      Taro.showToast({ title: r.message, icon: 'none' })
+      setVersionOpen(false)
+      void load()
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '回滚失败，请重试', icon: 'none' })
+    } finally {
+      setVersionBusy(false)
     }
   }
 
@@ -201,6 +237,9 @@ export default function OpportunitiesView() {
                     </View>
                   </View>
                 )}
+                <View className='bf-btn bf-btn--sm bf-btn--ghost' onClick={() => doOpenVersions(o)}>
+                  版本
+                </View>
               </View>
             </View>
           ))}
@@ -248,6 +287,36 @@ export default function OpportunitiesView() {
             </View>
             <View className='bf-btn bf-btn--ghost m11-modal__btn' onClick={() => setImportOpen(false)}>
               取消
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* V5.0 M4-04 版本历史 / 回滚弹窗 */}
+      {versionOpen && versionItem && (
+        <View className='m11-mask' onClick={() => setVersionOpen(false)}>
+          <View className='m11-modal m11-modal--wide' onClick={(e) => e.stopPropagation()}>
+            <Text className='m11-modal__title'>版本历史 · {versionItem.title}</Text>
+            <Text className='bf-muted m11-modal__sub'>
+              保存时自动备份上一版本，支持回滚到任意历史版本；修改后 5 分钟内对用户端生效。
+            </Text>
+            {versions.length === 0 && <Text className='bf-muted m11-empty-line'>暂无历史版本</Text>}
+            {versions.map((v) => (
+              <View key={v.version} className='m11-ver-row'>
+                <View className='m11-ver-row__main'>
+                  <Text className='m11-row__title'>v{v.version}</Text>
+                  <Text className='bf-muted m11-row__sub'>{v.title} · {v.updatedAt}</Text>
+                </View>
+                <View
+                  className={`bf-btn bf-btn--sm ${versionBusy ? 'bf-btn--disabled' : ''}`}
+                  onClick={() => !versionBusy && doRollback(v.version)}
+                >
+                  回滚到此版本
+                </View>
+              </View>
+            ))}
+            <View className='bf-btn bf-btn--ghost m11-modal__btn' onClick={() => setVersionOpen(false)}>
+              关闭
             </View>
           </View>
         </View>

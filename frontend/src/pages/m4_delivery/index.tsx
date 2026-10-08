@@ -727,16 +727,16 @@ export default function M4Delivery() {
   )
 }
 
-/** 十件交付物清单（D01–D10，用于进度页逐项打勾展示；格式与 PRD 4.4.1 一致）。 */
+/** 十件交付物清单（D01–D10，用于进度页逐项打勾展示；格式与 PRD 4.4.1 一致，名称对齐 V5.0 需求 3.2）。 */
 const ALL_ITEMS: DeliverableFile[] = [
-  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
-  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '', formats: [{ fileType: 'excel', url: '' }] },
-  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
-  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
-  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
-  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
-  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '', formats: [{ fileType: 'word', url: '' }, { fileType: 'txt', url: '' }] },
-  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '', formats: [{ fileType: 'png', url: '' }, { fileType: 'svg', url: '' }] },
-  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'excel', url: '' }] },
+  { code: 'D01', name: '专属商机可行性评分卡', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D02', name: '回本测算 Excel 表', fileType: 'excel', url: '', formats: [{ fileType: 'excel', url: '' }] },
+  { code: 'D03', name: '精准客户画像 + 首月获客清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D04', name: '本地一手供应商线索 + 询价话术', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D05', name: '定价建议 + 3 套开业活动方案', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D06', name: '全流程开店清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D07', name: '首月获客文案 10 条', fileType: 'word', url: '', formats: [{ fileType: 'word', url: '' }, { fileType: 'txt', url: '' }] },
+  { code: 'D08', name: '开业宣传物料包（海报+二维码+门头效果图）', fileType: 'png', url: '', formats: [{ fileType: 'png', url: '' }, { fileType: 'svg', url: '' }] },
+  { code: 'D09', name: '30 天逐日行动日历', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'excel', url: '' }] },
   { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] }
 ]

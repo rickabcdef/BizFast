@@ -7,8 +7,11 @@ import {
   toggleOpportunityShelf,
   importOpportunities,
   reviewOpportunity,
+  getAdminOpportunityVersions,
+  rollbackOpportunity,
   type AdminOpportunity,
-  type AdminSession
+  type AdminSession,
+  type OpportunityVersion
 } from '@/api/adminApi'
 import { useAuthStore } from '@/store/auth'
 
@@ -115,6 +118,43 @@ const doReview = async (o: AdminOpportunity, action: 'approve' | 'reject') => {
     void load()
   } catch (e: any) {
     ElMessage.error(e?.message || '操作失败')
+  }
+}
+
+// ---- V5.0 M4-04 版本历史 / 一键回滚（保存时自动备份上一版本，所见即所得） ----
+const versionOpen = ref(false)
+const versionBusy = ref(false)
+const versionItem = ref<AdminOpportunity | null>(null)
+const versionList = ref<OpportunityVersion[]>([])
+
+const openVersions = async (o: AdminOpportunity) => {
+  versionItem.value = o
+  versionOpen.value = true
+  try {
+    const d = await getAdminOpportunityVersions(auth.session as AdminSession, o.id)
+    versionList.value = d.versions || []
+  } catch {
+    versionList.value = []
+  }
+}
+
+const doRollback = async (v: OpportunityVersion) => {
+  if (!versionItem.value || versionBusy.value) return
+  versionBusy.value = true
+  try {
+    await ElMessageBox.confirm(`确认回滚到 v${v.version}？当前内容将被历史版本覆盖（可再次保存新版本恢复）。`, '一键回滚', {
+      type: 'warning',
+      confirmButtonText: '确认回滚',
+      cancelButtonText: '取消'
+    })
+    const r = await rollbackOpportunity(auth.session as AdminSession, versionItem.value.id, v.version)
+    ElMessage.success(r.message)
+    versionOpen.value = false
+    void load()
+  } catch (e: any) {
+    if (e !== 'cancel' && e !== 'close') ElMessage.error(e?.message || '回滚失败')
+  } finally {
+    versionBusy.value = false
   }
 }
 
@@ -236,6 +276,7 @@ const doImport = async () => {
         </div>
         <div class="biz-actions">
           <button class="admin-btn admin-btn-sm" @click="openEdit(o)">编辑</button>
+          <button class="admin-btn admin-btn-outline admin-btn-sm" @click="openVersions(o)">版本</button>
           <template v-if="o.status === 'passed'">
             <button v-if="!o.onShelf" class="admin-btn admin-btn-sm" style="background: var(--bf-ok)" @click="doToggleShelf(o, true)">上架</button>
             <button v-else class="admin-btn admin-btn-outline admin-btn-sm" @click="doToggleShelf(o, false)">下架</button>
@@ -289,6 +330,21 @@ const doImport = async () => {
         <el-button @click="importOpen = false">取消</el-button>
         <el-button type="primary" :loading="importBusy" @click="doImport">导入</el-button>
       </template>
+    </el-dialog>
+
+    <!-- V5.0 M4-04 版本历史 / 一键回滚 -->
+    <el-dialog v-model="versionOpen" title="版本历史与一键回滚" width="640px" destroy-on-close>
+      <div class="bf-muted" style="margin-bottom: 10px">
+        {{ versionItem?.title }} · 保存时自动备份上一版本，可回滚到任意历史版本；修改后 5 分钟内对用户端生效。
+      </div>
+      <div v-if="versionList.length === 0" class="bf-muted" style="padding: 12px 0">暂无历史版本</div>
+      <div v-for="v in versionList" :key="v.version" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06)">
+        <div style="min-width: 0">
+          <div style="font-size: 13px; color: var(--bf-text-1)">v{{ v.version }}</div>
+          <div class="bf-muted" style="font-size: 12px">更新于 {{ v.updatedAt }}</div>
+        </div>
+        <el-button size="small" :loading="versionBusy" @click="doRollback(v)">↩️ 回滚到此版本</el-button>
+      </div>
     </el-dialog>
   </div>
 </template>

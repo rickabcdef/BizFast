@@ -233,15 +233,15 @@ export function getToolAccess(): Promise<ToolAccess> {
 // PRD 4.4.1 十件交付物清单：部分交付物同时交付多格式（如 D03 = PDF + Word）。
 // fileType 为卡片主格式（第一项），formats 为完整格式列表。
 const D01_D10_MOCK: DeliverableFile[] = [
-  { code: 'D01', name: '最佳商机可行性评分卡', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
-  { code: 'D02', name: '回本测算表', fileType: 'excel', url: '', formats: [{ fileType: 'excel', url: '' }] },
-  { code: 'D03', name: '客户画像与获客清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
-  { code: 'D04', name: '供应商线索与询价话术', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
-  { code: 'D05', name: '定价建议与开业活动方案', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
-  { code: 'D06', name: '开店流程清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
-  { code: 'D07', name: '获客文案模板10条', fileType: 'word', url: '', formats: [{ fileType: 'word', url: '' }, { fileType: 'txt', url: '' }] },
-  { code: 'D08', name: '店名与宣传物料', fileType: 'png', url: '', formats: [{ fileType: 'png', url: '' }, { fileType: 'svg', url: '' }] },
-  { code: 'D09', name: '30天行动日历', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'excel', url: '' }] },
+  { code: 'D01', name: '专属商机可行性评分卡', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D02', name: '回本测算 Excel 表', fileType: 'excel', url: '', formats: [{ fileType: 'excel', url: '' }] },
+  { code: 'D03', name: '精准客户画像 + 首月获客清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D04', name: '本地一手供应商线索 + 询价话术', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D05', name: '定价建议 + 3 套开业活动方案', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] },
+  { code: 'D06', name: '全流程开店清单', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'word', url: '' }] },
+  { code: 'D07', name: '首月获客文案 10 条', fileType: 'word', url: '', formats: [{ fileType: 'word', url: '' }, { fileType: 'txt', url: '' }] },
+  { code: 'D08', name: '开业宣传物料包（海报+二维码+门头效果图）', fileType: 'png', url: '', formats: [{ fileType: 'png', url: '' }, { fileType: 'svg', url: '' }] },
+  { code: 'D09', name: '30 天逐日行动日历', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }, { fileType: 'excel', url: '' }] },
   { code: 'D10', name: '风险清单与止损线', fileType: 'pdf', url: '', formats: [{ fileType: 'pdf', url: '' }] }
 ]
 
@@ -427,6 +427,11 @@ export interface AdminOrder {
   paidAt: string | null
   refundRequested: boolean
   refundReason: string | null
+  // V5.0 M4-03：异常订单（支付超 2 小时未交付 / 重复订单 / 回调缺失）红色高亮，可一键处理
+  abnormal: boolean
+  abnormalType?: 'pay_no_deliver' | 'duplicate' | 'callback_missing' | null
+  abnormalHandled: boolean
+  downloaded: boolean
 }
 
 export interface AdminOpportunity {
@@ -451,6 +456,8 @@ export interface PromptItem {
   content: string
   model: string
   updatedAt: string
+  // V5.0 M4-06：保留最近 10 个版本可回滚
+  versions?: { version: number; content: string; model: string; updatedAt: string }[]
 }
 
 export interface ReviewItem {
@@ -572,12 +579,13 @@ export async function getAdminUserDetail(userId: string): Promise<{ user: AdminU
 }
 
 // ---------------- M11-02 订单管理 ----------------
-export function getAdminOrders(params: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<PageBox<AdminOrder>> {
+export function getAdminOrders(params: { page?: number; pageSize?: number; status?: string; keyword?: string; abnormal?: boolean }): Promise<PageBox<AdminOrder>> {
   const q = new URLSearchParams()
   q.set('page', String(params.page ?? 1))
   q.set('pageSize', String(params.pageSize ?? 20))
   if (params.status) q.set('status', params.status)
   if (params.keyword) q.set('keyword', params.keyword)
+  if (params.abnormal) q.set('abnormal', 'true')
   if (USE_MOCK) return delay(400).then(() => mockOrders(params))
   return api.get<PageBox<AdminOrder>>(`/api/admin/orders?${q.toString()}`)
 }
@@ -587,6 +595,27 @@ export function processRefund(orderId: string, action: 'approve' | 'reject', rea
   if (USE_MOCK) return delay(400).then(() => ({ orderId, status: action === 'approve' ? 'refunded' : 'paid', message: action === 'approve' ? '已同意退款，24 小时内原路到账' : '已驳回退款申请' }))
   return api.put<{ orderId: string; status: OrderStatus; message: string }>(`/api/admin/orders/${orderId}/refund`, { action, reason: reason || null })
 }
+
+// ---------------- V5.0 M4-03 一键补单 / 批量处理异常 ----------------
+const ORDER_ABNORMAL_LABEL: Record<string, string> = {
+  pay_no_deliver: '支付超 2 小时未交付',
+  duplicate: '重复订单',
+  callback_missing: '渠道回调缺失'
+}
+
+/** 一键补单（M2-04 / V5.0：渠道已扣款但回调丢失时，主动查单把货补给用户）。 */
+export function repairOrder(orderId: string): Promise<{ orderId: string; message: string }> {
+  if (USE_MOCK) return delay(500).then(() => ({ orderId, message: '补单成功：订单已转为已支付，用户可正常下载交付物' }))
+  return api.post<{ orderId: string; message: string }>(`/api/admin/orders/${orderId}/resend`)
+}
+
+/** 一键批量处理异常订单（M2-04 / V5.0：处理后不再红色高亮，相关告警同步关闭）。 */
+export function resolveAllAbnormalOrders(reason?: string): Promise<{ count: number; message: string }> {
+  if (USE_MOCK) return delay(600).then(() => ({ count: 2, message: '已批量处理 2 笔异常订单，相关告警已同步关闭' }))
+  return api.post<{ count: number; message: string }>('/api/admin/orders/resolve-abnormal', { reason: reason || '后台一键批量处理异常' })
+}
+
+export { ORDER_ABNORMAL_LABEL }
 
 // ---------------- M11-03 商机库管理 ----------------
 export function getAdminOpportunities(params: { page?: number; pageSize?: number; status?: string; keyword?: string }): Promise<PageBox<AdminOpportunity>> {
@@ -620,8 +649,49 @@ export function getAdminPrompts(): Promise<{ items: PromptItem[]; notice: string
 }
 
 export function saveAdminPrompt(key: string, patch: { content?: string; model?: string }): Promise<PromptItem> {
-  if (USE_MOCK) return delay(300).then(() => ({ key, name: key, content: patch.content || '', model: patch.model || 'default', updatedAt: '刚刚' }))
+  if (USE_MOCK) return delay(300).then(() => ({ key, name: key, content: patch.content || '', model: patch.model || 'default', updatedAt: '刚刚', versions: [{ version: 1, content: patch.content || '', model: patch.model || 'default', updatedAt: '刚刚' }] }))
   return api.put<PromptItem>(`/api/admin/prompts/${key}`, patch)
+}
+
+// ---------------- V5.0 M4-06 提示词：一键测试 / 版本回滚 ----------------
+/** 一键测试（用当前提示词跑一次示例诊断，返回结果摘要与耗时，不产生真实费用）。 */
+export function testAdminPrompt(key: string): Promise<{ key: string; ok: boolean; sample: string; latencyMs: number }> {
+  if (USE_MOCK) {
+    return delay(900).then(() => ({
+      key,
+      ok: true,
+      sample: '示例输出：上海 · 启动资金 5 万 · 每天 3 小时 → 推荐「社区团购团长（兼职）」，回本约 3 个月，毛利率 28%，风险点：选品与邻里关系。',
+      latencyMs: 823
+    }))
+  }
+  return api.post<{ key: string; ok: boolean; sample: string; latencyMs: number }>(`/api/admin/prompts/${key}/test`)
+}
+
+/** 版本回滚（保留最近 10 个版本，回滚后当前内容被历史版本覆盖，可再保存新版本恢复）。 */
+export function rollbackAdminPrompt(key: string, version: number): Promise<PromptItem> {
+  if (USE_MOCK) return delay(400).then(() => ({ key, name: key, content: '（已回滚到历史版本的内容）', model: 'doubao-seed-1.6', updatedAt: '刚刚', versions: [{ version, content: '（已回滚到历史版本的内容）', model: 'doubao-seed-1.6', updatedAt: '刚刚' }] }))
+  return api.post<PromptItem>(`/api/admin/prompts/${key}/rollback`, { version })
+}
+
+// ---------------- V5.0 M4-04 商机库：版本历史 / 回滚 ----------------
+/** 商机版本历史（保存时自动备份上一版本，所见即所得，支持版本回滚）。 */
+export function getAdminOpportunityVersions(id: string): Promise<{ id: string; versions: { version: number; title: string; updatedAt: string }[] }> {
+  if (USE_MOCK) {
+    return delay(300).then(() => ({
+      id,
+      versions: [
+        { version: 2, title: `${id} · 当前版本（已微调毛利率）`, updatedAt: '2026-10-04 10:20' },
+        { version: 1, title: `${id} · 初始版本`, updatedAt: '2026-09-25 16:40' }
+      ]
+    }))
+  }
+  return api.get<{ id: string; versions: { version: number; title: string; updatedAt: string }[] }>(`/api/admin/opportunities/${id}/versions`)
+}
+
+/** 商机一键回滚（回到历史版本，修改后 5 分钟内对用户端生效）。 */
+export function rollbackOpportunity(id: string, version: number): Promise<{ id: string; message: string }> {
+  if (USE_MOCK) return delay(500).then(() => ({ id, message: `已回滚到 v${version}，5 分钟内对用户端生效` }))
+  return api.post<{ id: string; message: string }>(`/api/admin/opportunities/${id}/rollback`, { version })
 }
 
 // ---------------- M11-06 内容审核 ----------------
@@ -852,19 +922,23 @@ function mockUsers(params: { keyword?: string; memberStatus?: string }): PageBox
   return { items: filtered, total: filtered.length, page: 1, pageSize: 20 }
 }
 
-function mockOrders(params: { status?: string; keyword?: string }): PageBox<AdminOrder> {
+function mockOrders(params: { status?: string; keyword?: string; abnormal?: boolean }): PageBox<AdminOrder> {
+  // 金额对齐 V5.0 定价（29.9 / 99 / 599）；ORD-2026-0006/0007 为异常订单（红色高亮 + 一键补单演示）
   const all: AdminOrder[] = [
-    { id: 'ORD-2026-0001', userId: 'U-1001', userPhone: '138****2211', plan: 'month', planName: '月度会员', amountYuan: 39, status: 'delivered', statusLabel: '已交付', channel: '支付宝', createdAt: '2026-10-01 20:14', paidAt: '2026-10-01 20:15', refundRequested: false, refundReason: null },
-    { id: 'ORD-2026-0002', userId: 'U-1002', userPhone: '159****0087', plan: 'single', planName: '单次启动包', amountYuan: 9.9, status: 'generating', statusLabel: '生成中', channel: '微信支付', createdAt: '2026-10-02 09:30', paidAt: '2026-10-02 09:31', refundRequested: false, refundReason: null },
-    { id: 'ORD-2026-0003', userId: 'U-1003', userPhone: '186****3345', plan: 'year', planName: '年度会员', amountYuan: 199, status: 'paid', statusLabel: '已支付', channel: '支付宝', createdAt: '2026-10-02 15:02', paidAt: '2026-10-02 15:02', refundRequested: true, refundReason: '用不上了想退' },
-    { id: 'ORD-2026-0004', userId: 'U-1001', userPhone: '138****2211', plan: 'single', planName: '单次启动包', amountYuan: 9.9, status: 'refunded', statusLabel: '已退款', channel: '微信支付', createdAt: '2026-09-28 11:41', paidAt: '2026-09-28 11:42', refundRequested: false, refundReason: null },
-    { id: 'ORD-2026-0005', userId: 'U-1005', userPhone: '188****7766', plan: 'month', planName: '月度会员', amountYuan: 39, status: 'pending', statusLabel: '待支付', channel: '支付宝', createdAt: '2026-10-03 08:55', paidAt: null, refundRequested: false, refundReason: null }
+    { id: 'ORD-2026-0001', userId: 'U-1001', userPhone: '138****2211', plan: 'month', planName: 'AI 合伙人月卡', amountYuan: 99, status: 'delivered', statusLabel: '已交付', channel: '支付宝', createdAt: '2026-10-01 20:14', paidAt: '2026-10-01 20:15', refundRequested: false, refundReason: null, abnormal: false, abnormalHandled: false, downloaded: true },
+    { id: 'ORD-2026-0002', userId: 'U-1002', userPhone: '159****0087', plan: 'single', planName: '开业礼包（单次）', amountYuan: 29.9, status: 'generating', statusLabel: '生成中', channel: '微信支付', createdAt: '2026-10-02 09:30', paidAt: '2026-10-02 09:31', refundRequested: false, refundReason: null, abnormal: false, abnormalHandled: false, downloaded: false },
+    { id: 'ORD-2026-0003', userId: 'U-1003', userPhone: '186****3345', plan: 'year', planName: '创业陪跑年卡', amountYuan: 599, status: 'paid', statusLabel: '已支付', channel: '支付宝', createdAt: '2026-10-02 15:02', paidAt: '2026-10-02 15:02', refundRequested: true, refundReason: '用不上了想退', abnormal: false, abnormalHandled: false, downloaded: false },
+    { id: 'ORD-2026-0004', userId: 'U-1001', userPhone: '138****2211', plan: 'single', planName: '开业礼包（单次）', amountYuan: 29.9, status: 'refunded', statusLabel: '已退款', channel: '微信支付', createdAt: '2026-09-28 11:41', paidAt: '2026-09-28 11:42', refundRequested: false, refundReason: null, abnormal: false, abnormalHandled: false, downloaded: false },
+    { id: 'ORD-2026-0005', userId: 'U-1005', userPhone: '188****7766', plan: 'month', planName: 'AI 合伙人月卡', amountYuan: 99, status: 'pending', statusLabel: '待支付', channel: '支付宝', createdAt: '2026-10-03 08:55', paidAt: null, refundRequested: false, refundReason: null, abnormal: false, abnormalHandled: false, downloaded: false },
+    { id: 'ORD-2026-0006', userId: 'U-1006', userPhone: '177****9900', plan: 'single', planName: '开业礼包（单次）', amountYuan: 29.9, status: 'paid', statusLabel: '已支付', channel: '微信支付', createdAt: '2026-10-04 07:20', paidAt: '2026-10-04 07:21', refundRequested: false, refundReason: null, abnormal: true, abnormalType: 'pay_no_deliver', abnormalHandled: false, downloaded: false },
+    { id: 'ORD-2026-0007', userId: 'U-1007', userPhone: '155****4433', plan: 'single', planName: '开业礼包（单次）', amountYuan: 29.9, status: 'paid', statusLabel: '已支付', channel: '支付宝', createdAt: '2026-10-04 08:02', paidAt: '2026-10-04 08:02', refundRequested: false, refundReason: null, abnormal: true, abnormalType: 'callback_missing', abnormalHandled: false, downloaded: false }
   ]
   const kw = (params.keyword || '').trim()
   const filtered = all.filter(
     (o) =>
       (!kw || o.id.includes(kw) || o.userPhone.includes(kw)) &&
-      (!params.status || o.status === params.status)
+      (!params.status || o.status === params.status) &&
+      (!params.abnormal || (o.abnormal && !o.abnormalHandled))
   )
   return { items: filtered, total: filtered.length, page: 1, pageSize: 20 }
 }
@@ -889,12 +963,12 @@ function mockOpportunities(params: { status?: string; keyword?: string }): PageB
 function mockPrompts(): { items: PromptItem[]; notice: string } {
   return {
     items: [
-      { key: 'diagnose.main', name: '诊断主提示词', content: '你是生意诊断专家。根据用户的启动资金、每日时间和城市，输出最热 3 个方向，说人话、给数字、给风险。', model: 'doubao-seed-1.6', updatedAt: '2026-09-30 11:20' },
-      { key: 'match.rank', name: '商机排序与五要素', content: '基于诊断标签从商机库挑选 3 个强相关方案，输出启动资金、回本周期、毛利率、第一个客户、上手难度。', model: 'doubao-seed-1.6', updatedAt: '2026-09-30 11:21' },
-      { key: 'package.d01', name: 'D01 可行性评分卡', content: '从市场、投入、回报、难度、政策五个维度打分，输出综合结论与一句人话建议。', model: 'doubao-lite', updatedAt: '2026-09-28 17:02' },
-      { key: 'package.d07', name: 'D07 获客文案', content: '生成 10 条可直发的获客文案：朋友圈、短视频脚本、私聊开场白各覆盖。', model: 'doubao-lite', updatedAt: '2026-09-28 17:03' }
+      { key: 'diagnose.main', name: '诊断主提示词', content: '你是生意诊断专家。根据用户的启动资金、每日时间和城市，输出最热 3 个方向，说人话、给数字、给风险。', model: 'doubao-seed-1.6', updatedAt: '2026-09-30 11:20', versions: [{ version: 3, content: '你是生意诊断专家。根据用户的启动资金、每日时间和城市，输出最热 3 个方向，说人话、给数字、给风险。', model: 'doubao-seed-1.6', updatedAt: '2026-09-30 11:20' }, { version: 2, content: '你是生意诊断专家。根据用户的启动资金、每日时间和城市，输出最热 3 个方向。', model: 'doubao-lite', updatedAt: '2026-09-20 09:00' }, { version: 1, content: '你是生意诊断专家，输出 3 个方向。', model: 'doubao-lite', updatedAt: '2026-09-10 15:30' }] },
+      { key: 'match.rank', name: '商机排序与五要素', content: '基于诊断标签从商机库挑选 3 个强相关方案，输出启动资金、回本周期、毛利率、第一个客户、上手难度。', model: 'doubao-seed-1.6', updatedAt: '2026-09-30 11:21', versions: [{ version: 1, content: '基于诊断标签从商机库挑选 3 个强相关方案，输出启动资金、回本周期、毛利率、第一个客户、上手难度。', model: 'doubao-seed-1.6', updatedAt: '2026-09-30 11:21' }] },
+      { key: 'package.d01', name: 'D01 专属商机可行性评分卡', content: '从市场、投入、回报、难度、政策五个维度打分，输出综合结论与一句人话建议。', model: 'doubao-lite', updatedAt: '2026-09-28 17:02', versions: [{ version: 1, content: '从市场、投入、回报、难度、政策五个维度打分，输出综合结论与一句人话建议。', model: 'doubao-lite', updatedAt: '2026-09-28 17:02' }] },
+      { key: 'package.d07', name: 'D07 首月获客文案', content: '生成 10 条可直发的获客文案：朋友圈、短视频脚本、私聊开场白各覆盖。', model: 'doubao-lite', updatedAt: '2026-09-28 17:03', versions: [{ version: 1, content: '生成 10 条可直发的获客文案：朋友圈、短视频脚本、私聊开场白各覆盖。', model: 'doubao-lite', updatedAt: '2026-09-28 17:03' }] }
     ],
-    notice: '提示词修改后立即生效，无需发版（M11-04）。生产环境密钥走配置中心。'
+    notice: '提示词修改后立即生效，无需发版（M11-04 / V5.0 M4-06）。保留最近 10 个版本可回滚，支持一键测试。'
   }
 }
 

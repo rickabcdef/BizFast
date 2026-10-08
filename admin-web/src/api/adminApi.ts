@@ -419,6 +419,25 @@ export async function reviewOpportunity(_session: AdminSession, id: string, acti
   })
 }
 
+// ---------------- V5.0 M4-04 商机版本历史 / 一键回滚 ----------------
+
+export interface OpportunityVersion {
+  version: number
+  snapshot?: Record<string, unknown>
+  updatedAt: string
+}
+
+export async function getAdminOpportunityVersions(_session: AdminSession, id: string): Promise<{ id: string; versions: OpportunityVersion[] }> {
+  return request(`/api/admin/opportunities/${encodeURIComponent(id)}/versions`)
+}
+
+export async function rollbackOpportunity(_session: AdminSession, id: string, version: number): Promise<{ id: string; message: string }> {
+  return request(`/api/admin/opportunities/${encodeURIComponent(id)}/rollback`, {
+    method: 'POST',
+    body: JSON.stringify({ version })
+  })
+}
+
 // ---------------- M11-04 提示词配置（版本历史与一键回滚） ----------------
 
 export async function getAdminPrompts(): Promise<{ items: PromptItem[]; notice: string }> {
@@ -440,6 +459,12 @@ export async function rollbackPrompt(_session: AdminSession, key: string, versio
   return request(`/api/admin/prompts/${encodeURIComponent(key)}/rollback`, {
     method: 'POST',
     body: JSON.stringify({ version })
+  })
+}
+
+export async function testAdminPrompt(_session: AdminSession, key: string): Promise<{ key: string; ok: boolean; sample: string; latencyMs: number }> {
+  return request(`/api/admin/prompts/${encodeURIComponent(key)}/test`, {
+    method: 'POST'
   })
 }
 

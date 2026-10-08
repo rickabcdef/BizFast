@@ -256,6 +256,27 @@ async def review_opportunity(
     return ok(result, _rid(request))
 
 
+@router.get("/opportunities/{opp_id}/versions", summary="商机版本历史（V5.0 M4-04）")
+async def get_opportunity_versions(
+    opp_id: str,
+    request: Request,
+    session: dict = Depends(require_perm("opps")),
+):
+    result = await admin_service.get_opportunity_versions(opp_id)
+    return ok(result, _rid(request))
+
+
+@router.post("/opportunities/{opp_id}/rollback", summary="商机一键回滚（V5.0 M4-04）")
+async def rollback_opportunity(
+    opp_id: str,
+    body: schemas.OpportunityRollbackIn,
+    request: Request,
+    session: dict = Depends(require_perm("opps")),
+):
+    result = await admin_service.rollback_opportunity(session, opp_id, body.version)
+    return ok(result, _rid(request))
+
+
 # ─── M11-04 提示词配置 ───
 
 @router.get("/prompts", summary="提示词配置列表")
@@ -299,6 +320,16 @@ async def rollback_prompt(
     session: dict = Depends(require_perm("prompts")),
 ):
     result = await admin_service.rollback_prompt(session, prompt_key, body.version)
+    return ok(result, _rid(request))
+
+
+@router.post("/prompts/{prompt_key}/test", summary="提示词一键测试（V5.0 M4-06）")
+async def test_prompt(
+    prompt_key: str,
+    request: Request,
+    session: dict = Depends(require_perm("prompts")),
+):
+    result = await admin_service.test_prompt(prompt_key)
     return ok(result, _rid(request))
 
 

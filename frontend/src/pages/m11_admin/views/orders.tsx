@@ -3,10 +3,18 @@ import { View, Text, Input } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import Loading from '@/components/Loading'
 import ErrorTip from '@/components/ErrorTip'
-import { exportCsv, getAdminOrders, processRefund, type AdminOrder } from '@/services/bApi'
+import {
+  exportCsv,
+  getAdminOrders,
+  processRefund,
+  repairOrder,
+  resolveAllAbnormalOrders,
+  ORDER_ABNORMAL_LABEL,
+  type AdminOrder
+} from '@/services/bApi'
 import type { OrderStatus } from '@/types'
 
-// M11-02 订单管理：查看订单 / 处理退款 / 核对支付，支持导出对账表
+// M11-02 订单管理：查看订单 / 处理退款 / 一键补单 / 批量处理异常 / 导出对账表（V5.0 M4-03）
 const STATUS_LABEL: Record<string, string> = {
   '': '全部状态',
   pending: '待支付',
@@ -25,18 +33,21 @@ export default function OrdersView() {
   const [pageSize] = useState(20)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
+  const [onlyAbnormal, setOnlyAbnormal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [refunding, setRefunding] = useState<AdminOrder | null>(null)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const abnormalCount = rows.filter((o) => o.abnormal && !o.abnormalHandled).length
+
   const load = useCallback(
-    async (p = page, kw = keyword, st = status) => {
+    async (p = page, kw = keyword, st = status, ab = onlyAbnormal) => {
       setLoading(true)
       setError('')
       try {
-        const d = await getAdminOrders({ page: p, pageSize, keyword: kw, status: st })
+        const d = await getAdminOrders({ page: p, pageSize, keyword: kw, status: st, abnormal: ab })
         setRows(d.items)
         setTotal(d.total)
       } catch (e: any) {
@@ -45,7 +56,7 @@ export default function OrdersView() {
         setLoading(false)
       }
     },
-    [page, keyword, status, pageSize]
+    [page, keyword, status, onlyAbnormal, pageSize]
   )
 
   useEffect(() => {
@@ -55,14 +66,27 @@ export default function OrdersView() {
 
   const doSearch = () => {
     setPage(1)
-    void load(1, keyword, status)
+    void load(1, keyword, status, onlyAbnormal)
   }
 
   const doExport = () => {
     const ok = exportCsv(
       `生意快启_订单对账表_${Date.now()}.csv`,
-      ['订单号', '用户', '套餐', '金额', '状态', '渠道', '下单时间', '支付时间', '退款申请'],
-      rows.map((o) => [o.id, o.userPhone, o.planName, o.amountYuan, o.statusLabel, o.channel, o.createdAt, o.paidAt || '', o.refundRequested ? o.refundReason || '是' : '否'])
+      ['订单号', '用户', '套餐', '金额', '状态', '渠道', '下单时间', '支付时间', '已下载', '异常标记', '处理状态', '退款申请'],
+      rows.map((o) => [
+        o.id,
+        o.userPhone,
+        o.planName,
+        o.amountYuan,
+        o.statusLabel,
+        o.channel,
+        o.createdAt,
+        o.paidAt || '',
+        o.downloaded ? '是' : '否',
+        o.abnormal ? ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常' : '否',
+        o.abnormalHandled ? '已处理' : o.abnormal ? '待处理' : '—',
+        o.refundRequested ? o.refundReason || '是' : '否'
+      ])
     )
     Taro.showToast({ title: ok ? '对账表已导出' : '导出失败，请重试', icon: 'none' })
   }
@@ -78,6 +102,39 @@ export default function OrdersView() {
       void load()
     } catch (e: any) {
       Taro.showToast({ title: e?.message || '退款处理失败，请重试', icon: 'none' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // V5.0 M4-03 一键补单（渠道已扣款但回调丢失 → 主动查单把货补给用户）
+  const doRepair = async (o: AdminOrder) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const r = await repairOrder(o.id)
+      Taro.showToast({ title: r.message, icon: 'none' })
+      void load()
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '补单失败，请重试', icon: 'none' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // V5.0 M4-03 一键批量处理异常订单（处理后不再红色高亮，相关告警同步关闭）
+  const doResolveAll = async () => {
+    if (busy || abnormalCount === 0) {
+      if (abnormalCount === 0) Taro.showToast({ title: '当前没有待处理的异常订单', icon: 'none' })
+      return
+    }
+    setBusy(true)
+    try {
+      const r = await resolveAllAbnormalOrders()
+      Taro.showToast({ title: r.message, icon: 'none' })
+      void load()
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '批量处理失败，请重试', icon: 'none' })
     } finally {
       setBusy(false)
     }
@@ -106,15 +163,28 @@ export default function OrdersView() {
               onClick={() => {
                 setStatus(s)
                 setPage(1)
-                void load(1, keyword, s)
+                void load(1, keyword, s, onlyAbnormal)
               }}
             >
               {STATUS_LABEL[s]}
             </View>
           ))}
+          <View
+            className={`m11-seg m11-seg--danger ${onlyAbnormal ? 'is-active' : ''}`}
+            onClick={() => {
+              setOnlyAbnormal(!onlyAbnormal)
+              setPage(1)
+              void load(1, keyword, status, !onlyAbnormal)
+            }}
+          >
+            仅看异常{abnormalCount > 0 ? `（${abnormalCount}）` : ''}
+          </View>
         </View>
         <View className='bf-row m11-filter__foot'>
           <Text className='bf-muted'>共 {total} 笔订单</Text>
+          <View className='bf-btn bf-btn--sm bf-btn--danger' onClick={doResolveAll}>
+            一键处理异常
+          </View>
           <View className='bf-btn bf-btn--sm bf-btn--ghost' onClick={doExport}>
             导出对账表
           </View>
@@ -127,11 +197,18 @@ export default function OrdersView() {
       {!loading && !error && (
         <View className='bf-card'>
           {rows.map((o) => (
-            <View key={o.id} className='m11-row'>
+            <View key={o.id} className={`m11-row ${o.abnormal && !o.abnormalHandled ? 'm11-row--abnormal' : ''}`}>
               <View className='m11-row__main'>
-                <Text className='m11-row__title'>{o.planName} · {o.id}</Text>
+                <Text className='m11-row__title'>
+                  {o.planName} · {o.id}
+                  {o.abnormal && !o.abnormalHandled && (
+                    <Text className='m11-tag-danger'>{ORDER_ABNORMAL_LABEL[o.abnormalType || ''] || '异常订单'}</Text>
+                  )}
+                  {o.abnormalHandled && <Text className='m11-tag-ok'>异常已处理</Text>}
+                </Text>
                 <Text className='bf-muted m11-row__sub'>
                   {o.userPhone} · {o.channel} · {o.createdAt}
+                  {o.downloaded ? ' · 已下载' : ' · 未下载'}
                 </Text>
                 {o.refundRequested && (
                   <Text className='m11-tip m11-tip--warn'>退款申请：{o.refundReason || '用户申请'}</Text>
@@ -140,6 +217,11 @@ export default function OrdersView() {
               <View className='m11-row__right'>
                 <Text className='m11-row__amount'>¥{o.amountYuan}</Text>
                 <Text className='bf-tag'>{o.statusLabel}</Text>
+                {o.abnormal && !o.abnormalHandled && (
+                  <View className='bf-btn bf-btn--sm bf-btn--warn' onClick={() => !busy && doRepair(o)}>
+                    一键补单
+                  </View>
+                )}
                 {o.refundRequested && (o.status === 'paid' || o.status === 'generating' || o.status === 'delivered') && (
                   <View className='bf-btn bf-btn--sm bf-btn--ghost' onClick={() => setRefunding(o)}>
                     处理退款
