@@ -121,6 +121,15 @@ async def lifespan(app: FastAPI):
     if settings.database_url.startswith("sqlite"):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        # create_all 只建缺失的表、不补已有表的列；旧库会因缺列直接 500
+        # （例如 users.renew_stage 缺失时 POST /api/auth/guest 报 50001，
+        # 表现为整个前台打不开）。这里做一次幂等补列，见 schema_guard 模块注释。
+        try:
+            from app.core.schema_guard import ensure_columns
+
+            await ensure_columns(engine)
+        except Exception as exc:  # pragma: no cover - 自愈失败不应阻断启动
+            logger.warning("SQLite 自动补列失败：%s", exc)
     # M5-09：播种演示优惠码（幂等，不覆盖运营已配置的券）
     try:
         from app.core.database import AsyncSessionLocal

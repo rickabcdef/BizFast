@@ -844,42 +844,41 @@ async def resend_order(db: AsyncSession, session: dict, order_id: str) -> dict:
 
 # ─── 商机库管理 ───
 
+def _ensure_overlay_record(opps: list[dict], opp_id: str) -> dict | None:
+    """确保运营配置文件里有该商机的记录，返回该记录（不存在则 None）。
+
+    V5.0 M4-04：后台原本只操作自己的 ``opportunities.json``，而用户端读的是
+    代码基线 ``app.data.opportunities``，两边互不相通，导致「改了不生效」。
+    现在基线商机**首次被运营编辑 / 上下架 / 审核**时，自动以当前有效状态
+    为基础补一条运营记录，后续改动即可正确叠加到用户端。
+    """
+    for o in opps:
+        if o.get("id") == opp_id:
+            return o
+    from app.data import opp_library
+
+    current = next((o for o in opp_library.admin_list() if o.get("id") == opp_id), None)
+    if current is None:
+        return None
+    opps.append(dict(current))
+    return opps[-1]
+
+
 async def get_opportunities(
     page: int = 1,
     page_size: int = 20,
     status: Optional[str] = None,
     keyword: Optional[str] = None,
 ) -> dict:
-    """获取商机列表（M11-03）。"""
-    # 从配置文件读取
-    opps = _load_json("opportunities.json", [])
+    """获取商机列表（M11-03 / V5.0 M4-04）。
 
-    # 首次访问播种演示数据（商机库为空时运营无从下手）
-    if not opps:
-        opps = [
-            {"id": "OP-2001", "title": "社区团购团长（兼职）", "category": "社区零售", "city": "全国",
-             "capitalMin": 5000, "capitalMax": 20000, "paybackMonths": 3, "marginPercent": 28,
-             "difficultyStars": 2, "source": "案例库", "status": "passed", "statusLabel": "已通过",
-             "onShelf": True, "createdAt": _now_str(), "updatedAt": _now_str()},
-            {"id": "OP-2002", "title": "上门宠物洗护（轻资产）", "category": "本地生活", "city": "上海",
-             "capitalMin": 30000, "capitalMax": 80000, "paybackMonths": 6, "marginPercent": 45,
-             "difficultyStars": 3, "source": "案例库", "status": "passed", "statusLabel": "已通过",
-             "onShelf": True, "createdAt": _now_str(), "updatedAt": _now_str()},
-            {"id": "OP-2003", "title": "夜市柠檬茶摊", "category": "餐饮小吃", "city": "长沙",
-             "capitalMin": 8000, "capitalMax": 15000, "paybackMonths": 2, "marginPercent": 62,
-             "difficultyStars": 1, "source": "批量导入", "status": "passed", "statusLabel": "已通过",
-             "onShelf": False, "createdAt": _now_str(), "updatedAt": _now_str()},
-            {"id": "OP-2004", "title": "亲子手工体验馆", "category": "教育亲子", "city": "成都",
-             "capitalMin": 80000, "capitalMax": 200000, "paybackMonths": 12, "marginPercent": 35,
-             "difficultyStars": 4, "source": "案例库", "status": "pending", "statusLabel": "待审核",
-             "onShelf": False, "createdAt": _now_str(), "updatedAt": _now_str()},
-            {"id": "OP-2005", "title": "社区早餐档口", "category": "餐饮小吃", "city": "广州",
-             "capitalMin": 15000, "capitalMax": 40000, "paybackMonths": 5, "marginPercent": 40,
-             "difficultyStars": 2, "source": "批量导入", "status": "rejected", "statusLabel": "已驳回",
-             "onShelf": False, "createdAt": _now_str(), "updatedAt": _now_str()},
-        ]
-        _save_json("opportunities.json", opps)
-    
+    数据源 = 用户端真实商机库（代码基线 + 运营调整），而不是后台自己的一套演示数据。
+    这样运营在后台看到、编辑的，就是用户端真正在推荐的那批商机。
+    """
+    from app.data import opp_library
+
+    opps = opp_library.admin_list()
+
     # 过滤
     if status:
         opps = [o for o in opps if o.get("status") == status]
@@ -905,23 +904,27 @@ async def save_opportunity(
     session: dict,
     data: dict,
 ) -> dict:
-    """保存商机（M11-03）。"""
+    """保存商机（M11-03 / V5.0 M4-04：改完即对用户端生效）。"""
+    from app.data import opp_library
+
     opps = _load_json("opportunities.json", [])
-    
+
     opp_id = data.get("id")
-    if opp_id:
-        # 更新
-        for i, o in enumerate(opps):
-            if o.get("id") == opp_id:
-                # V5.0 M4-04：保存前自动备份上一版本（所见即所得，支持版本回滚；保留最近 10 个）
-                versions = _load_opp_versions()
-                vlist = versions.get(opp_id, [])
-                vlist.append({"version": len(vlist) + 1, "snapshot": dict(o), "updatedAt": _now_str()})
-                versions[opp_id] = vlist[-10:]
-                _save_opp_versions(versions)
-                opps[i].update(data)
-                opps[i]["updatedAt"] = _now_str()
-                break
+    known_ids = {o["id"] for o in opp_library.admin_list()}
+    if opp_id and opp_id in known_ids:
+        # 更新（含「运营首次编辑一条代码基线商机」的情况）
+        rec = _ensure_overlay_record(opps, opp_id)
+        if rec is None:  # pragma: no cover - 正常不会发生
+            raise BizError(40401, "商机不存在")
+        # V5.0 M4-04：保存前自动备份上一版本（所见即所得，支持版本回滚；保留最近 10 个）
+        versions = _load_opp_versions()
+        vlist = versions.get(opp_id, [])
+        vlist.append({"version": len(vlist) + 1, "snapshot": dict(rec), "updatedAt": _now_str()})
+        versions[opp_id] = vlist[-10:]
+        _save_opp_versions(versions)
+        rec.update(data)
+        rec["id"] = opp_id
+        rec["updatedAt"] = _now_str()
         write_audit_log(session, "更新商机", opp_id, f"更新商机 {data.get('title', '')}")
     else:
         # 新增
@@ -937,6 +940,7 @@ async def save_opportunity(
         write_audit_log(session, "新增商机", opp_id, f"新增商机 {data.get('title', '')}")
     
     _save_json("opportunities.json", opps)
+    opp_library.refresh()  # 让用户端下一次读取立刻看到（不等 mtime / 无需重启）
     return data
 
 
@@ -957,26 +961,30 @@ async def get_opportunity_versions(opp_id: str) -> dict:
 
 
 async def rollback_opportunity(session: dict, opp_id: str, version: int) -> dict:
-    """商机一键回滚（回到历史版本，修改后 5 分钟内对用户端生效）。"""
+    """商机一键回滚（回到历史版本，用户端实时生效）。"""
+    from app.data import opp_library
+
     opps = _load_json("opportunities.json", [])
     versions = _load_opp_versions().get(opp_id, [])
     target = next((v for v in versions if v.get("version") == version), None)
     if target is None:
         raise BizError(40401, f"版本 v{version} 不存在")
 
+    rec = _ensure_overlay_record(opps, opp_id)
+    if rec is None:
+        raise BizError(40401, "商机不存在")
+
     snapshot = target.get("snapshot", {})
-    for o in opps:
-        if o.get("id") == opp_id:
-            # 用历史快照覆盖可编辑字段；id/状态/上下架状态保留现状
-            for k, v in snapshot.items():
-                if k not in ("id", "status", "statusLabel", "createdAt", "onShelf"):
-                    o[k] = v
-            o["updatedAt"] = _now_str()
-            break
+    # 用历史快照覆盖可编辑字段；id/状态/上下架状态保留现状
+    for k, v in snapshot.items():
+        if k not in ("id", "status", "statusLabel", "createdAt", "onShelf"):
+            rec[k] = v
+    rec["updatedAt"] = _now_str()
 
     _save_json("opportunities.json", opps)
+    opp_library.refresh()
     write_audit_log(session, "回滚商机", opp_id, f"回滚商机 {opp_id} 到 v{version}")
-    return {"id": opp_id, "message": f"已回滚到 v{version}，5 分钟内对用户端生效"}
+    return {"id": opp_id, "message": f"已回滚到 v{version}，用户端已生效"}
 
 
 async def toggle_opportunity_shelf(
@@ -984,23 +992,26 @@ async def toggle_opportunity_shelf(
     opp_id: str,
     on_shelf: bool,
 ) -> dict:
-    """上下架商机（M11-03）。"""
+    """上下架商机（M11-03 / V5.0 M4-04）。"""
+    from app.data import opp_library
+
     opps = _load_json("opportunities.json", [])
-    
-    for o in opps:
-        if o.get("id") == opp_id:
-            o["onShelf"] = on_shelf
-            o["updatedAt"] = _now_str()
-            break
-    
+    rec = _ensure_overlay_record(opps, opp_id)
+    if rec is None:
+        raise BizError(40401, "商机不存在")
+
+    rec["onShelf"] = on_shelf
+    rec["updatedAt"] = _now_str()
+
     _save_json("opportunities.json", opps)
+    opp_library.refresh()
     action = "上架" if on_shelf else "下架"
     write_audit_log(session, f"{action}商机", opp_id, f"{action}商机")
     
     return {
         "id": opp_id,
         "onShelf": on_shelf,
-        "message": f"已{action}",
+        "message": f"已{action}，用户端已生效" if on_shelf else f"已{action}，用户端不再展示该商机",
     }
 
 
@@ -1008,17 +1019,36 @@ async def delete_opportunity(
     session: dict,
     opp_id: str,
 ) -> dict:
-    """删除商机（M11-03，P2）。"""
+    """删除商机（M11-03，P2）。
+
+    代码基线里的商机不能真删（下次发版会回来），改为写一条「墓碑」记录，
+    用户端从此不再推荐它；后台新增的商机则直接从运营配置里移除。
+    """
+    from app.data import opp_library
+    from app.data.opportunities import OPPORTUNITY_INDEX
+
     opps = _load_json("opportunities.json", [])
-    before = len(opps)
-    opps = [o for o in opps if o.get("id") != opp_id]
-    if len(opps) == before:
+    rest = [o for o in opps if o.get("id") != opp_id]
+    removed_from_overlay = len(rest) != len(opps)
+
+    if opp_id in OPPORTUNITY_INDEX:
+        rest.append({
+            "id": opp_id,
+            "title": (OPPORTUNITY_INDEX[opp_id] or {}).get("title", ""),
+            "status": "deleted",
+            "statusLabel": "已删除",
+            "onShelf": False,
+            "deletedAt": _now_str(),
+            "updatedAt": _now_str(),
+        })
+    elif not removed_from_overlay:
         raise BizError(40401, "商机不存在")
 
-    _save_json("opportunities.json", opps)
+    _save_json("opportunities.json", rest)
+    opp_library.refresh()
     write_audit_log(session, "删除商机", opp_id, f"删除商机 {opp_id}")
 
-    return {"id": opp_id, "message": "商机已删除"}
+    return {"id": opp_id, "message": "商机已删除，用户端不再展示"}
 
 
 async def import_opportunities(
@@ -1026,6 +1056,8 @@ async def import_opportunities(
     items: list[dict],
 ) -> dict:
     """批量导入商机（M11-03）。"""
+    from app.data import opp_library
+
     opps = _load_json("opportunities.json", [])
     
     imported = 0
@@ -1056,6 +1088,7 @@ async def import_opportunities(
         imported += 1
     
     _save_json("opportunities.json", opps)
+    opp_library.refresh()
     write_audit_log(session, "批量导入商机", str(imported), f"导入 {imported} 条商机")
     
     return {
@@ -1071,21 +1104,24 @@ async def review_opportunity(
     action: str,
     reason: Optional[str] = None,
 ) -> dict:
-    """审核商机（M11-03）。"""
+    """审核商机（M11-03 / V5.0 M4-04：通过后用户端即可见）。"""
+    from app.data import opp_library
+
     opps = _load_json("opportunities.json", [])
-    
-    for o in opps:
-        if o.get("id") == opp_id:
-            if action == "approve":
-                o["status"] = "passed"
-                o["statusLabel"] = "已通过"
-            else:
-                o["status"] = "rejected"
-                o["statusLabel"] = "已驳回"
-            o["updatedAt"] = _now_str()
-            break
-    
+    rec = _ensure_overlay_record(opps, opp_id)
+    if rec is None:
+        raise BizError(40401, "商机不存在")
+
+    if action == "approve":
+        rec["status"] = "passed"
+        rec["statusLabel"] = "已通过"
+    else:
+        rec["status"] = "rejected"
+        rec["statusLabel"] = "已驳回"
+    rec["updatedAt"] = _now_str()
+
     _save_json("opportunities.json", opps)
+    opp_library.refresh()
     action_label = "通过" if action == "approve" else "驳回"
     write_audit_log(session, f"{action_label}商机", opp_id, reason or "")
     
@@ -1108,13 +1144,19 @@ async def get_prompts(session: dict) -> dict:
             {
                 "key": "diagnose",
                 "name": "诊断提示词",
-                "content": "你是一个专业的商业顾问，请根据用户提供的条件进行诊断分析...",
+                "content": (
+                    "用户在{city}，启动资金{capital}元，每天可投入{daily_hours}小时。"
+                    "请用一句不超过 30 字的中文给出最值得尝试的方向。"
+                ),
                 "model": "gpt-4",
                 "updatedAt": _now_str(),
                 "versions": [
                     {
                         "version": 1,
-                        "content": "你是一个专业的商业顾问，请根据用户提供的条件进行诊断分析...",
+                        "content": (
+                            "用户在{city}，启动资金{capital}元，每天可投入{daily_hours}小时。"
+                            "请用一句不超过 30 字的中文给出最值得尝试的方向。"
+                        ),
                         "model": "gpt-4",
                         "updatedAt": _now_str(),
                         "operator": "system",
@@ -1160,10 +1202,15 @@ async def get_prompts(session: dict) -> dict:
 
 
 async def test_prompt(prompt_key: str) -> dict:
-    """提示词一键测试（V5.0 M4-06）：用当前提示词跑一次示例诊断，返回结果摘要（不产生真实费用）。
+    """提示词一键测试（V5.0 M4-06）：用当前提示词**真实**跑一次示例诊断。
 
-    说明：后台不接入外部大模型计费，测试返回结构化示例输出，用于验证提示词可用性与模型路由。
+    之前只返回硬编码示例文案，运营改完提示词点「测试」看不出任何差别。
+    现在用线上同一套提示词渲染 + 调用模型：未接入大模型时返回示例输出并标记
+    degraded=True（离线环境也能验证是否保存成功）。
     """
+    from app.ai import client as ai_client
+    from app.services import prompt_store
+
     prompts = _load_json("prompts.json", [])
     if not prompts:
         # 首次使用先播种默认配置，避免测试落空
@@ -1173,18 +1220,37 @@ async def test_prompt(prompt_key: str) -> dict:
     if p is None:
         raise BizError(40401, "提示词不存在")
 
-    model = p.get("model", "doubao-seed-1.6")
-    if "match" in prompt_key:
-        sample = "示例输出：上海 · 启动资金 5 万 · 每天 3 小时 → 推荐「社区团购团长（兼职）」，回本约 3 个月，毛利率 28%，风险点：选品与邻里关系。"
-    elif "package" in prompt_key:
-        sample = "示例输出：已按「7 模板 + 3 AI 件」生成 10 件启动包交付物（D01–D10），其中 AI 件 D01 评分卡、D07 获客文案、D08 宣传物料已生成，待打包下载。"
-    else:
-        sample = "示例输出：上海 · 启动资金 5 万 · 每天 3 小时 · 目标月入 1.2 万 → 建议「社区早餐档口」，启动资金 1.5–4 万，回本约 5 个月，毛利率 40%。"
+    content = (p.get("content") or "").strip()
+    if not content:
+        raise BizError(40001, "提示词内容为空，请先填写内容再测试")
+
+    # 用一组固定的示例参数填充占位符，保证「测试」看到的就是用户端实际会用的提示词
+    prompt_store.refresh()
+    rendered = (
+        prompt_store.render(prompt_key, {"city": "上海", "capital": 50000, "daily_hours": 3})
+        or content
+    )
+
+    started = time.perf_counter()
+    text, degraded = ai_client.try_complete(rendered)
+    latency_ms = int((time.perf_counter() - started) * 1000)
+
+    if not text:
+        if "match" in prompt_key:
+            text = "（示例）上海 · 启动资金 5 万 · 每天 3 小时 → 推荐「社区团购团长（兼职）」，回本约 3 个月，毛利率 28%，风险点：选品与邻里关系。"
+        elif "package" in prompt_key:
+            text = "（示例）已按「7 模板 + 3 AI 件」生成 10 件启动包交付物（D01–D10），其中 D01 评分卡、D07 获客文案、D08 宣传物料由 AI 生成，待打包下载。"
+        else:
+            text = "（示例）上海 · 启动资金 5 万 · 每天 3 小时 → 建议「社区早餐档口」，启动资金 1.5–4 万，回本约 5 个月，毛利率 40%。"
+
     return {
         "key": prompt_key,
         "ok": True,
-        "sample": sample,
-        "latencyMs": 800,
+        "model": p.get("model", "doubao-seed-1.6"),
+        "prompt": rendered,
+        "sample": text,
+        "latencyMs": latency_ms,
+        "degraded": degraded,
     }
 
 
@@ -1225,6 +1291,8 @@ async def save_prompt(
         raise BizError(40401, "提示词不存在")
 
     _save_json("prompts.json", prompts)
+    from app.services import prompt_store
+    prompt_store.refresh()  # 用户端下一次调用 AI 立刻用新提示词（无需发版 / 重启）
     write_audit_log(session, "保存提示词", prompt_id, f"更新提示词 {prompt_id}")
 
     return updated
@@ -1260,6 +1328,8 @@ async def rollback_prompt(
         raise BizError(40401, "提示词不存在")
 
     _save_json("prompts.json", prompts)
+    from app.services import prompt_store
+    prompt_store.refresh()
     write_audit_log(session, "回滚提示词", prompt_id, f"回滚到版本 {version}")
 
     return updated

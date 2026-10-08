@@ -195,7 +195,9 @@ async def create_opportunity(
     request: Request,
     session: dict = Depends(require_perm("opps")),
 ):
-    data = _dump(body)
+    # by_alias=True：运营记录统一以 camelCase 落库，与前端 / 后台列表字段一致
+    # （snake_case 会写进一个谁都不读的键，导致「改了不生效」）
+    data = body.model_dump(exclude_unset=True, by_alias=True)
     data.pop("id", None)
     result = await admin_service.save_opportunity(session, data)
     return ok(result, _rid(request))
@@ -208,7 +210,7 @@ async def update_opportunity(
     request: Request,
     session: dict = Depends(require_perm("opps")),
 ):
-    data = _dump(body)
+    data = body.model_dump(exclude_unset=True, by_alias=True)
     data["id"] = opp_id
     result = await admin_service.save_opportunity(session, data)
     return ok(result, _rid(request))

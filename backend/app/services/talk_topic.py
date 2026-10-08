@@ -18,7 +18,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from app.data.opportunities import OPPORTUNITIES
+from app.data import opp_library
 from app.models import TalkTopic
 from app.services import ai_cost
 
@@ -40,12 +40,14 @@ def _seed(topic_date: str, city: str) -> int:
 
 def _pick(topic_date: str, city: str, n: int = LINES_PER_CARD) -> list[dict]:
     """确定性取样：同一天同一城市，取到的商机稳定不变（可复现、便于缓存）。"""
-    if not OPPORTUNITIES:
+    # 走「有效视图」：后台运营下架 / 新增的商机会影响今日谈资（M4-04）
+    pool = opp_library.library()
+    if not pool:
         return []
-    start = _seed(topic_date, city) % len(OPPORTUNITIES)
+    start = _seed(topic_date, city) % len(pool)
     picked: list[dict] = []
-    for i in range(min(n, len(OPPORTUNITIES))):
-        picked.append(OPPORTUNITIES[(start + i) % len(OPPORTUNITIES)])
+    for i in range(min(n, len(pool))):
+        picked.append(pool[(start + i) % len(pool)])
     return picked
 
 

@@ -142,7 +142,7 @@ def render_report(
 
 async def _order_context(db, order: Order) -> dict:
     """从订单反查诊断信息，构造喜报文案字段。"""
-    from app.data.opportunities import OPPORTUNITIES
+    from app.data import opp_library
     from app.models import DiagnosisTask
 
     diag = (
@@ -153,9 +153,10 @@ async def _order_context(db, order: Order) -> dict:
             .limit(1)
         )
     ).scalar_one_or_none()
-    opp = OPPORTUNITIES[0] if OPPORTUNITIES else {}
+    pool = opp_library.library()
+    opp = pool[0] if pool else {}
     if order.match_id:
-        for o in OPPORTUNITIES:
+        for o in pool:
             if o.get("id") == order.match_id:
                 opp = o
                 break

@@ -80,11 +80,13 @@ async def build_context(db: AsyncSession, order: Order) -> dict:
     capital = diag.capital if diag else 50000
 
     # 目标商机：优先取订单关联的 match_id，其次取诊断结果里的第一个，最后兜底
-    from app.data.opportunities import OPPORTUNITIES
+    # 走「有效视图」：后台运营的编辑 / 下架 / 新增对交付物同样生效（M4-04）
+    from app.data import opp_library
 
-    opp = OPPORTUNITIES[0] if OPPORTUNITIES else {}
+    pool = opp_library.library()
+    opp = pool[0] if pool else {}
     if order.match_id:
-        for o in OPPORTUNITIES:
+        for o in pool:
             if o.get("id") == order.match_id:
                 opp = o
                 break

@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from app.core.config import settings
 from app.core.context import OwnerContext
 from app.core.errors import BizError
+from app.data import opp_library
 from app.data import opportunities as opp_data
 from app.models import Favorite, Order, User
 from app.services import diagnose as diag
@@ -142,7 +143,7 @@ async def get_match_list(db, task) -> dict:
 
     ordered: list[tuple[dict, int]] = []
     for opp_id in result.get("opportunity_ids", []):
-        op = opp_data.get_opportunity(opp_id)
+        op = opp_library.get(opp_id)
         if op:
             ordered.append((op, int(scores.get(opp_id, 0))))
 
@@ -171,7 +172,7 @@ async def get_match_list(db, task) -> dict:
         "case_count": opp_data.CASE_COUNT,
         "free": free,
         "locked": locked,
-        "total_candidates": len(opp_data.OPPORTUNITIES),
+        "total_candidates": len(opp_library.library()),
     }
 
 
@@ -239,7 +240,7 @@ async def today_quota(db, opportunity_id: str) -> dict:
 
 async def get_detail(db, owner: OwnerContext, opportunity_id: str, task_id: str | None = None) -> dict:
     """M3-03：商机详情。锁定商机未解锁时返回 40301。"""
-    op = opp_data.get_opportunity(opportunity_id)
+    op = opp_library.get(opportunity_id)
     if op is None:
         raise BizError(40401, "未找到该商机，请重新诊断")
 
@@ -280,7 +281,7 @@ async def list_favorites(db, owner: OwnerContext) -> dict:
 
     items = []
     for row in rows:
-        op = opp_data.get_opportunity(row.opportunity_id)
+        op = opp_library.get(row.opportunity_id)
         if op is None:
             continue  # 商机已下架则不展示，避免空卡片
         card = to_out(op, 0, False)
@@ -290,7 +291,7 @@ async def list_favorites(db, owner: OwnerContext) -> dict:
 
 
 async def toggle_favorite(db, owner: OwnerContext, opportunity_id: str) -> dict:
-    if opp_data.get_opportunity(opportunity_id) is None:
+    if opp_library.get(opportunity_id) is None:
         raise BizError(40401, "未找到该商机，请重新诊断")
     existing = (
         await db.execute(

@@ -28,10 +28,12 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.errors import BizError
 from app.data import cities as city_data
+from app.data import opp_library
 from app.data import opportunities as opp_data
 from app.models import DiagnosisTask
 from app.queue.runner import run_coroutine
 from app.services import ai_cost
+from app.services import prompt_store
 from app.storage import get_storage
 
 logger = logging.getLogger(__name__)
@@ -292,8 +294,9 @@ def rank_opportunities(
     tags: dict, capital: int, extra: dict | None = None
 ) -> list[tuple[dict, int]]:
     """按分数倒序返回全部候选商机（真实打分，不做通用推荐）。"""
+    # 走「有效视图」：后台运营下架 / 新增 / 改资金区间会影响匹配结果（M4-04）
     scored = [
-        (op, score_opportunity(op, tags, capital, extra)) for op in opp_data.OPPORTUNITIES
+        (op, score_opportunity(op, tags, capital, extra)) for op in opp_library.library()
     ]
     scored.sort(key=lambda item: (-item[1], item[0]["capital_min"]))
     return scored
@@ -648,10 +651,20 @@ async def _do_stage(db, stage_key: str, state: dict, task: DiagnosisTask, tags: 
     """单个阶段的真实计算。"""
     if stage_key == "scan":
         state["tier_weights"] = city_data.TIER_WEIGHTS[tags["city_level"]]
-        prompt = (
+        default_prompt = (
             f"用户在{task.city}，启动资金{task.capital}元，每天可投入{task.daily_hours}小时。"
             f"请用一句不超过 30 字的中文给出最值得尝试的方向。"
         )
+        # V5.0 M11-04：优先用后台「提示词配置」里的 diagnose 提示词；
+        # 运营没配过时回退内置默认，行为与改动前一致。
+        prompt = prompt_store.render(
+            "diagnose",
+            {
+                "city": task.city,
+                "capital": task.capital,
+                "daily_hours": task.daily_hours,
+            },
+        ) or default_prompt
         owner_key = (
             f"guest:{task.guest_token}" if task.guest_token else f"user:{task.user_id}"
         )

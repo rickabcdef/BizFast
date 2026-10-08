@@ -304,15 +304,16 @@ s, b = req("POST", "/api/share/invite/bind", {"inviterCode": code}, guest=GUEST_
 check("M8-03 老邀新双方得券", s == 200 and data_of(b).get("status") == "issued", b)
 
 # ─────────────── M7 小游戏 ───────────────
+# 游戏类型用 V5.0 命名合规后的原创名：bubble=指尖解压 / merge=数字合成
 s, b = req("POST", "/api/games/score",
-           {"game_type": "match3", "score": 1200, "duration_seconds": 60},
+           {"game_type": "bubble", "score": 1200, "duration_seconds": 60},
            token=guest_token, guest=GUEST)
 check("M7 提交游戏分数", s == 200 and b.get("code") == 0, b)
 
-s, b = req("GET", "/api/games/leaderboard/match3", token=guest_token, guest=GUEST)
+s, b = req("GET", "/api/games/leaderboard/bubble", token=guest_token, guest=GUEST)
 check("M7 排行榜", s == 200 and data_of(b).get("leaderboard") is not None, b)
 
-s, b = req("GET", "/api/games/my-best/match3", token=guest_token, guest=GUEST)
+s, b = req("GET", "/api/games/my-best/bubble", token=guest_token, guest=GUEST)
 check("M7 我的最佳成绩", s == 200 and b.get("code") == 0, b)
 
 s, b = req("GET", "/api/games/my-scores", token=guest_token, guest=GUEST)
@@ -444,9 +445,22 @@ if order_items:
     s, b = req("GET", f"/api/admin/users/{order_items[0].get('userId')}", **AH)
     check("M11-01 用户详情（含订单/启动包）", s == 200 and "user" in data_of(b), b)
 
-    s, b = req("PUT", f"/api/admin/orders/{oid}/refund",
-               {"action": "reject", "reason": "测试驳回"}, **AH)
-    check("M11-02 退款处理（驳回）", s == 200 and b.get("code") == 0, b)
+    # M11-02 退款处理（驳回）：必须先有一笔「待人工审核」的退款申请才能驳回。
+    # 已下载交付物的订单申请退款会转人工审核（见 payment.refund_order）。
+    refund_target = next((o for o in order_items if o.get("refundRequested")), None)
+    if refund_target is None and order_id:
+        req("POST", "/api/payment/refund",
+            {"orderId": order_id, "reason": "E2E 退款申请"}, token=guest_token, guest=GUEST)
+        _, b2 = req("GET", "/api/admin/orders?page=1&pageSize=20", **AH)
+        refund_target = next(
+            (o for o in (data_of(b2).get("items") or []) if o.get("refundRequested")), None
+        )
+    if refund_target:
+        s, b = req("PUT", f"/api/admin/orders/{refund_target['id']}/refund",
+                   {"action": "reject", "reason": "测试驳回"}, **AH)
+        check("M11-02 退款处理（驳回）", s == 200 and b.get("code") == 0, b)
+    else:
+        check("M11-02 退款处理（驳回）", False, "未能构造出待审核的退款申请")
 
 # 商机库 CRUD
 s, b = req("GET", "/api/admin/opportunities?page=1&pageSize=50", **AH)

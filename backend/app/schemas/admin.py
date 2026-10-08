@@ -170,12 +170,20 @@ class OpportunitySaveIn(CamelModel):
     payback_months: int = 0
     margin_percent: int = 0
     difficulty_stars: int = 1
+    # 用户端卡片还会展示一段描述与图标，允许运营一并调整（不传则保持原值）
+    summary: Optional[str] = None
+    icon: Optional[str] = None
 
 class OpportunityImportIn(BaseModel):
     """批量导入商机：items 为待入库的商机数组（CSV/Excel 解析后由前端提交）。"""
     items: list[dict] = []
 
-class OpportunityShelfIn(BaseModel):
+class OpportunityShelfIn(CamelModel):
+    """上下架入参。
+
+    原为裸 BaseModel（只认 `on_shelf`），而前端发的是 `onShelf`，
+    导致上下架按钮一直返回「请填写上下架状态」——改回 CamelModel 兼容两种写法。
+    """
     on_shelf: bool
 
 class OpportunityReviewIn(BaseModel):

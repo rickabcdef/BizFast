@@ -279,9 +279,9 @@ async def user_orders(
     orders = list(result.scalars().all())
 
     # 订单标题：优先用关联商机名，否则用方案名，保证列表可读
-    from app.data.opportunities import OPPORTUNITIES
+    from app.data import opp_library
 
-    opp_titles = {o.get("id"): o.get("title", "") for o in OPPORTUNITIES}
+    opp_titles = {o.get("id"): o.get("title", "") for o in opp_library.library()}
     plan_label = {"single": "单次启动包", "month": "月度会员", "year": "年度会员"}
 
     items = []
