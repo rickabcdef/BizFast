@@ -17,8 +17,13 @@ export function resolveUrl(path: string): string {
   return `${ORIGIN}${path}`
 }
 
-function getToken(): string | null {
+function getToken(path?: string): string | null {
   try {
+    // 后台接口（/api/admin，M11 / V5.0 M4）使用管理员独立会话；
+    // 其余接口使用用户会话（bf_token）。两者互不混用，否则后台请求会被 require_admin 拒绝。
+    if (path && path.startsWith('/api/admin')) {
+      return Taro.getStorageSync('bf_admin_token') || null
+    }
     return Taro.getStorageSync('bf_token') || null
   } catch {
     return null
@@ -124,7 +129,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     'Content-Type': 'application/json',
     ...((options.headers as Record<string, string>) || {})
   }
-  const token = getToken()
+  const token = getToken(path)
   if (token) headers['Authorization'] = `Bearer ${token}`
   const guest = getGuestToken()
   if (guest) headers['X-Guest-Token'] = guest

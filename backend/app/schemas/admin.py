@@ -40,6 +40,12 @@ class DashboardKpisOut(CamelModel):
     package_done_rate: str = "0%"
     refund_rate: str = "0%"
     avg_order_yuan: str = "0"
+    # V5.0 M4-01 现金流看板补充指标
+    today_new_users: int = 0
+    today_order_count: int = 0
+    today_revenue_cents: int = 0  # 今日营收（分）
+    ai_cost_cents: int = 0  # 今日 AI 成本（分）
+    net_cashflow_cents: int = 0  # 净现金流 = 营收 - AI 成本（分）
 
 class DashboardTrendItem(CamelModel):
     label: str

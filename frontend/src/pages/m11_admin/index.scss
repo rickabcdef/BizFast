@@ -458,3 +458,196 @@
   color: #e8ecff;
   font-size: 26rpx;
 }
+
+// ==================== V5.0 三块新看板（成本监控 / 转化与裂变 / 现金流看板） ====================
+
+// ---------- 通用：状态告警条 / 颜色 / 双栏 / 周期切换 ----------
+.m11-alert {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  margin-bottom: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+.m11-alert__icon { font-size: 30rpx; }
+.m11-alert__text { color: rgba(255, 255, 255, 0.85); flex: 1; }
+.m11-alert--ok { background: rgba(0, 180, 42, 0.12); border: 2rpx solid rgba(0, 180, 42, 0.35); }
+.m11-alert--warn { background: rgba(255, 125, 0, 0.12); border: 2rpx solid rgba(255, 125, 0, 0.4); }
+.m11-alert--danger { background: rgba(245, 63, 63, 0.14); border: 2rpx solid rgba(245, 63, 63, 0.5); }
+
+.m11-txt--ok { color: #00b42a; }
+.m11-txt--danger { color: #ff5c7c; }
+
+.m11-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.m11-kpis--sub {
+  grid-template-columns: repeat(5, 1fr);
+  margin-bottom: 20rpx;
+}
+.m11-kpi--flat {
+  padding: 20rpx;
+  background: rgba(20, 26, 58, 0.45);
+  border: 2rpx solid rgba(123, 108, 255, 0.22);
+  border-radius: 20rpx;
+}
+.m11-kpi__value--sm { font-size: 32rpx; }
+.m11-kpi__sub {
+  display: block;
+  font-size: 22rpx;
+  color: #8b93b8;
+  margin-top: 10rpx;
+}
+
+.m11-periods {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+.m11-period {
+  padding: 12rpx 28rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #8b93b8;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2rpx solid rgba(139, 147, 184, 0.25);
+}
+.m11-period.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, #5b6cff 0%, #9b5cff 100%);
+  border-color: transparent;
+}
+
+// ---------- 现金流卡（M4-01） ----------
+.m11-cash {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+.m11-cash__cell {
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: rgba(20, 26, 58, 0.45);
+  border: 2rpx solid rgba(123, 108, 255, 0.22);
+}
+.m11-cash__label { display: block; font-size: 24rpx; color: #8b93b8; }
+.m11-cash__value { display: block; font-size: 44rpx; font-weight: 700; color: #fff; margin-top: 12rpx; }
+.m11-cash__sub { display: block; font-size: 22rpx; color: #8b93b8; margin-top: 10rpx; }
+
+// ---------- 每日数据日报（第 8 章） ----------
+.m11-report {
+  padding: 20rpx 4rpx;
+  border-bottom: 2rpx solid rgba(139, 147, 184, 0.12);
+}
+.m11-report:last-child { border-bottom: none; }
+.m11-report__head { display: flex; justify-content: space-between; }
+.m11-report__date { font-size: 26rpx; font-weight: 600; color: #e8ecff; }
+.m11-report__net { font-size: 24rpx; color: #8b93b8; }
+.m11-report__line { display: block; font-size: 24rpx; color: rgba(255, 255, 255, 0.75); margin-top: 10rpx; line-height: 1.5; }
+
+// ---------- 成本监控（M4-05，对齐切图 18 页） ----------
+.m11-gate-name { display: block; font-size: 26rpx; font-weight: 600; color: #e8ecff; }
+.m11-gate-desc { display: block; font-size: 22rpx; color: #8b93b8; margin-top: 4rpx; }
+.m11-table {
+  margin-top: 16rpx;
+  border: 2rpx solid rgba(139, 147, 184, 0.2);
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.m11-table__row {
+  display: grid;
+  grid-template-columns: 2fr 2.2fr 1.6fr 1.2fr;
+  gap: 12rpx;
+  align-items: center;
+  padding: 18rpx 20rpx;
+  border-bottom: 2rpx solid rgba(139, 147, 184, 0.1);
+  font-size: 24rpx;
+}
+.m11-table__row:last-child { border-bottom: none; }
+.m11-table__cell--name { display: flex; flex-direction: column; gap: 4rpx; }
+.m11-tag {
+  display: inline-block;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+}
+.m11-tag--ok { color: #00b42a; background: rgba(0, 180, 42, 0.14); }
+
+.m11-costbar { margin-bottom: 20rpx; }
+.m11-costbar__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #e8ecff;
+  margin-bottom: 8rpx;
+}
+.m11-costbar__track {
+  height: 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.m11-costbar__in {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #165dff, #7b61ff);
+}
+.m11-costbar__in--alt {
+  background: linear-gradient(90deg, #7b61ff, #c86cff);
+}
+
+// ---------- 转化漏斗 + 裂变数据（M4-07/08，对齐切图 19 页） ----------
+.m11-funnel__row { margin-bottom: 20rpx; }
+.m11-funnel__head { display: flex; justify-content: space-between; font-size: 24rpx; margin-bottom: 8rpx; }
+.m11-funnel__name { font-weight: 600; color: #e8ecff; }
+.m11-funnel__num { color: #8b93b8; }
+.m11-funnel__track {
+  height: 36rpx;
+  border-radius: 10rpx;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.m11-funnel__in {
+  height: 100%;
+  border-radius: 10rpx;
+  display: flex;
+  align-items: center;
+  padding-left: 12rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #fff;
+}
+.m11-funnel__in--drop { animation: m11-drop-pulse 1.2s ease-in-out infinite; }
+@keyframes m11-drop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.m11-funnel__drop {
+  display: block;
+  font-size: 22rpx;
+  color: #ff7d00;
+  margin-top: 6rpx;
+}
+.m11-growth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+  margin: 16rpx 0;
+}
+.m11-growth-cell {
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2rpx solid rgba(139, 147, 184, 0.2);
+}
+.m11-growth-label { display: block; font-size: 22rpx; color: #8b93b8; }
+.m11-growth-value { display: block; font-size: 32rpx; font-weight: 600; color: #fff; margin-top: 8rpx; }
+.m11-growth-ch { margin-top: 12rpx; }

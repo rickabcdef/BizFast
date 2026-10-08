@@ -495,6 +495,12 @@ export interface DashboardKpis {
   conversionRate: string
   packageDoneRate: string
   avgOrderYuan: string
+  // V5.0 M4-01 现金流看板补充指标
+  todayNewUsers: number
+  todayOrderCount: number
+  todayRevenueCents: number // 今日营收（分）
+  aiCostCents: number // 今日 AI 成本（分）
+  netCashflowCents: number // 净现金流 = 营收 - AI 成本（分）
 }
 
 export interface DashboardTrend {
@@ -656,6 +662,146 @@ export function getAdminAuditLogs(params: { page?: number; pageSize?: number; op
   return api.get<PageBox<AuditLogItem>>(`/api/admin/audit?${q.toString()}`)
 }
 
+// ---------------- V5.0 M4-05/07/08 后台三块新看板 + 第 8 章运营自动化 ----------------
+
+export interface CostBucket {
+  tokens: number
+  costCents: number
+  costLabel: string
+  calls: number
+  revenueCents: number
+  revenueLabel: string
+  costRatio: number
+  alert: boolean
+}
+
+export interface CostByModel { model: string; costCents: number; costLabel: string; tokens: number }
+export interface CostByFeature {
+  feature: string
+  featureLabel: string
+  costCents: number
+  costLabel: string
+  tokens: number
+  calls: number
+}
+export interface CostGates {
+  modelTier: string
+  cacheHitRate: number
+  templateRatio: number
+  maxRounds: { diagnose: number; package: number; coach: number }
+}
+export interface CostBudget { free: number; single: number; month: number; year: number }
+
+export interface CostMonitorData {
+  today: CostBucket
+  month: CostBucket
+  byModel: CostByModel[]
+  byFeature: CostByFeature[]
+  gates: CostGates
+  budget: CostBudget
+  alertRatio: number
+  alert: boolean
+  notice: string
+}
+
+export interface FunnelStep {
+  step: string
+  label: string
+  value: number
+  rateFromTop: number
+  rateFromPrev: number | null
+  dropAlert: boolean
+}
+export interface FunnelData { period: string; steps: FunnelStep[]; overallConversion: number; notice: string }
+
+export interface GrowthSummary {
+  shares: number
+  registers: number
+  pays: number
+  shareRate: number
+  uniqueInviters: number
+  paidInvitees: number
+  kFactor: number
+  fissionCacCents: number
+  fissionCacLabel: string
+}
+export interface GrowthRow { channel: string; clicks: number }
+export interface GrowthData { rows: GrowthRow[]; summary: GrowthSummary }
+
+export interface DailyReportItem {
+  id: string
+  reportDate: string
+  revenueCents: number
+  revenueLabel: string
+  orderCount: number
+  newUsers: number
+  refundCents: number
+  refundLabel: string
+  refundCount: number
+  aiCostCents: number
+  aiCostLabel: string
+  channelFeeCents: number
+  channelFeeLabel: string
+  netCashCents: number
+  netCashLabel: string
+  pushStatus: string
+  pushedAt: string | null
+  content: string
+  createdAt: string | null
+}
+
+export interface AdminAlertItem {
+  id: string
+  alertType: string
+  level: string
+  title: string
+  content: string
+  relatedType: string | null
+  relatedId: string | null
+  createdAt: string | null
+}
+
+/** V5.0 M4-05：AI 成本监控（今日/本月成本、按模型/功能分布、六道闸门、超 25% 告警）。 */
+export function getAdminCostMonitor(): Promise<CostMonitorData> {
+  if (USE_MOCK) return delay(400).then(() => mockCostMonitor())
+  return api.get<CostMonitorData>('/api/admin/cost-monitor')
+}
+
+/** V5.0 M4-07：转化漏斗（访问→开始诊断→完成诊断→点击付费→支付成功→下载交付物，按日/周/月）。 */
+export function getAdminFunnel(period = 'day'): Promise<FunnelData> {
+  if (USE_MOCK) return delay(400).then(() => mockFunnel(period))
+  return api.get<FunnelData>(`/api/admin/funnel?period=${period}`)
+}
+
+/** V5.0 M4-08：裂变数据看板（转发量/带来新用户/带来付费/K 因子/单用户裂变获客成本）。 */
+export function getAdminGrowth(): Promise<GrowthData> {
+  if (USE_MOCK) return delay(400).then(() => mockGrowth())
+  return api.get<GrowthData>('/api/admin/growth')
+}
+
+/** V5.0 第 8 章：每日数据日报列表（每天 9 点自动生成，可手动补生成）。 */
+export function getAdminDailyReports(limit = 30): Promise<{ items: DailyReportItem[] }> {
+  if (USE_MOCK) return delay(400).then(() => mockDailyReports())
+  return api.get<{ items: DailyReportItem[] }>(`/api/admin/daily-reports?limit=${limit}`)
+}
+
+/** V5.0 第 8 章：后台告警列表（异常订单 / 成本超限）。 */
+export function getAdminAlerts(params: { limit?: number; unreadOnly?: boolean } = {}): Promise<{ items: AdminAlertItem[] }> {
+  const q = new URLSearchParams()
+  q.set('limit', String(params.limit ?? 50))
+  if (params.unreadOnly) q.set('unreadOnly', 'true')
+  if (USE_MOCK) return delay(400).then(() => mockAlerts())
+  return api.get<{ items: AdminAlertItem[] }>(`/api/admin/alerts?${q.toString()}`)
+}
+
+/** V5.0 第 8 章：标记告警已读（不传 id 则全部已读）。 */
+export function readAdminAlerts(alertId?: string): Promise<{ updated: number }> {
+  const q = new URLSearchParams()
+  if (alertId) q.set('alertId', alertId)
+  if (USE_MOCK) return delay(200).then(() => ({ updated: 1 }))
+  return api.post<{ updated: number }>(`/api/admin/alerts/read?${q.toString()}`)
+}
+
 // ---------------- M11 Mock ----------------
 
 function mockDashboard(): { kpis: DashboardKpis; trend: DashboardTrend[]; refreshAt: string } {
@@ -677,7 +823,12 @@ function mockDashboard(): { kpis: DashboardKpis; trend: DashboardTrend[]; refres
       refundRate: '3.5%',
       conversionRate: '6.9%',
       packageDoneRate: '99.2%',
-      avgOrderYuan: '15.4'
+      avgOrderYuan: '15.4',
+      todayNewUsers: 328,
+      todayOrderCount: 107,
+      todayRevenueCents: 214800,
+      aiCostCents: 2860,
+      netCashflowCents: 214800 - 2860
     },
     trend,
     refreshAt: '刚刚'
@@ -804,6 +955,124 @@ function mockAuditLogs(params: { operator?: string; action?: string }): PageBox<
     (l) => (!params.operator || l.operator.includes(params.operator)) && (!params.action || l.action.includes(params.action))
   )
   return { items: filtered, total: filtered.length, page: 1, pageSize: 20 }
+}
+
+// ---------------- V5.0 后台三块新看板 Mock（对齐 UI 切图 V5.0 13/18/19 页） ----------------
+
+function mockCostMonitor(): CostMonitorData {
+  return {
+    today: { tokens: 486_200, costCents: 2860, costLabel: '28.60', calls: 412, revenueCents: 132_400, revenueLabel: '1324.00', costRatio: 0.0216, alert: false },
+    month: { tokens: 12_430_000, costCents: 28_643, costLabel: '286.43', calls: 11_540, revenueCents: 3_332_000, revenueLabel: '33320.00', costRatio: 0.0086, alert: false },
+    byModel: [
+      { model: 'doubao-lite', costCents: 18_640, costLabel: '186.40', tokens: 8_140_000 },
+      { model: 'doubao-seed-1.6', costCents: 7_230, costLabel: '72.30', tokens: 2_560_000 },
+      { model: 'video-upgrade', costCents: 1_960, costLabel: '19.60', tokens: 0 },
+      { model: 'digital-human', costCents: 810, costLabel: '8.10', tokens: 0 }
+    ],
+    byFeature: [
+      { feature: 'package', featureLabel: '启动包生成', costCents: 13_184, costLabel: '131.84', tokens: 4_120_000, calls: 412 },
+      { feature: 'diagnose', featureLabel: '商机诊断', costCents: 1153, costLabel: '11.53', tokens: 3_842_000, calls: 3842 },
+      { feature: 'topic', featureLabel: '今日谈资卡', costCents: 654, costLabel: '6.54', tokens: 2_180_000, calls: 2180 },
+      { feature: 'coach', featureLabel: 'AI 教练', costCents: 758, costLabel: '7.58', tokens: 1_264_000, calls: 1264 }
+    ],
+    gates: {
+      modelTier: '轻量模型优先，验收不过才升档',
+      cacheHitRate: 0.34,
+      templateRatio: 0.7,
+      maxRounds: { diagnose: 8, package: 25, coach: 5 }
+    },
+    budget: { free: 100, single: 350, month: 9000, year: 70000 },
+    alertRatio: 0.25,
+    alert: false,
+    notice: 'AI 成本占收入比健康（阈值 25%）'
+  }
+}
+
+function mockFunnel(period: string): FunnelData {
+  const days = period === 'week' ? 7 : period === 'month' ? 30 : 1
+  const scale = days === 30 ? 30 : days === 7 ? 7 : 1
+  const v = {
+    visit: Math.round(12480 * scale / 14),
+    diagnose_start: Math.round(5240 * scale / 14),
+    diagnose_done: Math.round(3842 * scale / 14),
+    pay_click: Math.round(620 * scale / 14),
+    pay_success: Math.round(412 * scale / 14),
+    download: Math.round(396 * scale / 14)
+  }
+  const steps = [
+    { step: 'visit', label: '访问', value: v.visit, rateFromTop: 1, rateFromPrev: null, dropAlert: false },
+    { step: 'diagnose_start', label: '开始诊断', value: v.diagnose_start, rateFromTop: round4(v.diagnose_start / v.visit), rateFromPrev: round4(v.diagnose_start / v.visit), dropAlert: false },
+    { step: 'diagnose_done', label: '完成诊断', value: v.diagnose_done, rateFromTop: round4(v.diagnose_done / v.visit), rateFromPrev: round4(v.diagnose_done / v.diagnose_start), dropAlert: false },
+    { step: 'pay_click', label: '点击付费', value: v.pay_click, rateFromTop: round4(v.pay_click / v.visit), rateFromPrev: round4(v.pay_click / v.diagnose_done), dropAlert: round4(v.pay_click / v.diagnose_done) < 0.3 },
+    { step: 'pay_success', label: '支付成功', value: v.pay_success, rateFromTop: round4(v.pay_success / v.visit), rateFromPrev: round4(v.pay_success / v.pay_click), dropAlert: false },
+    { step: 'download', label: '下载交付物', value: v.download, rateFromTop: round4(v.download / v.visit), rateFromPrev: round4(v.download / v.pay_success), dropAlert: false }
+  ]
+  return {
+    period,
+    steps,
+    overallConversion: round4(v.pay_success / v.visit),
+    notice: '各环节转化正常'
+  }
+}
+function round4(n: number): number { return Math.round(n * 10000) / 10000 }
+
+function mockGrowth(): GrowthData {
+  return {
+    rows: [
+      { channel: '今日谈资卡', clicks: 5272 },
+      { channel: '机会热度图', clicks: 1864 },
+      { channel: '开业喜报', clicks: 920 },
+      { channel: '邀请链接', clicks: 586 }
+    ],
+    summary: {
+      shares: 8642,
+      registers: 2318,
+      pays: 86,
+      shareRate: 0.21,
+      uniqueInviters: 2050,
+      paidInvitees: 41,
+      kFactor: 0.42,
+      fissionCacCents: 30,
+      fissionCacLabel: '0.30'
+    }
+  }
+}
+
+function mockDailyReports(): { items: DailyReportItem[] } {
+  const days = ['10-07', '10-06', '10-05', '10-04', '10-03']
+  return {
+    items: days.map((d, i) => ({
+      id: `DR-${d.replace('-', '')}`,
+      reportDate: `2026-${d}`,
+      revenueCents: 118_400 - i * 8200,
+      revenueLabel: `${(1184 - i * 82).toFixed(0)}.00`,
+      orderCount: 96 - i * 6,
+      newUsers: 286 - i * 18,
+      refundCents: 2990,
+      refundLabel: '29.90',
+      refundCount: 1,
+      aiCostCents: 2640 + i * 96,
+      aiCostLabel: `${(26.4 + i * 0.96).toFixed(2)}`,
+      channelFeeCents: 5920,
+      channelFeeLabel: '59.20',
+      netCashCents: 118_400 - 2640 - 5920 - 2990,
+      netCashLabel: `${(1184 - 26.4 - 59.2 - 29.9).toFixed(1)}0`,
+      pushStatus: 'pushed',
+      pushedAt: `2026-${d}T09:00:00`,
+      content: `日报：营收 ¥${(1184 - i * 82).toFixed(0)}，订单 ${96 - i * 6} 单，新增用户 ${286 - i * 18} 人，AI 成本 ¥${(26.4 + i * 0.96).toFixed(2)}，净现金流正常。`,
+      createdAt: `2026-${d}T09:00:00`
+    }))
+  }
+}
+
+function mockAlerts(): { items: AdminAlertItem[] } {
+  return {
+    items: [
+      { id: 'AL-0001', alertType: 'abnormal_order', level: 'warning', title: '3 笔订单已支付超 2 小时未交付', content: '订单 ORD-2026-0002 等 3 笔已支付但生成超时，建议立即处理。', relatedType: 'order', relatedId: 'ORD-2026-0002', createdAt: '2026-10-07 10:02:00' },
+      { id: 'AL-0002', alertType: 'refund_request', level: 'warning', title: '12 名用户申请退款待审核', content: '退款申请超过 24 小时未处理，请尽快审核。', relatedType: null, relatedId: null, createdAt: '2026-10-07 08:30:00' },
+      { id: 'AL-0003', alertType: 'cost_ratio', level: 'info', title: 'AI 成本占收入比 8.6%，处于安全区间', content: '警戒线 15%，红线 25%，六道成本闸门全部正常。', relatedType: null, relatedId: null, createdAt: '2026-10-06 09:00:00' }
+    ]
+  }
 }
 
 // ---------------- CSV 导出（M11-01/02：支持导出与对账表） ----------------

@@ -11,6 +11,8 @@ import ReviewsView from './views/reviews'
 import RolesView from './views/roles'
 import AuditView from './views/audit'
 import ShareView from './views/share'
+import CostView from './views/cost'
+import FunnelView from './views/funnel'
 import './index.scss'
 
 // m11_admin 运营管理后台 | 负责人: B+D | 优先级: P1
@@ -19,13 +21,14 @@ import './index.scss'
 //   M11-02 订单管理（查看/处理退款/核对支付，导出对账表）
 //   M11-03 商机库管理（P0：商机模板/行业数据/案例库，批量导入与审核）
 //   M11-04 提示词配置（在线配置 AI 提示词与模型路由，改后无需发版生效）
-//   M11-05 数据看板（转化率/付费单数/收入/退款率，数据延迟 ≤ 5 分钟）
+//   M11-05 数据看板（V5.0 M4-01 现金流看板：营收/订单/新增用户/付费率/退款率/AI成本/净现金流）
 //   M11-06 内容审核（敏感词与合规审核，违规拦截率 ≥ 99%）
 //   M11-07 权限管理（管理员/运营/客服分级，操作均记录操作人）
 //   M11-08 审计日志（关键操作留痕，日志保留 ≥ 180 天）
+// V5.0 新增：M4-05 AI 成本监控（六道闸门/超 25% 告警）、M4-07 转化漏斗 + M4-08 裂变数据。
 // 分享转化（M8-04）为研发 D 的模块，作为独立 Tab 保留。
 
-type TabKey = 'dashboard' | 'users' | 'orders' | 'opportunities' | 'reviews' | 'prompts' | 'roles' | 'audit' | 'share'
+type TabKey = 'dashboard' | 'users' | 'orders' | 'opportunities' | 'reviews' | 'prompts' | 'roles' | 'audit' | 'share' | 'cost' | 'funnel'
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'dashboard', label: '数据看板' },
@@ -34,6 +37,8 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'opportunities', label: '商机库' },
   { key: 'reviews', label: '内容审核' },
   { key: 'prompts', label: '提示词' },
+  { key: 'cost', label: '成本监控' },
+  { key: 'funnel', label: '转化与裂变' },
   { key: 'roles', label: '权限' },
   { key: 'audit', label: '审计日志' },
   { key: 'share', label: '分享转化' }
@@ -154,6 +159,8 @@ export default function M11Admin() {
         {tab === 'roles' && <RolesView />}
         {tab === 'audit' && <AuditView />}
         {tab === 'share' && <ShareView />}
+        {tab === 'cost' && <CostView />}
+        {tab === 'funnel' && <FunnelView />}
       </View>
     </View>
   )

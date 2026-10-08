@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.errors import BizError
 from app.core.security import create_access_token
-from app.models import DiagnosisTask, Order, Package, PaymentRecord, User
+from app.models import AiCostLog, DiagnosisTask, Order, Package, PaymentRecord, User
 from app.schemas import admin as admin_schemas
 
 # ─── 配置与常量 ───
@@ -258,6 +258,33 @@ async def get_dashboard(db: AsyncSession, granularity: str = "day") -> dict:
     package_done_rate = f"{(delivered_count / pay_count * 100):.1f}%" if pay_count > 0 else "0%"
     refund_rate = f"{(refund_count / pay_count * 100):.1f}%" if pay_count > 0 else "0%"
     avg_order_yuan = f"{revenue_yuan / pay_count:.1f}" if pay_count > 0 else "0"
+
+    # V5.0 M4-01 现金流看板：今日新增用户 / 今日 AI 成本 / 净现金流
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_new_users = int(
+        (await db.execute(
+            select(func.count(User.id)).where(User.created_at >= today_start)
+        )).scalar_one() or 0
+    )
+    ai_cost_cents = int(
+        (await db.execute(
+            select(func.coalesce(func.sum(AiCostLog.cost_cents), 0)).where(
+                AiCostLog.created_at >= today_start
+            )
+        )).scalar_one() or 0
+    )
+    # 今日已支付订单（含已退款，口径与 cost_monitor 的 _revenue_cents 一致）
+    today_orders = (
+        await db.execute(
+            select(func.count(Order.id), func.coalesce(func.sum(Order.amount), 0)).where(
+                Order.paid_at >= today_start,
+                Order.status.in_(["paid", "generating", "delivered", "refunded"]),
+            )
+        )
+    ).one()
+    today_order_count = int(today_orders[0] or 0)
+    today_revenue_cents = int(today_orders[1] or 0)
+    net_cashflow_cents = today_revenue_cents - ai_cost_cents
     
     kpis = admin_schemas.DashboardKpisOut(
         diagnose_count=diag_count,
@@ -267,6 +294,11 @@ async def get_dashboard(db: AsyncSession, granularity: str = "day") -> dict:
         package_done_rate=package_done_rate,
         refund_rate=refund_rate,
         avg_order_yuan=avg_order_yuan,
+        today_new_users=today_new_users,
+        today_order_count=today_order_count,
+        today_revenue_cents=today_revenue_cents,
+        ai_cost_cents=ai_cost_cents,
+        net_cashflow_cents=net_cashflow_cents,
     )
     
     # Mock Trend 数据
