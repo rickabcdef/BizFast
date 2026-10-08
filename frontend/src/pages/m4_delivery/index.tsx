@@ -337,7 +337,20 @@ export default function M4Delivery() {
     // PDF 在线预览（浏览器原生渲染；预览不产生额外费用 M4-04）
     if (typeof window !== 'undefined') {
       window.open(url, '_blank')
+      return
     }
+    // 小程序端：下载临时文件后用 openDocument 预览（支持 PDF/Office）
+    const DOC_TYPE: Record<string, 'pdf' | 'docx' | 'xlsx'> = { pdf: 'pdf', word: 'docx', excel: 'xlsx' }
+    const docType = DOC_TYPE[f.fileType]
+    if (!docType) {
+      Taro.showToast({ title: '该格式暂不支持预览', icon: 'none' })
+      return
+    }
+    Taro.downloadFile({
+      url,
+      success: (r) => Taro.openDocument({ filePath: r.tempFilePath, fileType: docType }),
+      fail: () => Taro.showToast({ title: '预览文件加载失败', icon: 'none' })
+    })
   }
 
   // ---------------- V5.0 M3-06 / M5-02 开业喜报 + M8 工具箱权益 ----------------
