@@ -49,7 +49,9 @@ export function shareCard(opts: { title: string; imageUrl?: string; path?: strin
   }
 }
 
-// 文件保存适配：小程序/App 调系统相册或文件，Web 触发下载
+// 文件保存适配：小程序/App 调系统相册或文件，Web 触发下载。
+// 图片类（开业喜报/海报等）在小程序端保存到相册（可发朋友圈，M3-06），
+// 其它文件（PDF/ZIP/Excel 等）保存到本地文件；相册保存失败时回退本地文件。
 export function saveFile(url: string, fileName: string): void {
   const platform = getPlatform()
   if (platform === 'web') {
@@ -57,9 +59,28 @@ export function saveFile(url: string, fileName: string): void {
     a.href = url
     a.download = fileName
     a.click()
-  } else {
-    Taro.downloadFile({ url, success: (r) => Taro.saveFile({ tempFilePath: r.tempFilePath }) })
+    return
   }
+  const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName)
+  Taro.downloadFile({
+    url,
+    success: (r) => {
+      if (isImage) {
+        try {
+          Taro.saveImageToPhotosAlbum({
+            filePath: r.tempFilePath,
+            success: () => Taro.showToast({ title: '已保存到相册', icon: 'success' }),
+            fail: () => Taro.saveFile({ tempFilePath: r.tempFilePath })
+          })
+        } catch {
+          Taro.saveFile({ tempFilePath: r.tempFilePath })
+        }
+      } else {
+        Taro.saveFile({ tempFilePath: r.tempFilePath })
+      }
+    },
+    fail: () => Taro.showToast({ title: '下载失败，请检查网络后重试', icon: 'none' })
+  })
 }
 
 // 画布导出图片（M3-06 对比表导出）：入参是 dataURL（后端没有这张图，只能本地生成）。
