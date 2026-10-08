@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import BubblePopGame, { type BubblePopStats } from '@/canvas-games/bubblePop'
 import NumberMergeGame, { type NumberMergeStats } from '@/canvas-games/numberMerge'
 import './index.scss'
@@ -11,7 +11,10 @@ import './index.scss'
 type GameKey = 'bubble' | 'merge'
 
 export default function M7Games() {
-  const [game, setGame] = useState<GameKey>('bubble')
+  const router = useRouter()
+  // 支持深链 ?g=merge / ?g=bubble（来自工具箱/等待页直达指定游戏）
+  const initialGame: GameKey = router.params.g === 'merge' ? 'merge' : 'bubble'
+  const [game, setGame] = useState<GameKey>(initialGame)
   const [muted, setMuted] = useState(false)
   const [bubbleStats, setBubbleStats] = useState<BubblePopStats>({ popped: 0, total: 30, elapsedSec: 0 })
   const [mergeStats, setMergeStats] = useState<NumberMergeStats>({ score: 0, best: 0, over: false, won: false })
